@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #1a3a5c;
+  --color-orange: #c8410a;
+  --color-cream: #f5f3ee;
+  --color-ink: #0f0f0d;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+}
+
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+}
