@@ -9,7 +9,7 @@ Answer Engine Optimization automation for Axxiom Elevator's 8-brand network. Gen
 | Backend API + Workers | Python 3.12, FastAPI, APScheduler, SQLAlchemy | Railway |
 | Frontend Dashboard | React, TypeScript, Tailwind, TanStack Query | Netlify |
 | Auth | Supabase Auth (JWT) | Supabase |
-| Database | PostgreSQL | Railway |
+| Database | PostgreSQL (`aeo` schema) | Supabase (same project as auth) |
 
 ## Repository Structure
 
@@ -33,7 +33,8 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your API keys
 
-# Requires PostgreSQL running locally, or use Railway DATABASE_URL
+# Requires PostgreSQL — use Supabase (recommended) or local Postgres
+# See backend/.env.example for DATABASE_URL format (Supabase Session pooler or direct)
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -70,9 +71,13 @@ See [backend/.env.example](backend/.env.example) and [frontend/.env.example](fro
 Key backend variables:
 
 - `ANTHROPIC_API_KEY` — Claude content generation
-- `DATABASE_URL` — PostgreSQL (Railway injects automatically)
+- `DATABASE_URL` — Supabase PostgreSQL connection string (see `backend/.env.example`)
+- `DB_SCHEMA` — `aeo` (default)
 - `WP_APP_PASSWORD_*` — WordPress Application Password per brand
-- `PEEC_API_KEY` — AI citation monitoring
+- `PEEC_API_KEY` — Legacy Peec.ai citation monitoring (optional; use `CITATION_PROVIDER=peec`)
+- `CITATION_PROVIDER` — `geo_aeo` (default), `peec`, `none`, or `auto`
+- `GEO_AEO_TRACKER_URL` — URL of self-hosted [GEO/AEO Tracker](geo-aeo-tracker/README.md)
+- `GEO_AEO_PROVIDERS` — Comma-separated AI models (e.g. `perplexity,google_ai`)
 - `GOOGLE_SERVICE_ACCOUNT_JSON` — Base64-encoded service account for GSC + GA4
 - `SUPABASE_JWT_SECRET` — JWT validation for dashboard API calls
 - `SLACK_WEBHOOK_URL` — Worker notifications (optional)
@@ -115,17 +120,13 @@ Nothing publishes to WordPress without explicit approval.
 
 ## Deploy to Railway (Backend)
 
+See [backend/RAILWAY_DEPLOY.md](backend/RAILWAY_DEPLOY.md) for the full checklist.
+
 1. Create Railway project, connect GitHub repo
 2. Set root directory to `backend/`
-3. Add PostgreSQL plugin (auto-injects `DATABASE_URL`)
-4. Set all env vars from `.env.example`
-5. Deploy — health check at `/health`
-
-Start command (in `railway.toml`):
-
-```
-uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
+3. Set env vars from `backend/.env.example` (use Supabase `DATABASE_URL`, not Railway Postgres)
+4. Deploy — health check at `/health` (includes database connectivity)
+5. Set Netlify `VITE_API_URL` to the Railway public URL
 
 ## Deploy to Netlify (Frontend)
 

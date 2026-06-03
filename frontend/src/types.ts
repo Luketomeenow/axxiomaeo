@@ -16,6 +16,28 @@ export interface DashboardData {
   }[];
 }
 
+export interface TrafficTrendResponse {
+  configured: boolean;
+  reason?: "no_ga4" | "no_credentials";
+  brands: {
+    brand_id: string;
+    brand_name: string;
+    data: { date: string; sessions: number }[];
+  }[];
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  wp_url: string;
+  markets: string[];
+  is_corporate: boolean;
+  phone?: string;
+  ga4_property_id?: string;
+  gsc_site_url?: string;
+  logo_url?: string;
+}
+
 export interface ContentDraft {
   id: number;
   brand_id: string;
@@ -23,7 +45,15 @@ export interface ContentDraft {
   title: string;
   target_query: string;
   status: string;
-  validation_result?: { valid: boolean; reason: string };
+  priority?: number | null;
+  validation_result?: {
+    valid: boolean;
+    reason: string;
+    word_count?: number;
+    h2_question_ratio?: number;
+    h2_questions?: number;
+    h2_total?: number;
+  };
   created_at: string;
 }
 

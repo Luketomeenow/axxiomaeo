@@ -23,7 +23,13 @@ export function LoginPage() {
       }
       await signIn(email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const message =
+        err instanceof Error
+          ? err.message === "Failed to fetch"
+            ? "Cannot reach Supabase. Check VITE_SUPABASE_URL in frontend/.env and restart the dev server."
+            : err.message
+          : "Login failed";
+      setError(message);
     } finally {
       setSubmitting(false);
     }

@@ -1,4 +1,5 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { NotificationBell } from "./NotificationBell";
 
 const navItems = [
@@ -9,11 +10,27 @@ const navItems = [
   { path: "/citations", label: "Citations" },
   { path: "/schema/health", label: "Schema Health" },
   { path: "/reports", label: "Reports" },
+  { path: "/settings/brands", label: "Brand Settings" },
   { path: "/notifications", label: "Notifications" },
 ];
 
 export function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
+
+  const pageTitle =
+    navItems.find(
+      (n) =>
+        location.pathname === n.path ||
+        (n.path !== "/" && location.pathname.startsWith(n.path))
+    )?.label || "Dashboard";
 
   return (
     <div className="min-h-screen flex">
@@ -40,15 +57,28 @@ export function Layout() {
         </nav>
       </aside>
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b border-black/8 px-6 py-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-navy">
-            {navItems.find(
-              (n) =>
-                location.pathname === n.path ||
-                (n.path !== "/" && location.pathname.startsWith(n.path))
-            )?.label || "Dashboard"}
-          </h2>
-          <NotificationBell />
+        {!supabaseConfigured && (
+          <div className="bg-orange/10 border-b border-orange/20 px-6 py-2 text-xs text-orange">
+            Dev mode: Supabase not configured — authentication is bypassed.
+          </div>
+        )}
+        <header className="bg-white border-b border-black/8 px-6 py-4 flex items-center justify-between gap-4">
+          <h2 className="font-display text-lg font-bold text-navy">{pageTitle}</h2>
+          <div className="flex items-center gap-4">
+            {user?.email && (
+              <span className="text-xs text-black/50 hidden sm:block">{user.email}</span>
+            )}
+            <NotificationBell />
+            {supabaseConfigured && (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="text-xs text-navy hover:text-orange font-medium"
+              >
+                Sign Out
+              </button>
+            )}
+          </div>
         </header>
         <main className="flex-1 p-6 overflow-auto">
           <Outlet />

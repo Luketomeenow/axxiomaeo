@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { SchemaPreview } from "../components/SchemaPreview";
 import { apiFetch } from "../lib/api";
 import type { SchemaDeployment } from "../types";
 
@@ -38,6 +39,7 @@ export function SchemaReviewPage() {
 
   const loadDetail = async (dep: SchemaDeployment) => {
     setSelected(dep);
+    setDetail(null);
     const d = await apiFetch<{ schema_json: string }>(`/api/schema/deployments/${dep.id}`);
     setDetail(d);
   };
@@ -90,17 +92,12 @@ export function SchemaReviewPage() {
         </div>
 
         {selected && (
-          <div className="bg-white rounded border border-black/8 p-4 space-y-4">
-            <h3 className="font-medium text-navy">{selected.title}</h3>
-            <pre className="text-xs bg-gray-50 p-4 rounded overflow-auto max-h-80">
-              {detail?.schema_json
-                ? JSON.stringify(JSON.parse(detail.schema_json), null, 2)
-                : "Loading…"}
-            </pre>
+          <div className="space-y-4">
+            <SchemaPreview schemaJson={detail?.schema_json} />
             <div className="flex gap-2">
               <button
                 onClick={() => approve.mutate(selected.id)}
-                disabled={approve.isPending}
+                disabled={approve.isPending || !detail}
                 className="px-4 py-2 bg-navy text-white rounded text-sm"
               >
                 Approve & Deploy

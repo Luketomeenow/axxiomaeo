@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ContentPreview } from "../components/ContentPreview";
+import { SchemaPreview } from "../components/SchemaPreview";
 import { apiFetch } from "../lib/api";
 import type { ContentDraftDetail } from "../types";
 
@@ -49,17 +51,13 @@ export function ContentReviewDetailPage() {
   if (isLoading) return <p className="text-black/50">Loading…</p>;
   if (!draft) return <p className="text-orange">Draft not found</p>;
 
-  const wordCount = draft.html_content
-    ? draft.html_content.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length
-    : 0;
-
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-display text-xl font-bold text-navy">{draft.title}</h2>
           <p className="text-sm text-black/50 mt-1">
-            {draft.brand_id} · {draft.content_type} · {wordCount} words
+            {draft.brand_id} · {draft.content_type}
           </p>
           {draft.validation_result && (
             <p
@@ -116,32 +114,9 @@ export function ContentReviewDetailPage() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded border border-black/8 overflow-hidden">
-          <div className="px-4 py-3 border-b border-black/8 bg-cream">
-            <h3 className="text-sm font-medium text-navy">Content Preview</h3>
-          </div>
-          <div
-            className="p-6 prose prose-sm max-w-none overflow-auto max-h-[600px]"
-            dangerouslySetInnerHTML={{ __html: draft.html_content || "<p>No content</p>" }}
-          />
-        </div>
-        <div className="bg-white rounded border border-black/8 overflow-hidden">
-          <div className="px-4 py-3 border-b border-black/8 bg-cream">
-            <h3 className="text-sm font-medium text-navy">Schema JSON-LD</h3>
-          </div>
-          <pre className="p-4 text-xs overflow-auto max-h-[600px] bg-gray-50 text-navy">
-            {draft.schema_json
-              ? (() => {
-                  try {
-                    return JSON.stringify(JSON.parse(draft.schema_json), null, 2);
-                  } catch {
-                    return draft.schema_json;
-                  }
-                })()
-              : "No schema generated"}
-          </pre>
-        </div>
+      <div className="grid lg:grid-cols-2 gap-6 min-h-[500px]">
+        <ContentPreview html={draft.html_content} validationResult={draft.validation_result} />
+        <SchemaPreview schemaJson={draft.schema_json} />
       </div>
     </div>
   );

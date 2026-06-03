@@ -1,21 +1,14 @@
 import logging
-from dataclasses import dataclass
 
 import httpx
 
 from app.config import get_settings
+from app.models.brand import Brand
+from app.schemas.citation import CitationResult
+from app.services.geo_aeo_tracker_service import GeoAeoTrackerService
 from app.utils.helpers import retry_with_backoff
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class CitationResult:
-    query: str
-    is_cited: bool
-    competitor_cited: str | None = None
-    citation_url: str | None = None
-    platform: str = "google_ai"
 
 
 class PeecService:
@@ -52,33 +45,49 @@ class PeecService:
             )
         return results
 
-    async def get_trend_data(self, brand_name: str, days: int = 30) -> dict:
-        if not self.api_key:
-            return {"trend": [], "citation_share": 0}
-
-        async def do_request():
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.get(
-                    f"{self.BASE_URL}/citations/trends",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    params={"brand_name": brand_name, "days": days},
-                )
-                response.raise_for_status()
-                return response.json()
-
-        return await retry_with_backoff(do_request)
-
 
 class CitationService:
     def __init__(self):
+        settings = get_settings()
+        self.provider = settings.citation_provider.lower()
         self.peec = PeecService()
+        self.geo_aeo = GeoAeoTrackerService()
 
-    async def run_audit(self, brand_name: str, queries: list[str]) -> tuple[list[CitationResult], str]:
+    async def provider_available(self) -> bool:
+        provider = self.provider
+        if provider == "auto":
+            if self.geo_aeo._configured():
+                return await self.geo_aeo.health_check()
+            return bool(get_settings().peec_api_key)
+        if provider == "geo_aeo":
+            return self.geo_aeo._configured() and await self.geo_aeo.health_check()
+        if provider == "peec":
+            return bool(get_settings().peec_api_key)
+        return provider == "none"
+
+    async def run_audit(self, brand: Brand, queries: list[str]) -> tuple[list[CitationResult], str]:
+        provider = self.provider
+        if provider == "auto":
+            if self.geo_aeo._configured():
+                provider = "geo_aeo"
+            elif get_settings().peec_api_key:
+                provider = "peec"
+            else:
+                provider = "none"
+
         try:
-            results = await self.peec.get_citation_share(brand_name, queries)
-            return results, "completed"
+            if provider == "geo_aeo":
+                results = await self.geo_aeo.get_citation_share(brand, queries)
+                return results, "completed"
+            if provider == "peec":
+                results = await self.peec.get_citation_share(brand.name, queries)
+                return results, "completed"
+            if provider == "none":
+                return [], "manual_required"
+            logger.error("Unknown CITATION_PROVIDER: %s", provider)
+            return [], "manual_required"
         except Exception as e:
-            logger.error("Peec.ai unavailable: %s", e)
+            logger.error("Citation audit failed (%s): %s", provider, e)
             return [], "manual_required"
 
     def build_gap_list(self, results: list[CitationResult]) -> list[dict]:

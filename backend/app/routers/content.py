@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -57,6 +59,16 @@ async def list_drafts(
         query = query.where(ContentDraft.status == status)
     result = await db.execute(query)
     drafts = result.scalars().all()
+
+    queue_ids = [d.queue_id for d in drafts if d.queue_id]
+    queue_priorities: dict[int, int] = {}
+    if queue_ids:
+        queue_result = await db.execute(
+            select(ContentQueue).where(ContentQueue.id.in_(queue_ids))
+        )
+        for item in queue_result.scalars().all():
+            queue_priorities[item.id] = item.priority
+
     return [
         {
             "id": d.id,
@@ -66,6 +78,7 @@ async def list_drafts(
             "target_query": d.target_query,
             "status": d.status,
             "validation_result": d.validation_result,
+            "priority": queue_priorities.get(d.queue_id) if d.queue_id else None,
             "created_at": d.created_at.isoformat() if d.created_at else None,
         }
         for d in drafts
@@ -97,13 +110,45 @@ async def get_draft(
     }
 
 
-async def _generate_task(brand_id: str, content_type: str, target_query: str, title: str, city: str, state: str):
+async def _generate_task(
+    brand_id: str,
+    content_type: str,
+    target_query: str,
+    title: str,
+    city: str,
+    state: str,
+    queue_id: int | None = None,
+):
     from app.database import AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
         service = ContentGenerationService(session)
-        await service.generate_draft(brand_id, content_type, target_query, title, city=city, state=state)
+        await service.generate_draft(
+            brand_id,
+            content_type,
+            target_query,
+            title,
+            queue_id=queue_id,
+            city=city,
+            state=state,
+        )
         await session.commit()
+
+
+def _parse_local_market(item: ContentQueue) -> tuple[str, str]:
+    """Extract city/state from local_page queue titles or queries."""
+    if item.content_type != "local_page":
+        return "", ""
+    for text in (item.title or "", item.target_query or ""):
+        match = re.search(r"\bin\s+(.+?)\s+([A-Z]{2})\b", text, re.IGNORECASE)
+        if match:
+            return match.group(1).strip(), match.group(2).upper()
+        tail = re.search(r"(\w+(?:\s+\w+)*?)\s+([A-Z]{2})$", text.strip(), re.IGNORECASE)
+        if tail:
+            city_part = tail.group(1).strip()
+            city = city_part.split()[-1] if " " in city_part else city_part
+            return city, tail.group(2).upper()
+    return "", ""
 
 
 @router.post("/generate")
@@ -123,6 +168,48 @@ async def generate_content(
         req.state,
     )
     return {"status": "generating", "message": "Content generation started"}
+
+
+@router.post("/queue/{queue_id}/generate")
+async def generate_from_queue(
+    queue_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    item = await db.get(ContentQueue, queue_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Queue item not found")
+    if item.status not in ("pending", "needs_review"):
+        raise HTTPException(status_code=400, detail=f"Item is already {item.status}")
+
+    existing = await db.execute(
+        select(ContentDraft).where(
+            ContentDraft.queue_id == queue_id,
+            ContentDraft.status.in_(("generating", "pending_review", "needs_review")),
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=409,
+            detail="A draft for this queue item already exists — check Content Review",
+        )
+
+    city, state = _parse_local_market(item)
+    item.status = "in_progress"
+    await db.flush()
+
+    background_tasks.add_task(
+        _generate_task,
+        item.brand_id,
+        item.content_type or "faq_hub",
+        item.target_query or "",
+        item.title or "",
+        city,
+        state,
+        item.id,
+    )
+    return {"status": "generating", "queue_id": queue_id, "message": "Content generation started"}
 
 
 @router.post("/drafts/{draft_id}/approve")

@@ -39,7 +39,18 @@ async def trigger_citation_audit(
     background_tasks: BackgroundTasks,
     _user: dict = Depends(get_current_user),
 ):
+    from app.services.citation_service import CitationService
     from app.workers.citation_worker import run_citation_audit
+
+    service = CitationService()
+    if not await service.provider_available():
+        return {
+            "status": "unavailable",
+            "message": (
+                "Citation provider unavailable — start GEO/AEO Tracker on :3000 "
+                "with Bright Data keys, or set CITATION_PROVIDER=none in backend/.env"
+            ),
+        }
 
     background_tasks.add_task(run_citation_audit)
     return {"status": "audit_started"}

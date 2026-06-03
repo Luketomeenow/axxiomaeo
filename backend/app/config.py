@@ -1,4 +1,7 @@
 from functools import lru_cache
+from urllib.parse import quote_plus
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,8 +10,18 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""
     database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/axxiom_aeo"
+    db_schema: str = "aeo"
+    supabase_project_ref: str = "cdlssoeqqfrgckpxewhn"
+    supabase_db_region: str = ""
+    db_password: str = ""
 
     peec_api_key: str = ""
+
+    citation_provider: str = "geo_aeo"  # geo_aeo | peec | none | auto
+    geo_aeo_tracker_url: str = "http://localhost:3000"
+    geo_aeo_providers: str = "perplexity,google_ai"
+    geo_aeo_concurrency: int = 2
+
     google_service_account_json: str = ""
     bing_api_key: str = ""
 
@@ -42,6 +55,36 @@ class Settings(BaseSettings):
     wp_username_ironhawk: str = "admin"
 
     claude_model: str = "claude-sonnet-4-20250514"
+
+    @field_validator("supabase_jwt_secret", mode="before")
+    @classmethod
+    def strip_jwt_secret(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip().strip('"').strip("'")
+        return value
+
+    @field_validator("database_url", "db_password", mode="before")
+    @classmethod
+    def strip_quotes(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip().strip('"').strip("'")
+        return value
+
+    def _pooler_host(self) -> str:
+        """Region may be ``ap-northeast-1`` or full pooler prefix ``aws-1-ap-northeast-1``."""
+        region = self.supabase_db_region.strip()
+        if region.startswith("aws-"):
+            return f"{region}.pooler.supabase.com"
+        return f"aws-0-{region}.pooler.supabase.com"
+
+    def resolved_database_url(self) -> str:
+        """Build pooler URL from DB_PASSWORD (avoids @/# breaking DATABASE_URL)."""
+        if self.db_password and self.supabase_db_region:
+            encoded = quote_plus(self.db_password)
+            ref = self.supabase_project_ref
+            host = self._pooler_host()
+            return f"postgresql://postgres.{ref}:{encoded}@{host}:5432/postgres"
+        return self.database_url
 
     @property
     def cors_origin_list(self) -> list[str]:

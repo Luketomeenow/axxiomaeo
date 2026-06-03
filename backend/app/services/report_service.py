@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import Integer, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -135,6 +135,38 @@ class ReportService:
             for r in result.scalars().all()
             if r.competitor_cited
         ]
+
+    async def get_traffic_trend(self, days: int = 90) -> dict:
+        from app.config import get_settings
+
+        settings = get_settings()
+        has_credentials = bool(settings.google_service_account_json)
+
+        brands_result = await self.db.execute(select(Brand))
+        brands = brands_result.scalars().all()
+        configured_brands = [b for b in brands if b.ga4_property_id]
+
+        if not has_credentials and not configured_brands:
+            return {"configured": False, "reason": "no_ga4", "brands": []}
+        if not has_credentials:
+            return {"configured": False, "reason": "no_credentials", "brands": []}
+        if not configured_brands:
+            return {"configured": False, "reason": "no_ga4", "brands": []}
+
+        brand_series = []
+        for brand in configured_brands:
+            data = await self.ga4.get_ai_referred_sessions_timeseries(
+                brand.ga4_property_id, days=days
+            )
+            brand_series.append(
+                {
+                    "brand_id": brand.id,
+                    "brand_name": brand.name,
+                    "data": data,
+                }
+            )
+
+        return {"configured": True, "brands": brand_series}
 
     async def generate_monthly_report(self) -> MonthlyReport:
         now = datetime.utcnow()

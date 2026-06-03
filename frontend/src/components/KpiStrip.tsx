@@ -40,6 +40,7 @@ export function KpiStrip({ data }: Props) {
         <KpiCard
           label="AI Citation Share"
           value={`${data.citation_share}%`}
+          sub={`Previous month: ${data.citation_share_prev}%`}
           trend={data.citation_trend}
         />
         <KpiCard label="AI-Referred Sessions" value={data.ai_referred_sessions} sub="Month to date" />

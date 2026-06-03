@@ -1,4 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { BrandLocationPicker } from "../components/BrandLocationPicker";
+import type { BrandLocation } from "../data/brandLocations";
 import { apiFetch } from "../lib/api";
 import type { ContentQueueItem } from "../types";
 
@@ -8,16 +12,122 @@ const PRIORITY_LABEL: Record<number, string> = {
   5: "MEDIUM",
 };
 
+const CONTENT_TYPES = [
+  { value: "faq_hub", label: "FAQ Hub" },
+  { value: "local_page", label: "Local Page" },
+  { value: "vertical_page", label: "Vertical Page" },
+  { value: "comparison", label: "Comparison" },
+  { value: "data_stats", label: "Data & Statistics" },
+];
+
 export function ContentQueuePage() {
+  const queryClient = useQueryClient();
+  const [showModal, setShowModal] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
+  const [form, setForm] = useState({
+    location_id: "",
+    brand_id: "",
+    content_type: "faq_hub",
+    target_query: "",
+    title: "",
+    city: "",
+    state: "",
+  });
+
+  const selectLocation = (location: BrandLocation) => {
+    setForm((prev) => ({
+      ...prev,
+      location_id: location.id,
+      brand_id: location.brandId,
+      city: location.city,
+      state: location.state,
+    }));
+  };
+
+  const openModal = () => {
+    setShowModal(true);
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ["content-queue"],
     queryFn: () => apiFetch<ContentQueueItem[]>("/api/content/queue"),
     refetchInterval: 60000,
   });
 
+  const { data: brandsById } = useQuery({
+    queryKey: ["brands"],
+    queryFn: () => apiFetch<{ id: string; name: string }[]>("/api/brands"),
+    select: (brands) => Object.fromEntries(brands.map((b) => [b.id, b.name])),
+  });
+
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+
+  const showSuccess = (message: string) => {
+    setSuccessMsg(message);
+    queryClient.invalidateQueries({ queryKey: ["content-queue"] });
+    queryClient.invalidateQueries({ queryKey: ["drafts"] });
+    setTimeout(() => setSuccessMsg(""), 8000);
+  };
+
+  const generate = useMutation({
+    mutationFn: (payload: {
+      brand_id: string;
+      content_type: string;
+      target_query: string;
+      title: string;
+      city: string;
+      state: string;
+    }) =>
+      apiFetch("/api/content/generate", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      setShowModal(false);
+      showSuccess("Generation started — check Content Review in a few minutes.");
+    },
+  });
+
+  const generateFromQueue = useMutation({
+    mutationFn: (queueId: number) =>
+      apiFetch(`/api/content/queue/${queueId}/generate`, { method: "POST" }),
+    onMutate: (queueId) => setGeneratingId(queueId),
+    onSettled: () => setGeneratingId(null),
+    onSuccess: () => {
+      showSuccess("Queue item generation started — check Content Review in a few minutes.");
+    },
+  });
+
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-xl font-bold text-navy">Content Queue</h2>
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="font-display text-xl font-bold text-navy">Content Queue</h2>
+        <button
+          type="button"
+          onClick={openModal}
+          className="px-4 py-2 bg-orange text-white rounded text-sm hover:bg-orange/90"
+        >
+          Generate Content
+        </button>
+      </div>
+
+      {successMsg && (
+        <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded">
+          {successMsg}{" "}
+          <Link to="/content/review" className="underline font-medium">
+            Go to Content Review
+          </Link>
+        </div>
+      )}
+
+      {generateFromQueue.isError && (
+        <div className="bg-orange/10 border border-orange/30 text-orange text-sm px-4 py-3 rounded">
+          {(generateFromQueue.error as Error).message === "Not Found"
+            ? "Generate endpoint unavailable — restart the backend server (uvicorn) and try again."
+            : (generateFromQueue.error as Error).message}
+        </div>
+      )}
+
       <div className="bg-white rounded border border-black/8 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -28,18 +138,19 @@ export function ContentQueuePage() {
               <th className="px-4 py-3">Priority</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Scheduled</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-black/40">
+                <td colSpan={7} className="px-4 py-8 text-center text-black/40">
                   Loading…
                 </td>
               </tr>
             ) : !data?.length ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-black/40">
+                <td colSpan={7} className="px-4 py-8 text-center text-black/40">
                   Queue is empty
                 </td>
               </tr>
@@ -47,7 +158,7 @@ export function ContentQueuePage() {
               data.map((item) => (
                 <tr key={item.id} className="border-t border-black/5">
                   <td className="px-4 py-3 font-medium">{item.title}</td>
-                  <td className="px-4 py-3 text-black/60">{item.brand_id}</td>
+                  <td className="px-4 py-3 text-black/60">{brandsById?.[item.brand_id] ?? item.brand_id}</td>
                   <td className="px-4 py-3 text-black/60">{item.content_type}</td>
                   <td className="px-4 py-3">
                     <span
@@ -64,12 +175,130 @@ export function ContentQueuePage() {
                   </td>
                   <td className="px-4 py-3">{item.status}</td>
                   <td className="px-4 py-3 text-black/60">{item.scheduled_for || "—"}</td>
+                  <td className="px-4 py-3 text-right">
+                    {item.status === "pending" ? (
+                      <button
+                        type="button"
+                        onClick={() => generateFromQueue.mutate(item.id)}
+                        disabled={generatingId === item.id || generateFromQueue.isPending}
+                        className="px-3 py-1.5 bg-navy text-white rounded text-xs font-medium hover:bg-navy/90 disabled:opacity-50"
+                      >
+                        {generatingId === item.id ? "Starting…" : "Generate"}
+                      </button>
+                    ) : item.status === "in_progress" ? (
+                      <span className="text-xs text-black/40">Generating…</span>
+                    ) : item.status === "ready" || item.status === "needs_review" ? (
+                      <Link
+                        to="/content/review"
+                        className="text-xs text-navy font-medium hover:text-orange"
+                      >
+                        Review →
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-black/30">—</span>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 space-y-4">
+            <h3 className="font-display text-lg font-bold text-navy">Generate Content</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-black/60 mb-2">Brand</label>
+                <BrandLocationPicker selectedId={form.location_id} onSelect={selectLocation} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-black/60 mb-1">Content type</label>
+                <select
+                  value={form.content_type}
+                  onChange={(e) => setForm({ ...form, content_type: e.target.value })}
+                  className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                >
+                  {CONTENT_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-black/60 mb-1">Target query</label>
+                <input
+                  type="text"
+                  value={form.target_query}
+                  onChange={(e) => setForm({ ...form, target_query: e.target.value })}
+                  className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                  placeholder="e.g. how often should elevators be inspected"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-black/60 mb-1">Title (optional)</label>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                />
+              </div>
+              {form.content_type === "local_page" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-black/60 mb-1">City</label>
+                    <input
+                      type="text"
+                      value={form.city}
+                      onChange={(e) => setForm({ ...form, city: e.target.value })}
+                      className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                      placeholder="Houston"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-black/60 mb-1">State</label>
+                    <input
+                      type="text"
+                      value={form.state}
+                      onChange={(e) => setForm({ ...form, state: e.target.value })}
+                      className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                      placeholder="TX"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            {generate.isError && (
+              <p className="text-sm text-orange">{(generate.error as Error).message}</p>
+            )}
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 text-sm text-black/50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const { location_id: _locationId, ...payload } = form;
+                  generate.mutate(payload);
+                }}
+                disabled={!form.location_id || !form.target_query || generate.isPending}
+                className="px-4 py-2 bg-navy text-white rounded text-sm disabled:opacity-50"
+              >
+                {generate.isPending ? "Starting…" : "Generate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

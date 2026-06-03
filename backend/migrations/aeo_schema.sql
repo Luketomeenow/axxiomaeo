@@ -1,21 +1,21 @@
--- Axxiom AEO Platform — Legacy public schema (local Postgres only)
 -- =============================================================================
--- DO NOT RUN THIS ON SUPABASE if you have other apps on the same project.
--- Supabase likely already has public.brands (UUID) from another app.
--- Use aeo_schema.sql instead — it creates isolated tables under schema "aeo".
+-- Axxiom AEO Platform — Supabase schema (canonical — RUN THIS ONE)
+-- Schema: aeo
+-- Run in Supabase → SQL Editor → New query → paste all → Run
+--
+-- Do NOT run init.sql on Supabase (it uses public schema and will conflict).
+-- Safe to re-run: uses IF NOT EXISTS. For a clean reset, uncomment the DROP
+-- block below (deletes all AEO data in schema aeo).
 -- =============================================================================
 
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'brands'
-    ) THEN
-        RAISE EXCEPTION 'public.brands already exists. Skip init.sql — run migrations/aeo_schema.sql in Supabase SQL Editor instead.';
-    END IF;
-END $$;
+-- Uncomment for clean reinstall (destructive):
+-- DROP SCHEMA IF EXISTS aeo CASCADE;
 
-CREATE TABLE IF NOT EXISTS brands (
+CREATE SCHEMA IF NOT EXISTS aeo;
+
+COMMENT ON SCHEMA aeo IS 'Axxiom Answer Engine Optimization automation platform';
+
+CREATE TABLE IF NOT EXISTS aeo.brands (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
     wp_url VARCHAR(500) NOT NULL,
@@ -29,9 +29,9 @@ CREATE TABLE IF NOT EXISTS brands (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS content_pieces (
+CREATE TABLE IF NOT EXISTS aeo.content_pieces (
     id SERIAL PRIMARY KEY,
-    brand_id VARCHAR(50) REFERENCES brands(id),
+    brand_id VARCHAR(50) REFERENCES aeo.brands(id),
     content_type VARCHAR(50),
     title VARCHAR(500),
     target_query TEXT,
@@ -46,9 +46,9 @@ CREATE TABLE IF NOT EXISTS content_pieces (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS content_drafts (
+CREATE TABLE IF NOT EXISTS aeo.content_drafts (
     id SERIAL PRIMARY KEY,
-    brand_id VARCHAR(50) REFERENCES brands(id),
+    brand_id VARCHAR(50) REFERENCES aeo.brands(id),
     content_type VARCHAR(50),
     target_query TEXT,
     title VARCHAR(500),
@@ -65,9 +65,9 @@ CREATE TABLE IF NOT EXISTS content_drafts (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS citation_records (
+CREATE TABLE IF NOT EXISTS aeo.citation_records (
     id SERIAL PRIMARY KEY,
-    brand_id VARCHAR(50) REFERENCES brands(id),
+    brand_id VARCHAR(50) REFERENCES aeo.brands(id),
     query TEXT NOT NULL,
     query_category VARCHAR(50),
     platform VARCHAR(50),
@@ -77,9 +77,9 @@ CREATE TABLE IF NOT EXISTS citation_records (
     checked_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS schema_jobs (
+CREATE TABLE IF NOT EXISTS aeo.schema_jobs (
     id SERIAL PRIMARY KEY,
-    brand_id VARCHAR(50) REFERENCES brands(id),
+    brand_id VARCHAR(50) REFERENCES aeo.brands(id),
     wp_post_id INTEGER,
     wp_post_url VARCHAR(500),
     schema_types JSONB DEFAULT '[]',
@@ -90,9 +90,9 @@ CREATE TABLE IF NOT EXISTS schema_jobs (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS schema_deployments (
+CREATE TABLE IF NOT EXISTS aeo.schema_deployments (
     id SERIAL PRIMARY KEY,
-    brand_id VARCHAR(50) REFERENCES brands(id),
+    brand_id VARCHAR(50) REFERENCES aeo.brands(id),
     wp_post_id INTEGER,
     wp_post_url VARCHAR(500),
     schema_type VARCHAR(50),
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS schema_deployments (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS monthly_reports (
+CREATE TABLE IF NOT EXISTS aeo.monthly_reports (
     id SERIAL PRIMARY KEY,
     report_month DATE,
     overall_citation_share DECIMAL(5,2),
@@ -119,9 +119,9 @@ CREATE TABLE IF NOT EXISTS monthly_reports (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS content_queue (
+CREATE TABLE IF NOT EXISTS aeo.content_queue (
     id SERIAL PRIMARY KEY,
-    brand_id VARCHAR(50) REFERENCES brands(id),
+    brand_id VARCHAR(50) REFERENCES aeo.brands(id),
     content_type VARCHAR(50),
     target_query TEXT,
     title VARCHAR(500),
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS content_queue (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS approval_events (
+CREATE TABLE IF NOT EXISTS aeo.approval_events (
     id SERIAL PRIMARY KEY,
     entity_type VARCHAR(50) NOT NULL,
     entity_id INTEGER NOT NULL,
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS approval_events (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE IF NOT EXISTS aeo.notifications (
     id SERIAL PRIMARY KEY,
     type VARCHAR(50) NOT NULL,
     title VARCHAR(200) NOT NULL,
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS worker_errors (
+CREATE TABLE IF NOT EXISTS aeo.worker_errors (
     id SERIAL PRIMARY KEY,
     worker_name VARCHAR(100) NOT NULL,
     error_message TEXT,
@@ -160,8 +160,8 @@ CREATE TABLE IF NOT EXISTS worker_errors (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_content_drafts_status ON content_drafts(status);
-CREATE INDEX IF NOT EXISTS idx_content_queue_status ON content_queue(status);
-CREATE INDEX IF NOT EXISTS idx_citation_records_brand ON citation_records(brand_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read_at);
-CREATE INDEX IF NOT EXISTS idx_schema_deployments_status ON schema_deployments(status);
+CREATE INDEX IF NOT EXISTS idx_content_drafts_status ON aeo.content_drafts(status);
+CREATE INDEX IF NOT EXISTS idx_content_queue_status ON aeo.content_queue(status);
+CREATE INDEX IF NOT EXISTS idx_citation_records_brand ON aeo.citation_records(brand_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON aeo.notifications(read_at);
+CREATE INDEX IF NOT EXISTS idx_schema_deployments_status ON aeo.schema_deployments(status);

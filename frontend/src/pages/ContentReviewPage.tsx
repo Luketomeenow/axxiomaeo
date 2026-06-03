@@ -1,23 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { ApprovalInbox } from "../components/ApprovalInbox";
+import { QueryStatus } from "../components/QueryStatus";
 import { apiFetch } from "../lib/api";
 import type { ContentDraft } from "../types";
 
 export function ContentReviewPage() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["drafts", "review"],
-    queryFn: () =>
-      apiFetch<ContentDraft[]>("/api/content/drafts?status=pending_review"),
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["drafts"],
+    queryFn: () => apiFetch<ContentDraft[]>("/api/content/drafts"),
     refetchInterval: 30000,
+    retry: 1,
   });
 
-  const needsReview = useQuery({
-    queryKey: ["drafts", "needs_review"],
-    queryFn: () =>
-      apiFetch<ContentDraft[]>("/api/content/drafts?status=needs_review"),
-  });
-
-  const allDrafts = [...(data ?? []), ...(needsReview.data ?? [])];
+  const reviewable = (data ?? []).filter((d) =>
+    ["pending_review", "needs_review"].includes(d.status)
+  );
 
   return (
     <div className="space-y-4">
@@ -29,14 +26,17 @@ export function ContentReviewPage() {
           </p>
         </div>
         <span className="text-sm bg-orange/10 text-orange px-3 py-1 rounded-full font-medium">
-          {allDrafts.length} pending
+          {reviewable.length} pending
         </span>
       </div>
-      {isLoading ? (
-        <p className="text-black/50">Loading drafts…</p>
-      ) : (
-        <ApprovalInbox drafts={allDrafts} />
-      )}
+      <QueryStatus
+        isLoading={isLoading}
+        isError={isError}
+        error={error as Error | null}
+        loadingText="Loading drafts…"
+      >
+        <ApprovalInbox drafts={reviewable} />
+      </QueryStatus>
     </div>
   );
 }

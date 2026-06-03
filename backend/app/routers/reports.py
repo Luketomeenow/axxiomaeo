@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,4 +49,35 @@ async def get_dashboard(
         "citation_by_brand": by_brand,
         "citation_by_category": by_category,
         "gap_queries": gaps[:20],
+    }
+
+
+@router.get("/traffic-trend")
+async def get_traffic_trend(
+    days: int = Query(90, ge=7, le=365),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    service = ReportService(db)
+    return await service.get_traffic_trend(days=days)
+
+
+@router.post("/generate")
+async def generate_report(
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Generate a monthly report snapshot from current dashboard KPIs."""
+    service = ReportService(db)
+    report = await service.generate_monthly_report()
+    return {
+        "id": report.id,
+        "report_month": report.report_month.isoformat() if report.report_month else None,
+        "overall_citation_share": float(report.overall_citation_share or 0),
+        "ai_referred_sessions": report.ai_referred_sessions,
+        "content_pieces_published": report.content_pieces_published,
+        "schema_coverage_pct": float(report.schema_coverage_pct or 0),
+        "gap_queries": report.gap_queries,
+        "brand_breakdown": report.brand_breakdown,
+        "created_at": report.created_at.isoformat() if report.created_at else None,
     }

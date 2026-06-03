@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { BrandSettingsPage } from "./pages/BrandSettingsPage";
 import { CitationsPage } from "./pages/CitationsPage";
 import { ContentQueuePage } from "./pages/ContentQueuePage";
 import { ContentReviewDetailPage } from "./pages/ContentReviewDetailPage";
@@ -56,6 +57,8 @@ function AppRoutes() {
         <Route path="/citations" element={<CitationsPage />} />
         <Route path="/schema/health" element={<SchemaHealthPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/settings/brands" element={<BrandSettingsPage />} />
+        <Route path="/settings/brands/:brandId" element={<BrandSettingsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

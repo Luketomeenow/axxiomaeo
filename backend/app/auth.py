@@ -1,4 +1,3 @@
-import httpx
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -8,6 +7,8 @@ from app.config import get_settings
 
 security = HTTPBearer(auto_error=False)
 _jwk_client: PyJWKClient | None = None
+
+JWKS_ALGORITHMS = ("ES256", "RS256")
 
 
 def _get_jwk_client() -> PyJWKClient | None:
@@ -21,35 +22,63 @@ def _get_jwk_client() -> PyJWKClient | None:
     return _jwk_client
 
 
+def _decode_with_jwks(token: str) -> dict:
+    client = _get_jwk_client()
+    if not client:
+        raise jwt.PyJWTError("JWKS not configured")
+
+    signing_key = client.get_signing_key_from_jwt(token)
+    header = jwt.get_unverified_header(token)
+    alg = header.get("alg")
+    if alg not in JWKS_ALGORITHMS:
+        raise jwt.PyJWTError(f"Unsupported JWKS algorithm: {alg}")
+
+    return jwt.decode(
+        token,
+        signing_key.key,
+        algorithms=[alg],
+        audience="authenticated",
+    )
+
+
+def _decode_with_secret(token: str, secret: str) -> dict:
+    return jwt.decode(
+        token,
+        secret,
+        algorithms=["HS256"],
+        audience="authenticated",
+    )
+
+
 def verify_token(token: str) -> dict:
     settings = get_settings()
     if settings.environment == "development" and not settings.supabase_jwt_secret and not settings.supabase_url:
         return {"sub": "dev-user", "email": "dev@localhost"}
 
-    try:
-        if settings.supabase_jwt_secret:
-            payload = jwt.decode(
-                token,
-                settings.supabase_jwt_secret,
-                algorithms=["HS256"],
-                audience="authenticated",
-            )
-            return payload
+    header_alg = jwt.get_unverified_header(token).get("alg")
+    errors: list[str] = []
 
-        client = _get_jwk_client()
-        if client:
-            signing_key = client.get_signing_key_from_jwt(token)
-            payload = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["RS256", "ES256"],
-                audience="authenticated",
-            )
-            return payload
-    except jwt.PyJWTError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {e}") from e
+    # Supabase user access tokens are ES256/RS256 — verify via JWKS first.
+    if header_alg in JWKS_ALGORITHMS and settings.supabase_url:
+        try:
+            return _decode_with_jwks(token)
+        except jwt.PyJWTError as e:
+            errors.append(str(e))
 
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Auth not configured")
+    if settings.supabase_jwt_secret:
+        try:
+            return _decode_with_secret(token, settings.supabase_jwt_secret)
+        except jwt.PyJWTError as e:
+            errors.append(str(e))
+
+    if header_alg == "HS256" and not settings.supabase_jwt_secret:
+        errors.append("SUPABASE_JWT_SECRET not configured for HS256 token")
+
+    if header_alg in JWKS_ALGORITHMS and not settings.supabase_url:
+        errors.append("SUPABASE_URL not configured for JWKS verification")
+
+    detail = errors[0] if errors else "Auth not configured"
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {detail}")
 
 
 async def get_current_user(

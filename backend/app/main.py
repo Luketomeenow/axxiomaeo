@@ -1,8 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
 from app.database import init_db
@@ -14,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
     try:
+        await init_db()
         from app.utils.seed import seed_brands_and_queue
 
         await seed_brands_and_queue()
     except Exception as e:
-        logger.warning("Seed skipped or partial: %s", e)
+        logger.error("Database init/seed failed: %s", e)
     start_scheduler()
     yield
     stop_scheduler()
@@ -41,6 +43,13 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.exception_handler(SQLAlchemyError)
+    async def database_error_handler(_request: Request, _exc: SQLAlchemyError):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Database unavailable — check DATABASE_URL or DB_PASSWORD in backend/.env"},
+        )
 
     app.include_router(health.router)
     app.include_router(brands.router)

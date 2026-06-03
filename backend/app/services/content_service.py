@@ -12,7 +12,7 @@ from app.services.claude_service import ClaudeService, validate_answer_first
 from app.services.notification_service import NotificationService
 from app.services.schema_service import build_combined_schema
 from app.services.wordpress_service import WordPressService
-from app.utils.helpers import count_words
+from app.utils.helpers import count_words, h2_question_ratio
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,16 @@ class ContentGenerationService:
         draft.html_content = html_content
         draft.schema_json = schema_json
         draft.slug = slug
-        draft.validation_result = {"valid": is_valid, "reason": failure_reason, "schema_types": schema_types}
+        ratio, h2_questions, h2_total = h2_question_ratio(html_content)
+        draft.validation_result = {
+            "valid": is_valid,
+            "reason": failure_reason,
+            "schema_types": schema_types,
+            "word_count": count_words(html_content),
+            "h2_question_ratio": round(ratio, 2),
+            "h2_questions": h2_questions,
+            "h2_total": h2_total,
+        }
 
         if is_valid:
             draft.status = "pending_review"
@@ -109,7 +118,7 @@ class ContentGenerationService:
         if queue_id:
             queue_item = await self.db.get(ContentQueue, queue_id)
             if queue_item:
-                queue_item.status = "in_progress"
+                queue_item.status = "ready" if is_valid else "needs_review"
 
         await self.db.flush()
         return draft

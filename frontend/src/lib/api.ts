@@ -21,7 +21,16 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || `API error: ${response.status}`);
+    const detail = error.detail;
+    let message: string;
+    if (typeof detail === "string") {
+      message = detail;
+    } else if (Array.isArray(detail)) {
+      message = detail.map((item) => item?.msg ?? JSON.stringify(item)).join(", ");
+    } else {
+      message = `API error: ${response.status}`;
+    }
+    throw new Error(message);
   }
   return response.json();
 }
