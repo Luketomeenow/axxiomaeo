@@ -35,16 +35,14 @@ export function ReportsPage() {
       <div className="flex items-center justify-between gap-4 print:hidden">
         <h2 className="font-display text-xl font-bold text-navy">Monthly Report</h2>
         <div className="flex gap-2">
-          {isEmpty && (
-            <button
-              type="button"
-              onClick={() => generate.mutate()}
-              disabled={generate.isPending}
-              className="px-4 py-2 bg-orange text-white rounded text-sm hover:bg-orange/90 disabled:opacity-50"
-            >
-              {generate.isPending ? "Generating…" : "Generate Report Now"}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => generate.mutate()}
+            disabled={generate.isPending}
+            className="px-4 py-2 bg-orange text-white rounded text-sm hover:bg-orange/90 disabled:opacity-50"
+          >
+            {generate.isPending ? "Generating…" : isEmpty ? "Generate Report Now" : "Refresh snapshot"}
+          </button>
           {!isEmpty && data && !data.message && (
             <button
               type="button"

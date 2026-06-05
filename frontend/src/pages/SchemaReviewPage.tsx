@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { SchemaPreview } from "../components/SchemaPreview";
 import { apiFetch } from "../lib/api";
 import type { SchemaDeployment } from "../types";
@@ -8,11 +9,27 @@ export function SchemaReviewPage() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<SchemaDeployment | null>(null);
   const [detail, setDetail] = useState<{ schema_json: string } | null>(null);
+  const [deployMsg, setDeployMsg] = useState("");
+
+  const { data: brands } = useQuery({
+    queryKey: ["brands"],
+    queryFn: () => apiFetch<{ id: string; name: string }[]>("/api/brands"),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["schema-deployments"],
     queryFn: () => apiFetch<SchemaDeployment[]>("/api/schema/deployments?status=pending_review"),
     refetchInterval: 30000,
+  });
+
+  const deployBrand = useMutation({
+    mutationFn: (brandId: string) =>
+      apiFetch(`/api/schema/deploy/${brandId}`, { method: "POST" }),
+    onSuccess: (res: { count?: number }) => {
+      setDeployMsg(`Queued ${res.count ?? ""} schema deployments for review.`);
+      queryClient.invalidateQueries({ queryKey: ["schema-deployments"] });
+    },
+    onError: (e: Error) => setDeployMsg(e.message),
   });
 
   const approve = useMutation({
@@ -46,7 +63,43 @@ export function SchemaReviewPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-xl font-bold text-navy">Schema Approval Inbox</h2>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h2 className="font-display text-xl font-bold text-navy">Schema Approval Inbox</h2>
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            id="schema-deploy-brand"
+            className="border border-black/15 rounded px-3 py-2 text-sm"
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Queue schema for brand…
+            </option>
+            {brands?.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={deployBrand.isPending}
+            onClick={() => {
+              const el = document.getElementById("schema-deploy-brand") as HTMLSelectElement;
+              if (el?.value) deployBrand.mutate(el.value);
+            }}
+            className="px-3 py-2 bg-orange text-white rounded text-sm disabled:opacity-50"
+          >
+            {deployBrand.isPending ? "Queuing…" : "Queue brand schema"}
+          </button>
+        </div>
+      </div>
+
+      {deployMsg && (
+        <p className="text-sm text-navy bg-cream px-4 py-2 rounded border border-black/8">
+          {deployMsg}
+        </p>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-white rounded border border-black/8 overflow-hidden">
           <table className="w-full text-sm">
@@ -68,7 +121,14 @@ export function SchemaReviewPage() {
               ) : !data?.length ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-black/40">
-                    No schema deployments pending
+                    <p>No schema deployments pending.</p>
+                    <p className="text-xs mt-2">
+                      Use <strong>Queue brand schema</strong> above or{" "}
+                      <Link to="/schema/health" className="text-navy hover:text-orange">
+                        Schema Health
+                      </Link>
+                      .
+                    </p>
                   </td>
                 </tr>
               ) : (

@@ -40,10 +40,12 @@ Citation monitoring (GEO/AEO Tracker sidecar):
 
 | Variable | Value |
 |----------|--------|
-| `CITATION_PROVIDER` | `geo_aeo` |
-| `GEO_AEO_TRACKER_URL` | Deployed tracker URL (e.g. Vercel) |
+| `CITATION_PROVIDER` | `none` until tracker is deployed, then `geo_aeo` |
+| `GEO_AEO_TRACKER_URL` | Deployed tracker URL (e.g. second Railway service) |
 | `GEO_AEO_PROVIDERS` | `perplexity,google_ai` |
+| `WEEKLY_CONTENT_BATCH_SIZE` | Queue items processed each Monday (default `5`) |
 
+See [backend/.env.production.example](.env.production.example) for a full Railway template.
 Bright Data keys go in the **tracker** app env, not Railway backend. See [geo-aeo-tracker/README.md](../geo-aeo-tracker/README.md).
 
 ## 3. Deploy and verify

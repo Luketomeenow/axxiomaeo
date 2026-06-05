@@ -168,6 +168,37 @@ class ReportService:
 
         return {"configured": True, "brands": brand_series}
 
+    async def get_gsc_highlights(self, limit: int = 15) -> dict:
+        """Top GSC queries per brand with gsc_site_url configured."""
+        from app.config import get_settings
+
+        if not get_settings().google_service_account_json:
+            return {"configured": False, "brands": []}
+
+        brands_result = await self.db.execute(select(Brand))
+        brands = [b for b in brands_result.scalars().all() if b.gsc_site_url]
+
+        if not brands:
+            return {"configured": True, "brands": [], "message": "No GSC site URLs in Brand Settings"}
+
+        out = []
+        for brand in brands:
+            gaps = await self.get_gap_queries()
+            brand_gaps = [g["query"] for g in gaps if g["brand_id"] == brand.id][:10]
+            queries = brand_gaps or ["elevator maintenance", "elevator repair", "elevator inspection"]
+            snippets = await self.gsc.get_featured_snippets(brand.gsc_site_url, queries[:10])
+            ranked = sorted(snippets, key=lambda x: x.get("impressions", 0), reverse=True)[:limit]
+            out.append(
+                {
+                    "brand_id": brand.id,
+                    "brand_name": brand.name,
+                    "site_url": brand.gsc_site_url,
+                    "queries": ranked,
+                }
+            )
+
+        return {"configured": True, "brands": out}
+
     async def generate_monthly_report(self) -> MonthlyReport:
         now = datetime.utcnow()
         month_start = now.replace(day=1)

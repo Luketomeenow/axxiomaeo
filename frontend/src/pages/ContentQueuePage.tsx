@@ -84,7 +84,10 @@ export function ContentQueuePage() {
       }),
     onSuccess: () => {
       setShowModal(false);
-      showSuccess("Generation started — check Content Review in a few minutes.");
+      showSuccess("Generation started — open Content Review (refreshes every 5s while writing).");
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
     },
   });
 
@@ -120,11 +123,22 @@ export function ContentQueuePage() {
         </div>
       )}
 
-      {generateFromQueue.isError && (
+      {(generate.isError || generateFromQueue.isError) && (
         <div className="bg-orange/10 border border-orange/30 text-orange text-sm px-4 py-3 rounded">
-          {(generateFromQueue.error as Error).message === "Not Found"
-            ? "Generate endpoint unavailable — restart the backend server (uvicorn) and try again."
-            : (generateFromQueue.error as Error).message}
+          {(() => {
+            const err = (generate.error || generateFromQueue.error) as Error | null;
+            const msg = err?.message ?? "Generation failed";
+            if (msg === "Not Found") {
+              return "Generate endpoint unavailable — restart the backend server (uvicorn) and try again.";
+            }
+            if (msg.includes("409") || msg.toLowerCase().includes("already exists")) {
+              return "A draft for this item already exists — check Content Review.";
+            }
+            if (msg.includes("429") || msg.toLowerCase().includes("still generating")) {
+              return "Another draft is still generating. Wait 1–2 minutes, then try again (one at a time).";
+            }
+            return msg;
+          })()}
         </div>
       )}
 
@@ -276,6 +290,12 @@ export function ContentQueuePage() {
             {generate.isError && (
               <p className="text-sm text-orange">{(generate.error as Error).message}</p>
             )}
+            {!form.location_id && (
+              <p className="text-sm text-black/45">Select a brand location above to enable Generate.</p>
+            )}
+            {form.location_id && !form.target_query.trim() && (
+              <p className="text-sm text-black/45">Enter a target query (search phrase) to enable Generate.</p>
+            )}
             <div className="flex gap-2 justify-end pt-2">
               <button
                 type="button"
@@ -290,7 +310,7 @@ export function ContentQueuePage() {
                   const { location_id: _locationId, ...payload } = form;
                   generate.mutate(payload);
                 }}
-                disabled={!form.location_id || !form.target_query || generate.isPending}
+                disabled={!form.location_id || !form.target_query.trim() || generate.isPending}
                 className="px-4 py-2 bg-navy text-white rounded text-sm disabled:opacity-50"
               >
                 {generate.isPending ? "Starting…" : "Generate"}

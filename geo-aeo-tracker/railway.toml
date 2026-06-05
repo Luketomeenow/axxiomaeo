@@ -1,0 +1,12 @@
+# Optional: deploy GEO/AEO Tracker as a second Railway service
+# Root directory: geo-aeo-tracker-app (after cloning geo-aeo-tracker)
+# Set BRIGHT_DATA_KEY and dataset IDs in Railway Variables — see geo-aeo-tracker/README.md
+# Point backend GEO_AEO_TRACKER_URL to this service's public URL and CITATION_PROVIDER=geo_aeo
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm run start -- -p $PORT"
+healthcheckPath = "/"
+healthcheckTimeout = 60

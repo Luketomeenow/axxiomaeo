@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.approval import ApprovalEvent
 from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece, ContentQueue
-from app.models.schema_job import SchemaJob
 from app.services.claude_service import ClaudeService, validate_answer_first
 from app.services.notification_service import NotificationService
 from app.services.schema_service import build_combined_schema
@@ -15,6 +14,55 @@ from app.services.wordpress_service import WordPressService
 from app.utils.helpers import count_words, h2_question_ratio
 
 logger = logging.getLogger(__name__)
+
+STALE_GENERATING_MINUTES = 3
+
+
+async def _set_queue_status(queue_id: int, status: str) -> None:
+    """Update queue row in a short separate transaction (avoids lock timeouts)."""
+    from app.database import AsyncSessionLocal
+
+    try:
+        async with AsyncSessionLocal() as session:
+            item = await session.get(ContentQueue, queue_id)
+            if item:
+                item.status = status
+            await session.commit()
+    except Exception:
+        logger.exception("Failed to update queue %s → %s", queue_id, status)
+
+
+async def recover_stale_generating_drafts(db: AsyncSession) -> int:
+    """Mark abandoned generating drafts so the UI can offer Regenerate."""
+    cutoff = datetime.utcnow() - timedelta(minutes=STALE_GENERATING_MINUTES)
+    result = await db.execute(
+        select(ContentDraft).where(
+            ContentDraft.status == "generating",
+            ContentDraft.created_at < cutoff,
+        )
+    )
+    count = 0
+    for draft in result.scalars():
+        if draft.html_content:
+            continue
+        draft.status = "needs_review"
+        draft.validation_result = {
+            "valid": False,
+            "reason": "Generation was interrupted or timed out. Use Regenerate to try again.",
+        }
+        if draft.queue_id:
+            await _set_queue_status(draft.queue_id, "needs_review")
+        count += 1
+    if count:
+        await db.flush()
+        logger.info("Recovered %s stale generating draft(s)", count)
+    return count
+
+
+def _inject_brand_phone(html: str, phone: str | None) -> str:
+    if not phone:
+        return html
+    return html.replace("[BRAND_PHONE]", phone.strip())
 
 
 class ContentGenerationService:
@@ -33,58 +81,109 @@ class ContentGenerationService:
         queue_id: int | None = None,
         city: str = "",
         state: str = "",
+        existing_draft_id: int | None = None,
     ) -> ContentDraft:
         brand = await self.db.get(Brand, brand_id)
         if not brand:
             raise ValueError(f"Brand {brand_id} not found")
 
-        draft = ContentDraft(
-            brand_id=brand_id,
-            content_type=content_type,
-            target_query=target_query,
-            title=title or target_query,
-            status="generating",
-            queue_id=queue_id,
-        )
-        self.db.add(draft)
-        await self.db.flush()
+        brand_name = brand.name
+        brand_markets = brand.markets or []
+        brand_phone = brand.phone
+        draft_title = title or target_query
+
+        if existing_draft_id:
+            draft = await self.db.get(ContentDraft, existing_draft_id)
+            if not draft:
+                raise ValueError(f"Draft {existing_draft_id} not found")
+            draft.status = "generating"
+            draft.html_content = None
+            draft.schema_json = None
+            draft.slug = None
+            draft.validation_result = None
+            draft.validation_attempts = 0
+            draft_id = draft.id
+            queue_id = draft.queue_id or queue_id
+        else:
+            draft = ContentDraft(
+                brand_id=brand_id,
+                content_type=content_type,
+                target_query=target_query,
+                title=draft_title,
+                status="generating",
+                queue_id=queue_id,
+            )
+            self.db.add(draft)
+            await self.db.flush()
+            draft_id = draft.id
+
+        # Commit before Claude — Supabase statement timeout kills long open transactions.
+        await self.db.commit()
 
         html_content = ""
         is_valid = False
         failure_reason = ""
+        validation_attempts = 0
 
-        for attempt in range(2):
-            if attempt == 0:
-                html_content = await self.claude.generate_content(
-                    content_type=content_type,
-                    brand_name=brand.name,
-                    target_query=target_query,
-                    markets=brand.markets or [],
-                    title=title,
-                    city=city,
-                    state=state,
-                )
-            else:
-                html_content = await self.claude.regenerate_with_correction(
-                    failure_reason=failure_reason,
-                    target_query=target_query,
-                    brand_name=brand.name,
-                    previous_content=html_content,
-                )
+        try:
+            for attempt in range(2):
+                validation_attempts = attempt + 1
+                if attempt == 0:
+                    html_content = await self.claude.generate_content(
+                        content_type=content_type,
+                        brand_name=brand_name,
+                        target_query=target_query,
+                        markets=brand_markets,
+                        title=title,
+                        city=city,
+                        state=state,
+                    )
+                else:
+                    html_content = await self.claude.regenerate_with_correction(
+                        failure_reason=failure_reason,
+                        target_query=target_query,
+                        brand_name=brand_name,
+                        previous_content=html_content,
+                    )
 
-            is_valid, failure_reason = await validate_answer_first(html_content, target_query)
-            draft.validation_attempts = attempt + 1
-            if is_valid:
-                break
+                is_valid, failure_reason = await validate_answer_first(html_content, target_query)
+                if is_valid:
+                    break
+        except Exception as exc:
+            logger.exception("Claude generation failed for draft %s", draft_id)
+            draft = await self.db.get(ContentDraft, draft_id)
+            if draft:
+                draft.status = "needs_review"
+                draft.validation_attempts = validation_attempts
+                draft.validation_result = {
+                    "valid": False,
+                    "reason": str(exc),
+                }
+                await self.db.flush()
+                await self.db.commit()
+                if queue_id:
+                    await _set_queue_status(queue_id, "needs_review")
+            raise
+
+        html_content = _inject_brand_phone(html_content, brand_phone)
+
+        brand = await self.db.get(Brand, brand_id)
+        if not brand:
+            raise ValueError(f"Brand {brand_id} not found")
 
         schema_json, schema_types = build_combined_schema(
-            html_content, brand, draft.title or target_query, content_type
+            html_content, brand, draft_title, content_type
         )
-        slug = self.wp.generate_slug(draft.title or target_query, brand.name)
+        slug = self.wp.generate_slug(draft_title, brand_name)
+
+        draft = await self.db.get(ContentDraft, draft_id)
+        if not draft:
+            raise ValueError(f"Draft {draft_id} not found after generation")
 
         draft.html_content = html_content
         draft.schema_json = schema_json
         draft.slug = slug
+        draft.validation_attempts = validation_attempts
         ratio, h2_questions, h2_total = h2_question_ratio(html_content)
         draft.validation_result = {
             "valid": is_valid,
@@ -101,7 +200,7 @@ class ContentGenerationService:
             await self.notifications.create(
                 type="draft_ready",
                 title=f"Content ready for review: {draft.title}",
-                body=f"Brand: {brand.name} | Query: {target_query}",
+                body=f"Brand: {brand_name} | Query: {target_query}",
                 entity_type="content_draft",
                 entity_id=draft.id,
             )
@@ -115,12 +214,13 @@ class ContentGenerationService:
                 entity_id=draft.id,
             )
 
-        if queue_id:
-            queue_item = await self.db.get(ContentQueue, queue_id)
-            if queue_item:
-                queue_item.status = "ready" if is_valid else "needs_review"
-
         await self.db.flush()
+        await self.db.commit()
+
+        if queue_id:
+            await _set_queue_status(queue_id, "ready" if is_valid else "needs_review")
+
+        draft = await self.db.get(ContentDraft, draft_id)
         return draft
 
     async def approve_and_publish(self, draft_id: int, user_id: str) -> ContentPiece:

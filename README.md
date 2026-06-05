@@ -120,7 +120,7 @@ Nothing publishes to WordPress without explicit approval.
 
 ## Deploy to Railway (Backend)
 
-See [backend/RAILWAY_DEPLOY.md](backend/RAILWAY_DEPLOY.md) for the full checklist.
+See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](backend/RAILWAY_DEPLOY.md) for Railway details, [frontend/NETLIFY_DEPLOY.md](frontend/NETLIFY_DEPLOY.md) for Netlify, and [wordpress/README.md](wordpress/README.md) for WordPress schema output.
 
 1. Create Railway project, connect GitHub repo
 2. Set root directory to `backend/`
@@ -149,6 +149,8 @@ See [backend/RAILWAY_DEPLOY.md](backend/RAILWAY_DEPLOY.md) for the full checklis
 | GET | `/api/content/queue` | Content queue |
 | GET | `/api/content/drafts` | List drafts |
 | POST | `/api/content/generate` | Trigger generation |
+| POST | `/api/content/queue/from-gap` | Add gap query to content queue |
+| GET | `/api/reports/gsc` | GSC query highlights by brand |
 | POST | `/api/content/drafts/{id}/approve` | Approve + publish |
 | POST | `/api/content/drafts/{id}/reject` | Reject draft |
 | GET | `/api/schema/deployments` | Schema approval inbox |

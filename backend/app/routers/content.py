@@ -1,16 +1,21 @@
+import asyncio
 import re
+from types import SimpleNamespace
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.content import ContentDraft, ContentQueue
-from app.services.content_service import ContentGenerationService
+from app.services.content_service import ContentGenerationService, recover_stale_generating_drafts
 
 router = APIRouter(prefix="/api/content", tags=["content"])
+
+# One Claude generation at a time — parallel runs cause Supabase lock timeouts.
+_generate_semaphore = asyncio.Semaphore(1)
 
 
 class GenerateRequest(BaseModel):
@@ -24,6 +29,39 @@ class GenerateRequest(BaseModel):
 
 class RejectRequest(BaseModel):
     notes: str = ""
+
+
+class GapQueueRequest(BaseModel):
+    brand_id: str
+    target_query: str
+    content_type: str = "faq_hub"
+    title: str = ""
+    priority: int = 3
+
+
+@router.post("/queue/from-gap")
+async def queue_from_gap(
+    req: GapQueueRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Add a citation gap query to the content queue for generation."""
+    item = ContentQueue(
+        brand_id=req.brand_id,
+        content_type=req.content_type,
+        target_query=req.target_query,
+        title=req.title or req.target_query,
+        priority=max(1, min(5, req.priority)),
+        status="pending",
+    )
+    db.add(item)
+    await db.flush()
+    return {
+        "id": item.id,
+        "brand_id": item.brand_id,
+        "target_query": item.target_query,
+        "status": item.status,
+    }
 
 
 @router.get("/queue")
@@ -48,12 +86,20 @@ async def get_content_queue(
     ]
 
 
+async def _count_active_generations(db: AsyncSession) -> int:
+    result = await db.execute(
+        select(func.count()).select_from(ContentDraft).where(ContentDraft.status == "generating")
+    )
+    return int(result.scalar() or 0)
+
+
 @router.get("/drafts")
 async def list_drafts(
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
+    await recover_stale_generating_drafts(db)
     query = select(ContentDraft).order_by(ContentDraft.created_at.desc())
     if status:
         query = query.where(ContentDraft.status == status)
@@ -104,6 +150,7 @@ async def get_draft(
         "html_content": draft.html_content,
         "schema_json": draft.schema_json,
         "validation_result": draft.validation_result,
+        "validation_attempts": draft.validation_attempts,
         "status": draft.status,
         "review_notes": draft.review_notes,
         "created_at": draft.created_at.isoformat() if draft.created_at else None,
@@ -118,21 +165,48 @@ async def _generate_task(
     city: str,
     state: str,
     queue_id: int | None = None,
+    existing_draft_id: int | None = None,
 ):
-    from app.database import AsyncSessionLocal
+    import logging
 
-    async with AsyncSessionLocal() as session:
-        service = ContentGenerationService(session)
-        await service.generate_draft(
-            brand_id,
-            content_type,
-            target_query,
-            title,
-            queue_id=queue_id,
-            city=city,
-            state=state,
-        )
-        await session.commit()
+    from app.database import AsyncSessionLocal
+    from app.models.approval import WorkerError
+
+    logger = logging.getLogger(__name__)
+
+    async with _generate_semaphore:
+        try:
+            async with AsyncSessionLocal() as session:
+                service = ContentGenerationService(session)
+                await service.generate_draft(
+                    brand_id,
+                    content_type,
+                    target_query,
+                    title,
+                    queue_id=queue_id,
+                    city=city,
+                    state=state,
+                    existing_draft_id=existing_draft_id,
+                )
+        except Exception as exc:
+            logger.exception("Background content generation failed")
+            try:
+                async with AsyncSessionLocal() as session:
+                    session.add(
+                        WorkerError(
+                            worker_name="content_generate",
+                            error_message=str(exc)[:500],
+                            error_details={
+                                "brand_id": brand_id,
+                                "target_query": target_query,
+                                "queue_id": queue_id,
+                                "draft_id": existing_draft_id,
+                            },
+                        )
+                    )
+                    await session.commit()
+            except Exception:
+                logger.exception("Failed to record worker error")
 
 
 def _parse_local_market(item: ContentQueue) -> tuple[str, str]:
@@ -158,6 +232,11 @@ async def generate_content(
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
+    if await _count_active_generations(db) > 0:
+        raise HTTPException(
+            status_code=429,
+            detail="Another draft is still generating. Wait for it to finish (1–2 min) before starting a new one.",
+        )
     background_tasks.add_task(
         _generate_task,
         req.brand_id,
@@ -193,6 +272,11 @@ async def generate_from_queue(
         raise HTTPException(
             status_code=409,
             detail="A draft for this queue item already exists — check Content Review",
+        )
+    if await _count_active_generations(db) > 0:
+        raise HTTPException(
+            status_code=429,
+            detail="Another draft is still generating. Wait for it to finish before starting another.",
         )
 
     city, state = _parse_local_market(item)
@@ -251,20 +335,31 @@ async def regenerate_draft(
     draft = await db.get(ContentDraft, draft_id)
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
+    if await _count_active_generations(db) > 0:
+        raise HTTPException(
+            status_code=429,
+            detail="Another draft is still generating. Wait for it to finish before regenerating.",
+        )
 
-    async def task():
-        from app.database import AsyncSessionLocal
-
-        async with AsyncSessionLocal() as session:
-            service = ContentGenerationService(session)
-            await service.generate_draft(
-                draft.brand_id,
-                draft.content_type or "faq_hub",
-                draft.target_query or "",
-                draft.title or "",
-                queue_id=draft.queue_id,
+    city, state = "", ""
+    if draft.content_type == "local_page":
+        city, state = _parse_local_market(
+            SimpleNamespace(
+                content_type=draft.content_type,
+                target_query=draft.target_query,
+                title=draft.title,
             )
-            await session.commit()
+        )
 
-    background_tasks.add_task(task)
-    return {"status": "regenerating"}
+    background_tasks.add_task(
+        _generate_task,
+        draft.brand_id,
+        draft.content_type or "faq_hub",
+        draft.target_query or "",
+        draft.title or "",
+        city,
+        state,
+        draft.queue_id,
+        draft_id,
+    )
+    return {"status": "regenerating", "draft_id": draft_id}

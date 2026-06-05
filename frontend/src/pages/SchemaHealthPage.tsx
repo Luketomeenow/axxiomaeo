@@ -1,4 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useState } from "react";
 import { apiFetch } from "../lib/api";
 
 interface SchemaHealthRow {
@@ -11,15 +13,116 @@ interface SchemaHealthRow {
 }
 
 export function SchemaHealthPage() {
-  const { data, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+  const [msg, setMsg] = useState("");
+
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["schema-health"],
     queryFn: () => apiFetch<SchemaHealthRow[]>("/api/schema/health"),
     refetchInterval: 60000,
   });
 
+  const { data: brands } = useQuery({
+    queryKey: ["brands"],
+    queryFn: () => apiFetch<{ id: string; name: string }[]>("/api/brands"),
+  });
+
+  const validate = useMutation({
+    mutationFn: (brandId: string) =>
+      apiFetch(`/api/schema/validate/${brandId}`, { method: "POST" }),
+    onSuccess: () => {
+      setMsg("Validation started — refresh in a minute.");
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["schema-health"] }), 30000);
+    },
+    onError: (e: Error) => setMsg(e.message),
+  });
+
+  const deploySchema = useMutation({
+    mutationFn: (brandId: string) =>
+      apiFetch(`/api/schema/deploy/${brandId}`, { method: "POST" }),
+    onSuccess: () => {
+      setMsg("Schema deployments queued — check Schema Review.");
+    },
+    onError: (e: Error) => setMsg(e.message),
+  });
+
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-xl font-bold text-navy">Schema Health</h2>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display text-xl font-bold text-navy">Schema Health</h2>
+          <p className="text-sm text-black/50 mt-1">
+            Requires JSON-LD in page source — install the{" "}
+            <a
+              href="https://github.com/Luketomeenow/axxiomaeo/blob/main/wordpress/README.md"
+              className="text-orange hover:underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              WordPress mu-plugin
+            </a>{" "}
+            on each site.
+          </p>
+        </div>
+        <Link to="/schema/review" className="text-sm text-navy hover:text-orange font-medium">
+          Schema Review →
+        </Link>
+      </div>
+
+      {msg && (
+        <div className="bg-cream border border-black/10 text-sm px-4 py-3 rounded text-navy">
+          {msg}
+        </div>
+      )}
+
+      {isError && (
+        <div className="bg-orange/10 border border-orange/30 text-orange text-sm px-4 py-3 rounded">
+          {(error as Error).message}
+        </div>
+      )}
+
+      <div className="bg-white rounded border border-black/8 p-4 flex flex-wrap gap-2 items-end">
+        <div>
+          <label className="block text-xs font-medium text-black/60 mb-1">Brand actions</label>
+          <select
+            id="schema-brand-pick"
+            className="border border-black/15 rounded px-3 py-2 text-sm min-w-[200px]"
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Select brand…
+            </option>
+            {brands?.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          className="px-3 py-2 bg-navy text-white rounded text-sm disabled:opacity-50"
+          disabled={validate.isPending || deploySchema.isPending}
+          onClick={() => {
+            const el = document.getElementById("schema-brand-pick") as HTMLSelectElement;
+            if (el?.value) validate.mutate(el.value);
+          }}
+        >
+          Run validation
+        </button>
+        <button
+          type="button"
+          className="px-3 py-2 border border-navy text-navy rounded text-sm disabled:opacity-50"
+          disabled={validate.isPending || deploySchema.isPending}
+          onClick={() => {
+            const el = document.getElementById("schema-brand-pick") as HTMLSelectElement;
+            if (el?.value) deploySchema.mutate(el.value);
+          }}
+        >
+          Queue brand schema
+        </button>
+      </div>
+
       <div className="bg-white rounded border border-black/8 overflow-hidden">
         <table className="w-full text-sm">
           <thead>

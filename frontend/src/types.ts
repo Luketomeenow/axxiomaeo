@@ -14,6 +14,22 @@ export interface DashboardData {
     category: string;
     competitor_cited: string;
   }[];
+  gsc_highlights?: {
+    configured: boolean;
+    brands: {
+      brand_id: string;
+      brand_name: string;
+      site_url: string;
+      queries: {
+        query: string;
+        clicks: number;
+        impressions: number;
+        position: number;
+        has_featured_snippet: boolean;
+      }[];
+    }[];
+    message?: string;
+  };
 }
 
 export interface TrafficTrendResponse {
@@ -53,13 +69,15 @@ export interface ContentDraft {
     h2_question_ratio?: number;
     h2_questions?: number;
     h2_total?: number;
+    schema_types?: string[];
   };
+  validation_attempts?: number;
   created_at: string;
 }
 
 export interface ContentDraftDetail extends ContentDraft {
-  html_content: string;
-  schema_json: string;
+  html_content: string | null;
+  schema_json: string | null;
   slug: string;
   review_notes?: string;
 }

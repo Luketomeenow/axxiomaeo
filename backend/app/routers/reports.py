@@ -44,12 +44,23 @@ async def get_dashboard(
     by_brand = await service.get_citation_by_brand()
     by_category = await service.get_citation_by_category()
     gaps = await service.get_gap_queries()
+    gsc = await service.get_gsc_highlights()
     return {
         **kpis,
         "citation_by_brand": by_brand,
         "citation_by_category": by_category,
         "gap_queries": gaps[:20],
+        "gsc_highlights": gsc,
     }
+
+
+@router.get("/gsc")
+async def get_gsc_highlights(
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    service = ReportService(db)
+    return await service.get_gsc_highlights()
 
 
 @router.get("/traffic-trend")

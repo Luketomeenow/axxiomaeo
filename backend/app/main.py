@@ -36,13 +36,16 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origin_list,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    cors_kwargs: dict = {
+        "allow_origins": settings.cors_origin_list,
+        "allow_credentials": True,
+        "allow_methods": ["*"],
+        "allow_headers": ["*"],
+    }
+    # Vite may use 5174+ if 5173 is taken — allow any local dev port.
+    if settings.environment == "development":
+        cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error_handler(_request: Request, _exc: SQLAlchemyError):

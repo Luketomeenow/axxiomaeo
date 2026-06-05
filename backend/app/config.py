@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     wp_username_ironhawk: str = "admin"
 
     claude_model: str = "claude-sonnet-4-20250514"
+    weekly_content_batch_size: int = 5
 
     @field_validator("supabase_jwt_secret", mode="before")
     @classmethod

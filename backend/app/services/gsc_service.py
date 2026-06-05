@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -32,6 +33,9 @@ class GSCService:
             return None
 
     async def get_featured_snippets(self, site_url: str, queries: list[str]) -> list[dict]:
+        return await asyncio.to_thread(self._get_featured_snippets_sync, site_url, queries)
+
+    def _get_featured_snippets_sync(self, site_url: str, queries: list[str]) -> list[dict]:
         creds = self._get_credentials()
         if not creds:
             return [{"query": q, "clicks": 0, "impressions": 0, "position": 0, "has_featured_snippet": False} for q in queries]
