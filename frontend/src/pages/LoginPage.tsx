@@ -36,37 +36,38 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8">
-        <h1 className="font-display text-2xl font-bold text-navy mb-1">Axxiom AEO</h1>
-        <p className="text-sm text-black/50 mb-8">Sign in to the automation dashboard</p>
+    <div className="min-h-screen bg-void flex items-center justify-center p-4">
+      <div className="aeo-panel w-full max-w-md p-8 shadow-2xl shadow-cyan/5">
+        <div className="mb-8">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold text-cyan tracking-wide">AXXIOM</span>
+            <span className="text-2xl font-bold text-ink tracking-wide">AEO</span>
+          </div>
+          <p className="text-sm text-muted mt-2">Sign in to the automation command center</p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-black/70 mb-1">Email</label>
+            <label className="block text-sm font-medium text-ink/80 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-black/15 rounded px-3 py-2 text-sm focus:outline-none focus:border-navy"
+              className="aeo-input"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-black/70 mb-1">Password</label>
+            <label className="block text-sm font-medium text-ink/80 mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-black/15 rounded px-3 py-2 text-sm focus:outline-none focus:border-navy"
+              className="aeo-input"
               required
             />
           </div>
-          {error && <p className="text-sm text-orange">{error}</p>}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-orange text-white py-2.5 rounded font-medium hover:bg-orange/90 disabled:opacity-50"
-          >
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <button type="submit" disabled={submitting} className="aeo-btn-primary w-full py-2.5">
             {submitting ? "Signing in…" : "Sign In"}
           </button>
         </form>

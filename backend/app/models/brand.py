@@ -18,6 +18,8 @@ class Brand(Base):
     gsc_site_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    target_queries: Mapped[list] = mapped_column(JSONB, default=list)
+    service_page_urls: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     content_pieces: Mapped[list["ContentPiece"]] = relationship(back_populates="brand")

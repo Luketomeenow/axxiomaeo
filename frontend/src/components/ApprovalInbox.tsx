@@ -57,7 +57,7 @@ export function ApprovalInbox({
               type="button"
               onClick={() => setStatusFilter(value)}
               className={`px-3 py-1.5 ${
-                statusFilter === value ? "bg-navy text-white" : "bg-white text-black/60 hover:bg-cream"
+                statusFilter === value ? "bg-cyan text-void" : "bg-panel-elevated text-muted hover:bg-void"
               }`}
             >
               {label}
@@ -67,7 +67,7 @@ export function ApprovalInbox({
         <select
           value={brandFilter}
           onChange={(e) => setBrandFilter(e.target.value)}
-          className="text-xs border border-black/15 rounded px-2 py-1.5 bg-white"
+          className="text-xs border border-border rounded px-2 py-1.5 bg-panel-elevated"
         >
           <option value="all">All brands</option>
           {brands?.map((b) => (
@@ -76,13 +76,13 @@ export function ApprovalInbox({
             </option>
           ))}
         </select>
-        <span className="text-xs text-black/40">{filtered.length} items</span>
+        <span className="text-xs text-muted/80">{filtered.length} items</span>
       </div>
 
-      <div className="bg-white rounded border border-black/8 overflow-hidden">
+      <div className="aeo-panel overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-black/8 text-left text-black/50">
+            <tr className="border-b border-border text-left text-muted">
               <th className="px-4 py-3 font-medium">Title</th>
               <th className="px-4 py-3 font-medium">Brand</th>
               <th className="px-4 py-3 font-medium">Type</th>
@@ -96,16 +96,16 @@ export function ApprovalInbox({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-black/40">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted/80">
                   No items match filters
                 </td>
               </tr>
             ) : (
               filtered.map((d) => (
-                <tr key={d.id} className="border-t border-black/5 hover:bg-cream/50">
+                <tr key={d.id} className="border-t border-border hover:bg-panel-hover">
                   <td className="px-4 py-3 font-medium">{d.title}</td>
-                  <td className="px-4 py-3 text-black/60">{d.brand_id}</td>
-                  <td className="px-4 py-3 text-black/60">{d.content_type}</td>
+                  <td className="px-4 py-3 text-muted">{d.brand_id}</td>
+                  <td className="px-4 py-3 text-muted">{d.content_type}</td>
                   <td className="px-4 py-3">
                     {d.priority ? (
                       <span
@@ -114,7 +114,7 @@ export function ApprovalInbox({
                         {PRIORITY_LABEL[d.priority] || "MEDIUM"}
                       </span>
                     ) : (
-                      <span className="text-black/30">—</span>
+                      <span className="text-muted/50">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -132,18 +132,18 @@ export function ApprovalInbox({
                   </td>
                   <td className="px-4 py-3">
                     {d.validation_result?.valid ? (
-                      <span className="text-green-700 text-xs">Valid</span>
+                      <span className="text-success text-xs">Valid</span>
                     ) : (
-                      <span className="text-orange text-xs">Needs attention</span>
+                      <span className="text-warning text-xs">Needs attention</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-black/50 text-xs">
+                  <td className="px-4 py-3 text-muted text-xs">
                     {d.created_at ? new Date(d.created_at).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <Link
                       to={`${linkPrefix}/${d.id}`}
-                      className="text-navy text-xs font-medium hover:text-orange"
+                      className="text-ink text-xs font-medium hover:text-cyan"
                     >
                       Review →
                     </Link>

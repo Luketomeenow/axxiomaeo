@@ -16,12 +16,15 @@ function KpiCard({
   trend?: number;
 }) {
   return (
-    <div className="bg-white rounded border border-black/8 p-5">
-      <p className="text-xs text-black/50 uppercase tracking-wide mb-1">{label}</p>
-      <p className="font-display text-3xl font-bold text-navy">{value}</p>
-      {sub && <p className="text-xs text-black/40 mt-1">{sub}</p>}
+    <div className="aeo-panel p-5 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-24 h-24 bg-cyan/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+      <p className="text-[10px] text-muted uppercase tracking-widest mb-2">{label}</p>
+      <p className="aeo-kpi-value">{value}</p>
+      {sub && <p className="text-xs text-muted mt-2">{sub}</p>}
       {trend !== undefined && (
-        <p className={`text-xs mt-1 font-medium ${trend >= 0 ? "text-green-700" : "text-orange"}`}>
+        <p
+          className={`text-xs mt-2 font-medium ${trend >= 0 ? "text-success" : "text-warning"}`}
+        >
           {trend >= 0 ? "↑" : "↓"} {Math.abs(trend).toFixed(1)}% vs last month
         </p>
       )}
@@ -38,16 +41,28 @@ export function KpiStrip({ data }: Props) {
     <div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
         <KpiCard
-          label="AI Citation Share"
-          value={`${data.citation_share}%`}
-          sub={`Previous month: ${data.citation_share_prev}%`}
+          label="AI Visibility"
+          value={`${data.avg_visibility_pct ?? data.citation_share}%`}
+          sub={`${data.citation_share}% citation rate · 3× probabilistic runs`}
           trend={data.citation_trend}
         />
-        <KpiCard label="AI-Referred Sessions" value={data.ai_referred_sessions} sub="Month to date" />
-        <KpiCard label="Content Published" value={data.content_published_mtd} sub="Month to date" />
-        <KpiCard label="Schema Coverage" value={`${data.schema_coverage_pct}%`} />
+        <KpiCard
+          label="Share of Voice"
+          value={`${data.share_of_voice ?? 0}%`}
+          sub="Your citations vs competitor wins"
+        />
+        <KpiCard
+          label="Topic Coverage"
+          value={`${data.topic_coverage_pct ?? 0}%`}
+          sub={`${data.platform_consensus_pct ?? 0}% multi-platform consensus`}
+        />
+        <KpiCard
+          label="AI-Referred Sessions"
+          value={data.ai_referred_sessions}
+          sub={`Schema ${data.schema_coverage_pct}% · ${data.content_published_mtd} posts MTD`}
+        />
       </div>
-      <p className="text-xs text-black/40 text-right">Last updated: {lastUpdated}</p>
+      <p className="text-xs text-muted text-right font-mono">Last updated {lastUpdated}</p>
     </div>
   );
 }

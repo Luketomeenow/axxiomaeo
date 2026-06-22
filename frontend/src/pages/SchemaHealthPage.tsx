@@ -50,12 +50,12 @@ export function SchemaHealthPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-xl font-bold text-navy">Schema Health</h2>
-          <p className="text-sm text-black/50 mt-1">
+          <h2 className="text-xl font-bold text-ink">Schema Health</h2>
+          <p className="text-sm text-muted mt-1">
             Requires JSON-LD in page source — install the{" "}
             <a
               href="https://github.com/Luketomeenow/axxiomaeo/blob/main/wordpress/README.md"
-              className="text-orange hover:underline"
+              className="aeo-link"
               target="_blank"
               rel="noreferrer"
             >
@@ -64,29 +64,34 @@ export function SchemaHealthPage() {
             on each site.
           </p>
         </div>
-        <Link to="/schema/review" className="text-sm text-navy hover:text-orange font-medium">
-          Schema Review →
-        </Link>
+        <div className="flex flex-wrap gap-3 items-center">
+          <Link to="/schema/review" className="text-sm text-ink hover:text-cyan font-medium">
+            Schema Review →
+          </Link>
+          <Link to="/schema/published" className="text-sm text-ink hover:text-cyan font-medium">
+            Published Schema →
+          </Link>
+        </div>
       </div>
 
       {msg && (
-        <div className="bg-cream border border-black/10 text-sm px-4 py-3 rounded text-navy">
+        <div className="bg-void border border-black/10 text-sm px-4 py-3 rounded text-ink">
           {msg}
         </div>
       )}
 
       {isError && (
-        <div className="bg-orange/10 border border-orange/30 text-orange text-sm px-4 py-3 rounded">
+        <div className="bg-warning/10 border border-warning/30 text-warning text-sm px-4 py-3 rounded">
           {(error as Error).message}
         </div>
       )}
 
-      <div className="bg-white rounded border border-black/8 p-4 flex flex-wrap gap-2 items-end">
+      <div className="aeo-panel p-4 flex flex-wrap gap-2 items-end">
         <div>
-          <label className="block text-xs font-medium text-black/60 mb-1">Brand actions</label>
+          <label className="block text-xs font-medium text-muted mb-1">Brand actions</label>
           <select
             id="schema-brand-pick"
-            className="border border-black/15 rounded px-3 py-2 text-sm min-w-[200px]"
+            className="border border-border rounded px-3 py-2 text-sm min-w-[200px]"
             defaultValue=""
           >
             <option value="" disabled>
@@ -101,7 +106,7 @@ export function SchemaHealthPage() {
         </div>
         <button
           type="button"
-          className="px-3 py-2 bg-navy text-white rounded text-sm disabled:opacity-50"
+          className="px-3 py-2 bg-cyan text-void rounded text-sm disabled:opacity-50"
           disabled={validate.isPending || deploySchema.isPending}
           onClick={() => {
             const el = document.getElementById("schema-brand-pick") as HTMLSelectElement;
@@ -112,7 +117,7 @@ export function SchemaHealthPage() {
         </button>
         <button
           type="button"
-          className="px-3 py-2 border border-navy text-navy rounded text-sm disabled:opacity-50"
+          className="px-3 py-2 border border-navy text-ink rounded text-sm disabled:opacity-50"
           disabled={validate.isPending || deploySchema.isPending}
           onClick={() => {
             const el = document.getElementById("schema-brand-pick") as HTMLSelectElement;
@@ -123,10 +128,10 @@ export function SchemaHealthPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded border border-black/8 overflow-hidden">
+      <div className="aeo-panel overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-black/8 text-left text-black/50">
+            <tr className="border-b border-border text-left text-muted">
               <th className="px-4 py-3">Brand</th>
               <th className="px-4 py-3">Pages Tracked</th>
               <th className="px-4 py-3">Valid Schema</th>
@@ -138,7 +143,7 @@ export function SchemaHealthPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-black/40">
+                <td colSpan={6} className="px-4 py-8 text-center text-muted/80">
                   Loading…
                 </td>
               </tr>
@@ -149,11 +154,11 @@ export function SchemaHealthPage() {
                     ? Math.round((row.valid_schema / row.total_pages) * 100)
                     : 0;
                 return (
-                  <tr key={row.brand_id} className="border-t border-black/5">
+                  <tr key={row.brand_id} className="border-t border-border">
                     <td className="px-4 py-3 font-medium">{row.brand_name}</td>
                     <td className="px-4 py-3">{row.total_pages}</td>
-                    <td className="px-4 py-3 text-green-700">{row.valid_schema}</td>
-                    <td className="px-4 py-3 text-orange">{row.errors}</td>
+                    <td className="px-4 py-3 text-success">{row.valid_schema}</td>
+                    <td className="px-4 py-3 text-warning">{row.errors}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-100 rounded-full h-2 max-w-[100px]">
@@ -165,7 +170,7 @@ export function SchemaHealthPage() {
                         <span className="text-xs">{coverage}%</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-black/60 text-xs">
+                    <td className="px-4 py-3 text-muted text-xs">
                       {row.last_validation
                         ? new Date(row.last_validation).toLocaleDateString()
                         : "Never"}

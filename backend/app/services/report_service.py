@@ -15,6 +15,17 @@ from app.services.gsc_service import GSCService
 logger = logging.getLogger(__name__)
 
 
+async def _latest_audit_run_id(db: AsyncSession) -> str | None:
+    result = await db.execute(
+        select(CitationRecord.audit_run_id)
+        .where(CitationRecord.audit_run_id.isnot(None))
+        .order_by(CitationRecord.checked_at.desc())
+        .limit(1)
+    )
+    row = result.scalar_one_or_none()
+    return row
+
+
 class ReportService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -41,9 +52,27 @@ class ReportService:
             select(CitationRecord).where(CitationRecord.checked_at >= month_start)
         )
         citation_rows = citations.scalars().all()
+        latest_run = await _latest_audit_run_id(self.db)
+        if latest_run:
+            citation_rows = [c for c in citation_rows if c.audit_run_id == latest_run]
         cited = sum(1 for c in citation_rows if c.is_cited)
         total_citations = len(citation_rows)
         citation_share = round(cited / total_citations * 100, 1) if total_citations else 0
+
+        visibility_scores = [c.visibility_pct for c in citation_rows if c.visibility_pct is not None]
+        avg_visibility = round(sum(visibility_scores) / len(visibility_scores), 1) if visibility_scores else 0
+
+        brand_citations = cited
+        competitor_wins = sum(
+            1 for c in citation_rows if not c.is_cited and c.competitor_cited
+        )
+        share_of_voice = (
+            round(brand_citations / (brand_citations + competitor_wins) * 100, 1)
+            if (brand_citations + competitor_wins)
+            else 0
+        )
+
+        topic_coverage = await self.get_topic_coverage()
 
         prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
         prev_citations = await self.db.execute(
@@ -69,20 +98,111 @@ class ReportService:
             "citation_share": citation_share,
             "citation_share_prev": prev_share,
             "citation_trend": citation_share - prev_share,
+            "avg_visibility_pct": avg_visibility,
+            "share_of_voice": share_of_voice,
+            "topic_coverage_pct": topic_coverage.get("coverage_pct", 0),
+            "platform_consensus_pct": await self._platform_consensus_pct(citation_rows),
             "ai_referred_sessions": ai_sessions,
             "content_published_mtd": content_count or 0,
             "schema_coverage_pct": schema_coverage,
             "last_updated": now.isoformat(),
         }
 
-    async def get_citation_by_brand(self) -> list[dict]:
-        result = await self.db.execute(
-            select(
-                CitationRecord.brand_id,
-                func.count(CitationRecord.id).label("total"),
-                func.sum(func.cast(CitationRecord.is_cited, Integer)).label("cited"),
-            ).group_by(CitationRecord.brand_id)
+    async def _platform_consensus_pct(self, rows: list[CitationRecord]) -> float:
+        """Share of seed queries cited on 2+ AI platforms."""
+        by_key: dict[tuple[str, str], set[str]] = {}
+        for r in rows:
+            if r.parent_query:
+                continue
+            key = (r.brand_id, r.query)
+            if r.is_cited and r.platform:
+                by_key.setdefault(key, set()).add(r.platform)
+        if not by_key:
+            return 0.0
+        multi = sum(1 for platforms in by_key.values() if len(platforms) >= 2)
+        return round(multi / len(by_key) * 100, 1)
+
+    async def get_topic_coverage(self) -> dict:
+        latest_run = await _latest_audit_run_id(self.db)
+        query = select(CitationRecord)
+        if latest_run:
+            query = query.where(CitationRecord.audit_run_id == latest_run)
+        result = await self.db.execute(query)
+        rows = result.scalars().all()
+        categories = {r.query_category for r in rows if r.query_category}
+        cited_categories = {
+            r.query_category for r in rows if r.query_category and r.is_cited
+        }
+        total = len(categories) or 1
+        return {
+            "total_categories": len(categories),
+            "cited_categories": len(cited_categories),
+            "coverage_pct": round(len(cited_categories) / total * 100, 1),
+            "categories": sorted(categories),
+        }
+
+    async def get_visibility_by_platform(self) -> list[dict]:
+        latest_run = await _latest_audit_run_id(self.db)
+        query = select(
+            CitationRecord.platform,
+            func.count(CitationRecord.id).label("total"),
+            func.avg(CitationRecord.visibility_pct).label("avg_visibility"),
+            func.sum(func.cast(CitationRecord.is_cited, Integer)).label("cited"),
         )
+        if latest_run:
+            query = query.where(CitationRecord.audit_run_id == latest_run)
+        query = query.group_by(CitationRecord.platform)
+        result = await self.db.execute(query)
+        rows = []
+        for row in result:
+            total = row.total or 0
+            cited = row.cited or 0
+            rows.append(
+                {
+                    "platform": row.platform,
+                    "citation_share": round(cited / total * 100, 1) if total else 0,
+                    "avg_visibility_pct": round(float(row.avg_visibility or 0), 1),
+                    "total_checks": total,
+                }
+            )
+        return rows
+
+    async def get_citation_by_funnel(self) -> list[dict]:
+        latest_run = await _latest_audit_run_id(self.db)
+        query = select(
+            CitationRecord.funnel_stage,
+            func.count(CitationRecord.id).label("total"),
+            func.sum(func.cast(CitationRecord.is_cited, Integer)).label("cited"),
+            func.avg(CitationRecord.visibility_pct).label("avg_visibility"),
+        )
+        if latest_run:
+            query = query.where(CitationRecord.audit_run_id == latest_run)
+        query = query.group_by(CitationRecord.funnel_stage)
+        result = await self.db.execute(query)
+        rows = []
+        for row in result:
+            total = row.total or 0
+            cited = row.cited or 0
+            rows.append(
+                {
+                    "funnel_stage": row.funnel_stage or "unknown",
+                    "citation_share": round(cited / total * 100, 1) if total else 0,
+                    "avg_visibility_pct": round(float(row.avg_visibility or 0), 1),
+                }
+            )
+        return rows
+
+    async def get_citation_by_brand(self) -> list[dict]:
+        latest_run = await _latest_audit_run_id(self.db)
+        query = select(
+            CitationRecord.brand_id,
+            func.count(CitationRecord.id).label("total"),
+            func.sum(func.cast(CitationRecord.is_cited, Integer)).label("cited"),
+        )
+        if latest_run:
+            query = query.where(CitationRecord.audit_run_id == latest_run)
+        query = query.group_by(CitationRecord.brand_id)
+        result = await self.db.execute(query)
         rows = []
         for row in result:
             total = row.total or 0
@@ -98,13 +218,16 @@ class ReportService:
         return rows
 
     async def get_citation_by_category(self) -> list[dict]:
-        result = await self.db.execute(
-            select(
-                CitationRecord.query_category,
-                func.count(CitationRecord.id).label("total"),
-                func.sum(func.cast(CitationRecord.is_cited, Integer)).label("cited"),
-            ).group_by(CitationRecord.query_category)
+        latest_run = await _latest_audit_run_id(self.db)
+        query = select(
+            CitationRecord.query_category,
+            func.count(CitationRecord.id).label("total"),
+            func.sum(func.cast(CitationRecord.is_cited, Integer)).label("cited"),
         )
+        if latest_run:
+            query = query.where(CitationRecord.audit_run_id == latest_run)
+        query = query.group_by(CitationRecord.query_category)
+        result = await self.db.execute(query)
         rows = []
         for row in result:
             total = row.total or 0
@@ -118,23 +241,59 @@ class ReportService:
         return rows
 
     async def get_gap_queries(self) -> list[dict]:
-        result = await self.db.execute(
-            select(CitationRecord)
-            .where(CitationRecord.is_cited == False)  # noqa: E712
-            .order_by(CitationRecord.checked_at.desc())
-            .limit(50)
-        )
+        latest_run = await _latest_audit_run_id(self.db)
+        query = select(CitationRecord).where(CitationRecord.is_cited == False)  # noqa: E712
+        if latest_run:
+            query = query.where(CitationRecord.audit_run_id == latest_run)
+        query = query.order_by(CitationRecord.checked_at.desc()).limit(50)
+        result = await self.db.execute(query)
+        from app.utils.query_fanout import CATEGORY_CONTENT_TYPE
+
         return [
             {
+                "id": r.id,
                 "query": r.query,
                 "brand_id": r.brand_id,
                 "category": r.query_category,
                 "competitor_cited": r.competitor_cited,
                 "platform": r.platform,
+                "visibility_pct": r.visibility_pct,
+                "is_mentioned": r.is_mentioned,
+                "is_url_cited": r.is_url_cited,
+                "recommended_content_type": CATEGORY_CONTENT_TYPE.get(
+                    r.query_category or "custom", "faq_hub"
+                ),
+                "invisible": not r.competitor_cited,
             }
             for r in result.scalars().all()
-            if r.competitor_cited
+            if r.competitor_cited or not r.is_cited
         ]
+
+    async def get_top_performing_queries(self, limit: int = 10) -> list[dict]:
+        latest_run = await _latest_audit_run_id(self.db)
+        query = select(CitationRecord).where(CitationRecord.is_cited == True)  # noqa: E712
+        if latest_run:
+            query = query.where(CitationRecord.audit_run_id == latest_run)
+        query = query.order_by(CitationRecord.checked_at.desc()).limit(limit * 3)
+        result = await self.db.execute(query)
+        seen: set[tuple[str, str]] = set()
+        rows = []
+        for r in result.scalars().all():
+            key = (r.brand_id, r.query)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(
+                {
+                    "query": r.query,
+                    "brand_id": r.brand_id,
+                    "platform": r.platform,
+                    "citation_url": r.citation_url,
+                }
+            )
+            if len(rows) >= limit:
+                break
+        return rows
 
     async def get_traffic_trend(self, days: int = 90) -> dict:
         from app.config import get_settings
@@ -205,6 +364,7 @@ class ReportService:
         kpis = await self.get_dashboard_kpis()
         brand_breakdown = await self.get_citation_by_brand()
         gap_queries = await self.get_gap_queries()
+        top_queries = await self.get_top_performing_queries()
 
         report = MonthlyReport(
             report_month=month_start.date(),
@@ -213,6 +373,7 @@ class ReportService:
             content_pieces_published=kpis["content_published_mtd"],
             schema_coverage_pct=kpis["schema_coverage_pct"],
             gap_queries=gap_queries[:10],
+            top_performing_queries=top_queries,
             brand_breakdown={b["brand_id"]: b for b in brand_breakdown},
             full_report_json=kpis,
         )

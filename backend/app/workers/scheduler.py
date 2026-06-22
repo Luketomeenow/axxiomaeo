@@ -5,6 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.workers.citation_worker import run_citation_audit
+from app.workers.content_refresh_worker import run_content_refresh
 from app.workers.content_worker import run_weekly_content
 from app.workers.report_worker import run_monthly_report
 from app.workers.schema_worker import run_schema_validation
@@ -39,7 +40,13 @@ def setup_scheduler():
         id="monthly_report",
         replace_existing=True,
     )
-    logger.info("APScheduler configured with 4 cron jobs (America/Chicago)")
+    scheduler.add_job(
+        run_content_refresh,
+        CronTrigger(day_of_week="sun", hour=6, minute=0),
+        id="content_refresh",
+        replace_existing=True,
+    )
+    logger.info("APScheduler configured with 5 cron jobs (America/Chicago)")
 
 
 def start_scheduler():

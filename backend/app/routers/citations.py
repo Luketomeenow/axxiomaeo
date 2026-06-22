@@ -27,7 +27,15 @@ async def get_latest_citations(
             "query_category": r.query_category,
             "platform": r.platform,
             "is_cited": r.is_cited,
+            "is_mentioned": r.is_mentioned,
+            "is_url_cited": r.is_url_cited,
+            "visibility_pct": r.visibility_pct,
+            "sample_runs": r.sample_runs,
+            "parent_query": r.parent_query,
+            "funnel_stage": r.funnel_stage,
             "competitor_cited": r.competitor_cited,
+            "citation_url": r.citation_url,
+            "audit_run_id": r.audit_run_id,
             "checked_at": r.checked_at.isoformat() if r.checked_at else None,
         }
         for r in records

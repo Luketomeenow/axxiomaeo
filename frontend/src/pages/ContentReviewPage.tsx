@@ -43,38 +43,37 @@ export function ContentReviewPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-xl font-bold text-navy">Content Approval Inbox</h2>
-          <p className="text-sm text-black/50 mt-1">
+          <h2 className="text-xl font-bold text-ink">Content Approval Inbox</h2>
+          <p className="text-sm text-muted mt-1">
             Review and approve content before publishing to WordPress
           </p>
         </div>
-        <span className="text-sm bg-orange/10 text-orange px-3 py-1 rounded-full font-medium">
+        <span className="text-sm bg-warning/10 text-warning px-3 py-1 rounded-full font-medium">
           {reviewable.length} pending
           {activeGenerating.length > 0 ? ` · ${activeGenerating.length} generating` : ""}
         </span>
       </div>
 
       {activeGenerating.length > 0 && (
-        <div className="bg-navy/5 border border-navy/15 rounded px-4 py-3 text-sm text-navy">
+        <div className="bg-navy/5 border border-navy/15 rounded px-4 py-3 text-sm text-ink">
           <p className="font-medium">
             Claude is writing {activeGenerating.length} draft
             {activeGenerating.length === 1 ? "" : "s"}…
           </p>
-          <p className="text-black/50 mt-1">
-            One at a time — usually 1–2 minutes each.{" "}
+          <p className="text-muted mt-1">
+            Usually 2–4 minutes each (text + images).{" "}
             {activeGenerating.map((d) => d.title || d.target_query).join(" · ")}
           </p>
         </div>
       )}
 
       {staleGenerating.length > 0 && (
-        <div className="bg-orange/10 border border-orange/30 rounded px-4 py-3 text-sm text-orange space-y-2">
+        <div className="bg-warning/10 border border-warning/25 rounded px-4 py-3 text-sm text-warning space-y-2">
           <p className="font-medium">
             {staleGenerating.length} draft(s) appear stuck (generation was interrupted).
           </p>
-          <p className="text-black/60">
-            Refresh the page to move them to the inbox, or retry below. Only run one generation at
-            a time.
+          <p className="text-muted">
+            Refresh the page to move them to the inbox, or retry below.
           </p>
           <div className="flex flex-wrap gap-2">
             {staleGenerating.map((d) => (
@@ -83,7 +82,7 @@ export function ContentReviewPage() {
                 type="button"
                 onClick={() => retry.mutate(d.id)}
                 disabled={retry.isPending}
-                className="px-3 py-1.5 bg-navy text-white rounded text-xs font-medium hover:bg-navy/90 disabled:opacity-50"
+                className="px-3 py-1.5 bg-cyan text-void rounded text-xs font-medium hover:bg-cyan/90 disabled:opacity-50"
               >
                 Retry: {d.title || d.target_query}
               </button>

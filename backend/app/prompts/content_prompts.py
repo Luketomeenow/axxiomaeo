@@ -1,3 +1,16 @@
+SHARED_AEO_BLOCK = """
+ALSO REQUIRED:
+- Immediately after H1, include a <div class="aeo-tldr"> with a 1-sentence direct answer to the target query.
+- Include author byline: <p class="aeo-author-byline"><em>By [Technician Name], IUEC-Certified Elevator Technician at {brand_name}</em></p>
+- Link to authoritative sources where citing codes: ASME (https://www.asme.org), ADA (https://www.ada.gov)
+- Use real outbound links when referencing regulations (href to official .gov or asme.org URLs)
+- TOPIC COVERAGE (query fan-out): Cover the full topic cluster — related sub-questions AI might search for
+  (cost, timeline, compliance, equipment, vendor comparison, local service). If the page only covers basics,
+  AI will cite a competitor who covers the gaps.
+- FRESHNESS: Include current-year references (2026) where citing stats, codes, or industry data.
+- IMAGES: Do NOT include <img> tags or image placeholders — images are inserted automatically after H1 and key H2 sections.
+"""
+
 FAQ_HUB_PROMPT = """
 You are a senior content strategist for {brand_name}, a certified elevator service company operating in {markets}.
 
@@ -17,7 +30,7 @@ CRITICAL RULES — Answer Engine Optimization (AEO):
 
 Markets served by {brand_name}: {markets}
 Content length target: {min_words}–{max_words} words
-"""
+""" + SHARED_AEO_BLOCK
 
 LOCAL_PAGE_PROMPT = """
 You are a senior content strategist for {brand_name}, a certified elevator service company.
@@ -37,7 +50,7 @@ CRITICAL AEO RULES:
 
 Brand: {brand_name}
 City: {city}, {state}
-"""
+""" + SHARED_AEO_BLOCK
 
 VERTICAL_PAGE_PROMPT = """
 You are a senior content strategist for {brand_name}, a certified elevator service company.
@@ -57,7 +70,7 @@ CRITICAL AEO RULES:
 Vertical: {vertical}
 Brand: {brand_name}
 Markets: {markets}
-"""
+""" + SHARED_AEO_BLOCK
 
 COMPARISON_PAGE_PROMPT = """
 You are a senior content strategist for {brand_name}, a certified elevator service company.
@@ -76,7 +89,7 @@ CRITICAL AEO RULES:
 
 Topic: {title}
 Brand: {brand_name}
-"""
+""" + SHARED_AEO_BLOCK
 
 DATA_STATS_PROMPT = """
 You are a senior content strategist and industry analyst for {brand_name}.
@@ -95,7 +108,7 @@ CRITICAL AEO RULES:
 9. Output clean WordPress HTML only
 
 Brand: {brand_name}
-"""
+""" + SHARED_AEO_BLOCK
 
 CORRECTION_PROMPT = """
 Your previous content failed AEO validation. Fix the following issues:
@@ -106,6 +119,22 @@ Original query: "{target_query}"
 
 Rewrite the content addressing ALL validation failures. Maintain the same topic and brand ({brand_name}).
 Output clean WordPress HTML only.
+"""
+
+REFRESH_CONTENT_PROMPT = """
+You are updating an existing AEO page for {brand_name} to improve freshness for AI search retrieval.
+
+Target query: "{target_query}"
+Content type: {content_type}
+
+RULES:
+1. Keep the same H1 topic and URL slug intent — this is a refresh, not a new page.
+2. Update statistics, code references, and year mentions to 2026 where relevant.
+3. Add 2-3 new FAQ H2 questions covering related subtopics AI might fan out to
+   (cost, compliance, timeline, equipment, vendor comparison).
+4. Preserve author byline, TL;DR block, and brand mentions.
+5. Strengthen the opening direct answer (40-60 words).
+6. Output clean WordPress HTML only — no markdown.
 """
 
 CONTENT_TYPE_CONFIG = {

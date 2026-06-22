@@ -21,6 +21,7 @@ class ContentPiece(Base):
     status: Mapped[str] = mapped_column(String(50), default="queued")
     published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    source_citation_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     brand: Mapped["Brand"] = relationship(back_populates="content_pieces")
@@ -43,6 +44,8 @@ class ContentDraft(Base):
     reviewer_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     queue_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    images_json: Mapped[list] = mapped_column(JSONB, default=list)
+    featured_media_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -58,6 +61,7 @@ class ContentQueue(Base):
     target_query: Mapped[str | None] = mapped_column(Text, nullable=True)
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
     priority: Mapped[int] = mapped_column(Integer, default=5)
+    source_citation_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="pending")
     scheduled_for: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

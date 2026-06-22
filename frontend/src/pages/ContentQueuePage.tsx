@@ -104,18 +104,18 @@ export function ContentQueuePage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="font-display text-xl font-bold text-navy">Content Queue</h2>
+        <h2 className="text-xl font-bold text-ink">Content Queue</h2>
         <button
           type="button"
           onClick={openModal}
-          className="px-4 py-2 bg-orange text-white rounded text-sm hover:bg-orange/90"
+          className="px-4 py-2 bg-cyan text-void rounded text-sm hover:bg-cyan/90"
         >
           Generate Content
         </button>
       </div>
 
       {successMsg && (
-        <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded">
+        <div className="bg-success/10 border border-success/25 text-success text-sm px-4 py-3 rounded">
           {successMsg}{" "}
           <Link to="/content/review" className="underline font-medium">
             Go to Content Review
@@ -124,7 +124,7 @@ export function ContentQueuePage() {
       )}
 
       {(generate.isError || generateFromQueue.isError) && (
-        <div className="bg-orange/10 border border-orange/30 text-orange text-sm px-4 py-3 rounded">
+        <div className="bg-warning/10 border border-warning/30 text-warning text-sm px-4 py-3 rounded">
           {(() => {
             const err = (generate.error || generateFromQueue.error) as Error | null;
             const msg = err?.message ?? "Generation failed";
@@ -134,18 +134,18 @@ export function ContentQueuePage() {
             if (msg.includes("409") || msg.toLowerCase().includes("already exists")) {
               return "A draft for this item already exists — check Content Review.";
             }
-            if (msg.includes("429") || msg.toLowerCase().includes("still generating")) {
-              return "Another draft is still generating. Wait 1–2 minutes, then try again (one at a time).";
+            if (msg.includes("429") || msg.toLowerCase().includes("generating")) {
+              return msg;
             }
             return msg;
           })()}
         </div>
       )}
 
-      <div className="bg-white rounded border border-black/8 overflow-hidden">
+      <div className="aeo-panel overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-black/8 text-left text-black/50">
+            <tr className="border-b border-border text-left text-muted">
               <th className="px-4 py-3">Title</th>
               <th className="px-4 py-3">Brand</th>
               <th className="px-4 py-3">Type</th>
@@ -158,22 +158,22 @@ export function ContentQueuePage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-black/40">
+                <td colSpan={7} className="px-4 py-8 text-center text-muted/80">
                   Loading…
                 </td>
               </tr>
             ) : !data?.length ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-black/40">
+                <td colSpan={7} className="px-4 py-8 text-center text-muted/80">
                   Queue is empty
                 </td>
               </tr>
             ) : (
               data.map((item) => (
-                <tr key={item.id} className="border-t border-black/5">
+                <tr key={item.id} className="border-t border-border">
                   <td className="px-4 py-3 font-medium">{item.title}</td>
-                  <td className="px-4 py-3 text-black/60">{brandsById?.[item.brand_id] ?? item.brand_id}</td>
-                  <td className="px-4 py-3 text-black/60">{item.content_type}</td>
+                  <td className="px-4 py-3 text-muted">{brandsById?.[item.brand_id] ?? item.brand_id}</td>
+                  <td className="px-4 py-3 text-muted">{item.content_type}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`text-xs px-2 py-0.5 rounded font-medium ${
@@ -188,28 +188,28 @@ export function ContentQueuePage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">{item.status}</td>
-                  <td className="px-4 py-3 text-black/60">{item.scheduled_for || "—"}</td>
+                  <td className="px-4 py-3 text-muted">{item.scheduled_for || "—"}</td>
                   <td className="px-4 py-3 text-right">
                     {item.status === "pending" ? (
                       <button
                         type="button"
                         onClick={() => generateFromQueue.mutate(item.id)}
                         disabled={generatingId === item.id || generateFromQueue.isPending}
-                        className="px-3 py-1.5 bg-navy text-white rounded text-xs font-medium hover:bg-navy/90 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-cyan text-void rounded text-xs font-medium hover:bg-cyan/90 disabled:opacity-50"
                       >
                         {generatingId === item.id ? "Starting…" : "Generate"}
                       </button>
                     ) : item.status === "in_progress" ? (
-                      <span className="text-xs text-black/40">Generating…</span>
+                      <span className="text-xs text-muted/80">Generating…</span>
                     ) : item.status === "ready" || item.status === "needs_review" ? (
                       <Link
                         to="/content/review"
-                        className="text-xs text-navy font-medium hover:text-orange"
+                        className="text-xs text-ink font-medium hover:text-cyan"
                       >
                         Review →
                       </Link>
                     ) : (
-                      <span className="text-xs text-black/30">—</span>
+                      <span className="text-xs text-muted/50">—</span>
                     )}
                   </td>
                 </tr>
@@ -221,19 +221,19 @@ export function ContentQueuePage() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 space-y-4">
-            <h3 className="font-display text-lg font-bold text-navy">Generate Content</h3>
+          <div className="aeo-panel shadow-xl w-full max-w-lg p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-ink">Generate Content</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-black/60 mb-2">Brand</label>
+                <label className="block text-xs font-medium text-muted mb-2">Brand</label>
                 <BrandLocationPicker selectedId={form.location_id} onSelect={selectLocation} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-black/60 mb-1">Content type</label>
+                <label className="block text-xs font-medium text-muted mb-1">Content type</label>
                 <select
                   value={form.content_type}
                   onChange={(e) => setForm({ ...form, content_type: e.target.value })}
-                  className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                  className="w-full border border-border rounded px-3 py-2 text-sm"
                 >
                   {CONTENT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -243,44 +243,44 @@ export function ContentQueuePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-black/60 mb-1">Target query</label>
+                <label className="block text-xs font-medium text-muted mb-1">Target query</label>
                 <input
                   type="text"
                   value={form.target_query}
                   onChange={(e) => setForm({ ...form, target_query: e.target.value })}
-                  className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                  className="w-full border border-border rounded px-3 py-2 text-sm"
                   placeholder="e.g. how often should elevators be inspected"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-black/60 mb-1">Title (optional)</label>
+                <label className="block text-xs font-medium text-muted mb-1">Title (optional)</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                  className="w-full border border-border rounded px-3 py-2 text-sm"
                 />
               </div>
               {form.content_type === "local_page" && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-black/60 mb-1">City</label>
+                    <label className="block text-xs font-medium text-muted mb-1">City</label>
                     <input
                       type="text"
                       value={form.city}
                       onChange={(e) => setForm({ ...form, city: e.target.value })}
-                      className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                      className="w-full border border-border rounded px-3 py-2 text-sm"
                       placeholder="Houston"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-black/60 mb-1">State</label>
+                    <label className="block text-xs font-medium text-muted mb-1">State</label>
                     <input
                       type="text"
                       value={form.state}
                       onChange={(e) => setForm({ ...form, state: e.target.value })}
-                      className="w-full border border-black/15 rounded px-3 py-2 text-sm"
+                      className="w-full border border-border rounded px-3 py-2 text-sm"
                       placeholder="TX"
                     />
                   </div>
@@ -288,19 +288,19 @@ export function ContentQueuePage() {
               )}
             </div>
             {generate.isError && (
-              <p className="text-sm text-orange">{(generate.error as Error).message}</p>
+              <p className="text-sm text-warning">{(generate.error as Error).message}</p>
             )}
             {!form.location_id && (
-              <p className="text-sm text-black/45">Select a brand location above to enable Generate.</p>
+              <p className="text-sm text-muted">Select a brand location above to enable Generate.</p>
             )}
             {form.location_id && !form.target_query.trim() && (
-              <p className="text-sm text-black/45">Enter a target query (search phrase) to enable Generate.</p>
+              <p className="text-sm text-muted">Enter a target query (search phrase) to enable Generate.</p>
             )}
             <div className="flex gap-2 justify-end pt-2">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm text-black/50"
+                className="px-4 py-2 text-sm text-muted"
               >
                 Cancel
               </button>
@@ -311,7 +311,7 @@ export function ContentQueuePage() {
                   generate.mutate(payload);
                 }}
                 disabled={!form.location_id || !form.target_query.trim() || generate.isPending}
-                className="px-4 py-2 bg-navy text-white rounded text-sm disabled:opacity-50"
+                className="px-4 py-2 bg-cyan text-void rounded text-sm disabled:opacity-50"
               >
                 {generate.isPending ? "Starting…" : "Generate"}
               </button>

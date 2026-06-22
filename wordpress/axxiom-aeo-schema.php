@@ -1,12 +1,29 @@
 <?php
 /**
  * Plugin Name: Axxiom AEO Schema
- * Description: Outputs JSON-LD from post meta field aeo_schema_json (set by Axxiom AEO Automation Platform).
- * Version: 1.0.0
+ * Description: Registers aeo_schema_json for REST API and outputs JSON-LD in wp_head (Axxiom AEO Automation Platform).
+ * Version: 1.1.0
  * Author: Axxiom Elevator
  *
  * Install: copy to wp-content/mu-plugins/axxiom-aeo-schema.php on each brand site.
  */
+
+/**
+ * Allow the Axxiom backend to write schema via WordPress REST API (meta.aeo_schema_json).
+ */
+add_action('init', function () {
+    $args = [
+        'type' => 'string',
+        'single' => true,
+        'show_in_rest' => true,
+        'auth_callback' => function () {
+            return current_user_can('edit_posts');
+        },
+    ];
+
+    register_post_meta('post', 'aeo_schema_json', $args);
+    register_post_meta('page', 'aeo_schema_json', $args);
+});
 
 add_action('wp_head', function () {
     if (!is_singular()) {

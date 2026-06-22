@@ -40,6 +40,12 @@ class ScrapeResponse:
     sources: list[str]
 
 
+@dataclass
+class QueryAuditMeta:
+    parent_query: str | None = None
+    funnel_stage: str | None = None
+
+
 def brand_search_terms(brand: Brand) -> list[str]:
     terms = [brand.name]
     if brand.wp_url:
@@ -82,9 +88,7 @@ def analyze_scrape(
     sources = scrape.sources or []
 
     mentioned = bool(find_mentions(answer, terms))
-    domain_cited = bool(
-        domain and any(domain in s.lower() for s in sources)
-    )
+    domain_cited = bool(domain and any(domain in s.lower() for s in sources))
     is_cited = mentioned or domain_cited
 
     citation_url = None
@@ -93,7 +97,7 @@ def analyze_scrape(
             if domain in source.lower():
                 citation_url = source
                 break
-    if not citation_url and sources and is_cited:
+    if not citation_url and sources and domain_cited:
         citation_url = sources[0]
 
     competitor = None if is_cited else find_competitor(answer)
@@ -101,9 +105,50 @@ def analyze_scrape(
     return CitationResult(
         query=scrape.prompt,
         is_cited=is_cited,
+        is_mentioned=mentioned,
+        is_url_cited=domain_cited,
+        visibility_pct=100.0 if is_cited else 0.0,
+        sample_runs=1,
         competitor_cited=competitor,
         citation_url=citation_url,
         platform=scrape.provider,
+    )
+
+
+def aggregate_sample_results(
+    results: list[CitationResult],
+    *,
+    parent_query: str | None = None,
+    funnel_stage: str | None = None,
+) -> CitationResult:
+    """Merge N probabilistic runs into one visibility score (Outwrite: 3x per prompt)."""
+    if not results:
+        raise ValueError("No sample results to aggregate")
+    first = results[0]
+    cited_count = sum(1 for r in results if r.is_cited)
+    mentioned_count = sum(1 for r in results if r.is_mentioned)
+    url_cited_count = sum(1 for r in results if r.is_url_cited)
+    n = len(results)
+    visibility = round(cited_count / n * 100, 1)
+
+    competitors = [r.competitor_cited for r in results if r.competitor_cited]
+    competitor = max(set(competitors), key=competitors.count) if competitors else None
+
+    urls = [r.citation_url for r in results if r.citation_url]
+    citation_url = urls[0] if urls else None
+
+    return CitationResult(
+        query=first.query,
+        is_cited=cited_count > 0,
+        is_mentioned=mentioned_count > 0,
+        is_url_cited=url_cited_count > 0,
+        visibility_pct=visibility,
+        sample_runs=n,
+        competitor_cited=competitor if cited_count == 0 else None,
+        citation_url=citation_url,
+        platform=first.platform,
+        parent_query=parent_query,
+        funnel_stage=funnel_stage,
     )
 
 
@@ -115,8 +160,9 @@ class GeoAeoTrackerService:
             p.strip()
             for p in settings.geo_aeo_providers.split(",")
             if p.strip() in VALID_PROVIDERS
-        ] or ["perplexity", "google_ai"]
+        ] or ["perplexity", "chatgpt", "google_ai"]
         self.concurrency = max(1, settings.geo_aeo_concurrency)
+        self.sample_runs = max(1, settings.citation_sample_runs)
 
     def _configured(self) -> bool:
         return bool(self.base_url)
@@ -153,7 +199,12 @@ class GeoAeoTrackerService:
             logger.warning("Scrape failed for provider=%s query=%r: %s", provider, prompt[:80], exc)
             return None
 
-    async def get_citation_share(self, brand: Brand, queries: list[str]) -> list[CitationResult]:
+    async def get_citation_share(
+        self,
+        brand: Brand,
+        queries: list[str],
+        query_meta: dict[str, QueryAuditMeta] | None = None,
+    ) -> list[CitationResult]:
         if not self._configured():
             raise RuntimeError("GEO_AEO_TRACKER_URL not configured")
 
@@ -165,19 +216,25 @@ class GeoAeoTrackerService:
 
         terms = brand_search_terms(brand)
         semaphore = asyncio.Semaphore(self.concurrency)
-        tasks = []
+        meta = query_meta or {}
 
-        async def run_pair(provider: str, query: str):
+        async def run_samples(provider: str, query: str) -> CitationResult | None:
             async with semaphore:
-                scrape = await self._scrape_one(provider, query)
-                if not scrape:
+                samples: list[CitationResult] = []
+                for _ in range(self.sample_runs):
+                    scrape = await self._scrape_one(provider, query)
+                    if scrape:
+                        samples.append(analyze_scrape(scrape, brand, terms))
+                if not samples:
                     return None
-                return analyze_scrape(scrape, brand, terms)
+                qmeta = meta.get(query, QueryAuditMeta())
+                return aggregate_sample_results(
+                    samples,
+                    parent_query=qmeta.parent_query,
+                    funnel_stage=qmeta.funnel_stage,
+                )
 
-        for query in queries:
-            for provider in self.providers:
-                tasks.append(run_pair(provider, query))
-
+        tasks = [run_samples(provider, query) for query in queries for provider in self.providers]
         outcomes = await asyncio.gather(*tasks)
         results = [r for r in outcomes if r is not None]
         if not results:

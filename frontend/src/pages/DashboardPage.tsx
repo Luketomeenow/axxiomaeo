@@ -21,10 +21,10 @@ export function DashboardPage() {
     retry: 1,
   });
 
-  if (isLoading) return <p className="text-black/50">Loading dashboard…</p>;
+  if (isLoading) return <p className="text-muted">Loading dashboard…</p>;
   if (error)
     return (
-      <p className="text-orange">
+      <p className="text-warning">
         {(error as Error).message?.includes("Failed to fetch")
           ? "Cannot reach the API — make sure the backend is running on port 8000."
           : `Failed to load dashboard: ${(error as Error).message}`}

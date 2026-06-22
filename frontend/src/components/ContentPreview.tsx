@@ -41,19 +41,19 @@ export function ContentPreview({ html, validationResult }: Props) {
     : "<p>No HTML content yet. If you just clicked Generate, wait 1–2 minutes and refresh this page.</p>";
 
   return (
-    <div className="bg-white rounded border border-black/8 overflow-hidden flex flex-col">
-      <div className="px-4 py-3 border-b border-black/8 bg-cream flex items-center justify-between gap-2 flex-wrap">
-        <h3 className="text-sm font-medium text-navy">Content Preview</h3>
+    <div className="aeo-panel overflow-hidden flex flex-col">
+      <div className="px-4 py-3 border-b border-border bg-void flex items-center justify-between gap-2 flex-wrap">
+        <h3 className="text-sm font-medium text-ink">Content Preview</h3>
         <div className="flex gap-2 flex-wrap">
           {wordCount !== undefined && (
-            <span className="text-xs bg-navy/10 text-navy px-2 py-0.5 rounded">
+            <span className="text-xs bg-navy/10 text-ink px-2 py-0.5 rounded">
               {wordCount.toLocaleString()} words
             </span>
           )}
           {h2Ratio !== undefined && h2Total !== undefined && h2Total > 0 && (
             <span
               className={`text-xs px-2 py-0.5 rounded ${
-                h2Ratio >= 0.6 ? "bg-green-100 text-green-800" : "bg-orange/10 text-orange"
+                h2Ratio >= 0.6 ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
               }`}
             >
               H2 questions: {h2Questions}/{h2Total} ({Math.round(h2Ratio * 100)}%)
@@ -63,7 +63,7 @@ export function ContentPreview({ html, validationResult }: Props) {
       </div>
       <style>{PREVIEW_CSS}</style>
       <div
-        className="content-preview-body p-4 overflow-auto min-h-[400px] max-h-[600px] bg-white"
+        className="content-preview-body p-4 overflow-auto min-h-[400px] max-h-[600px] bg-panel-elevated"
         dangerouslySetInnerHTML={{ __html: bodyHtml }}
       />
     </div>

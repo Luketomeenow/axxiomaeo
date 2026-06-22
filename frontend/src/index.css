@@ -1,14 +1,136 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy: #1a3a5c;
-  --color-orange: #c8410a;
-  --color-cream: #f5f3ee;
-  --color-ink: #0f0f0d;
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Playfair Display", Georgia, serif;
+  /* Axxiom Command palette */
+  --color-void: #080c12;
+  --color-panel: #0d1117;
+  --color-panel-elevated: #151b24;
+  --color-panel-hover: #1a2230;
+  --color-border: color-mix(in srgb, white 9%, transparent);
+  --color-border-strong: color-mix(in srgb, white 14%, transparent);
+
+  --color-cyan: #22d3ee;
+  --color-cyan-dim: #0891b2;
+  --color-navy: #0a1628;
+  --color-ink: #e8edf4;
+  --color-muted: #8b9cb3;
+
+  --color-success: #34d399;
+  --color-danger: #f87171;
+  --color-warning: #fbbf24;
+
+  /* Legacy aliases → Command theme */
+  --color-orange: #22d3ee;
+  --color-cream: #080c12;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 body {
-  @apply bg-cream text-ink font-sans antialiased;
+  @apply bg-void text-ink font-sans antialiased;
+  background-image: radial-gradient(
+    ellipse 80% 50% at 50% -20%,
+    color-mix(in srgb, var(--color-cyan) 8%, transparent),
+    transparent
+  );
+}
+
+@layer components {
+  .aeo-panel {
+    @apply bg-panel-elevated border border-border rounded-lg;
+  }
+
+  .aeo-panel-header {
+    @apply px-5 py-4 border-b border-border;
+  }
+
+  .aeo-title {
+    @apply text-base font-semibold text-ink tracking-tight;
+  }
+
+  .aeo-subtitle {
+    @apply text-xs text-muted mt-0.5;
+  }
+
+  .aeo-kpi-value {
+    @apply text-3xl font-bold text-cyan tabular-nums tracking-tight;
+  }
+
+  .aeo-btn-primary {
+    @apply px-4 py-2 bg-cyan text-void rounded-md text-sm font-semibold
+      hover:bg-cyan/90 disabled:opacity-50 transition-colors;
+  }
+
+  .aeo-btn-secondary {
+    @apply px-4 py-2 bg-panel-hover border border-border text-ink rounded-md text-sm font-medium
+      hover:border-cyan/40 hover:text-cyan disabled:opacity-50 transition-colors;
+  }
+
+  .aeo-input {
+    @apply w-full bg-panel border border-border rounded-md px-3 py-2 text-sm text-ink
+      placeholder:text-muted focus:outline-none focus:border-cyan/50 focus:ring-1 focus:ring-cyan/30;
+  }
+
+  .aeo-table-head {
+    @apply text-left text-xs font-medium text-muted uppercase tracking-wider;
+  }
+
+  .aeo-badge {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full border;
+  }
+
+  .aeo-badge-success {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full border bg-success/10 text-success border-success/25;
+  }
+
+  .aeo-badge-warning {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full border bg-warning/10 text-warning border-warning/25;
+  }
+
+  .aeo-badge-danger {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full border bg-danger/10 text-danger border-danger/25;
+  }
+
+  .aeo-badge-info {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full border bg-cyan/10 text-cyan border-cyan/25;
+  }
+
+  .aeo-link {
+    @apply text-cyan hover:text-cyan/80 transition-colors;
+  }
+
+  .aeo-code-editor {
+    @apply w-full text-xs font-mono border border-border rounded-md p-3
+      bg-panel text-ink caret-cyan
+      placeholder:text-muted
+      focus:outline-none focus:border-cyan/40 focus:ring-1 focus:ring-cyan/25;
+  }
+
+  .aeo-code-block {
+    @apply p-4 text-xs overflow-auto font-mono bg-panel text-ink whitespace-pre-wrap break-words;
+  }
+}
+
+/* Recharts dark theme */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: color-mix(in srgb, white 8%, transparent) !important;
+}
+
+.recharts-text {
+  fill: #8b9cb3 !important;
+  font-size: 11px;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: #151b24 !important;
+  border: 1px solid color-mix(in srgb, white 12%, transparent) !important;
+  border-radius: 6px !important;
+  color: #e8edf4 !important;
+}
+
+.recharts-legend-item-text {
+  color: #8b9cb3 !important;
 }

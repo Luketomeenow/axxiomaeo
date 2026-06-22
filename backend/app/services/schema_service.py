@@ -57,17 +57,121 @@ def build_local_business_schema(brand: Brand, city: str = "") -> str:
             "addressRegion": primary_city.split()[-1] if " " in primary_city else "",
             "addressCountry": "US",
         },
-        "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "4.8",
-            "reviewCount": "50",
-        },
         "serviceArea": [
             {"@type": "GeoCircle", "geoMidpoint": {"@type": "GeoCoordinates"}, "geoRadius": "50000"}
             for _ in (brand.markets or ["National"])
         ],
     }
     return _wrap_json_ld(schema)
+
+
+def _normalize_faq_items(items: list) -> list[dict]:
+    faqs: list[dict] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        question = item.get("question") or item.get("q") or item.get("name")
+        answer = item.get("answer") or item.get("a") or item.get("text")
+        if question and answer:
+            faqs.append({"question": str(question).strip(), "answer": str(answer).strip()})
+    return faqs
+
+
+def _faqs_from_faqpage_object(data: dict) -> list[dict]:
+    if data.get("@type") != "FAQPage":
+        return []
+    entities = data.get("mainEntity") or []
+    if not isinstance(entities, list):
+        entities = [entities]
+    faqs: list[dict] = []
+    for entity in entities:
+        if not isinstance(entity, dict):
+            continue
+        question = entity.get("name")
+        accepted = entity.get("acceptedAnswer") or {}
+        answer = accepted.get("text") if isinstance(accepted, dict) else None
+        if question and answer:
+            faqs.append({"question": str(question).strip(), "answer": str(answer).strip()})
+    return faqs
+
+
+def parse_faqs_from_text(text: str) -> list[dict]:
+    """
+    Parse FAQ question/answer pairs from plain text, JSON, or HTML.
+
+    Supported plain-text formats:
+    - Q: ... / A: ... blocks
+    - Question line ending with ? followed by answer paragraph(s)
+    - JSON array: [{"question": "...", "answer": "..."}]
+    - Existing FAQPage JSON-LD object
+    - HTML with <h2>Question?</h2> + following content (same as content publish)
+    """
+    raw = text.strip()
+    if not raw:
+        return []
+
+    if re.search(r"<h[1-6][^>]*>", raw, re.IGNORECASE):
+        return extract_faqs_from_html(raw)
+
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            return _normalize_faq_items(parsed)
+        if isinstance(parsed, dict):
+            if parsed.get("@type") == "FAQPage":
+                return _faqs_from_faqpage_object(parsed)
+            if "mainEntity" in parsed:
+                return _faqs_from_faqpage_object(parsed)
+            if "question" in parsed and "answer" in parsed:
+                return _normalize_faq_items([parsed])
+    except json.JSONDecodeError:
+        pass
+
+    qa_blocks = re.findall(
+        r"(?:^|\n)\s*Q(?:uestion)?\s*:\s*(.+?)\s*\n\s*A(?:nswer)?\s*:\s*(.+?)(?=\n\s*Q(?:uestion)?\s*:|\Z)",
+        raw,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if qa_blocks:
+        return [
+            {"question": q.strip(), "answer": a.strip()}
+            for q, a in qa_blocks
+            if q.strip() and a.strip()
+        ]
+
+    faqs: list[dict] = []
+    blocks = re.split(r"\n\s*\n", raw)
+    i = 0
+    while i < len(blocks):
+        block = blocks[i].strip()
+        if not block:
+            i += 1
+            continue
+        lines = block.split("\n", 1)
+        headline = lines[0].strip().lstrip("#").strip()
+        if headline.endswith("?"):
+            answer = lines[1].strip() if len(lines) > 1 else ""
+            if not answer and i + 1 < len(blocks):
+                nxt = blocks[i + 1].strip()
+                if nxt and not nxt.split("\n", 1)[0].strip().endswith("?"):
+                    answer = nxt
+                    i += 1
+            if answer:
+                faqs.append({"question": headline, "answer": answer})
+        i += 1
+
+    return faqs
+
+
+def build_faqpage_from_text(text: str) -> tuple[str, list[dict]]:
+    """Turn FAQ text into FAQPage JSON-LD. Returns (json_string, parsed_faqs)."""
+    faqs = parse_faqs_from_text(text)
+    if not faqs:
+        raise ValueError(
+            "No FAQ pairs found. Use Q:/A: blocks, JSON [{question, answer}], "
+            "or HTML with <h2>Question?</h2> followed by answer content."
+        )
+    return build_faqpage_schema(faqs), faqs
 
 
 def extract_faqs_from_html(html: str) -> list[dict]:
@@ -84,7 +188,7 @@ def extract_faqs_from_html(html: str) -> list[dict]:
                 break
             if sibling.name in ("p", "ul", "ol", "div"):
                 answer_parts.append(sibling.get_text(strip=True))
-        answer = " ".join(answer_parts)[:500]
+        answer = " ".join(answer_parts)[:2000]
         if answer:
             faqs.append({"question": question, "answer": answer})
     return faqs
@@ -106,10 +210,23 @@ def build_faqpage_schema(faqs: list[dict]) -> str:
     return _wrap_json_ld(schema)
 
 
+def _service_page_url(brand: Brand, service_type: str) -> str | None:
+    urls = brand.service_page_urls or {}
+    if not urls:
+        return None
+    key = service_type.lower()
+    for k, v in urls.items():
+        if k.lower() in key or key in k.lower():
+            return v
+    return urls.get(service_type)
+
+
 def build_service_schema(brand: Brand, service_type: str) -> str:
+    service_url = _service_page_url(brand, service_type)
     schema = {
         "@context": "https://schema.org",
         "@type": "Service",
+        "name": service_type,
         "serviceType": service_type,
         "provider": {"@type": "Organization", "name": brand.name, "url": brand.wp_url},
         "areaServed": brand.markets or [],
@@ -126,11 +243,71 @@ def build_service_schema(brand: Brand, service_type: str) -> str:
             ],
         },
     }
+    if service_url:
+        schema["url"] = service_url
     return _wrap_json_ld(schema)
 
 
-def build_article_schema(post: ContentPiece, brand: Brand, author: dict | None = None) -> str:
-    author = author or {"name": "Axxiom Technical Team", "url": brand.wp_url}
+def extract_author_from_html(html: str, brand: Brand) -> dict:
+    soup = BeautifulSoup(html, "lxml")
+    byline = soup.find(class_=re.compile(r"author|byline", re.I))
+    if byline:
+        name = byline.get_text(strip=True)
+        if name.lower().startswith("by "):
+            name = name[3:].strip()
+        if name:
+            return {
+                "name": name,
+                "url": brand.wp_url,
+                "jobTitle": "IUEC-Certified Elevator Technician",
+            }
+    return {
+        "name": f"{brand.name} Technical Team",
+        "url": brand.wp_url,
+        "jobTitle": "IUEC-Certified Elevator Technician",
+    }
+
+
+def extract_images_from_html(html: str) -> list[dict]:
+    soup = BeautifulSoup(html, "lxml")
+    images: list[dict] = []
+    for figure in soup.find_all("figure", class_=re.compile(r"aeo-figure")):
+        img = figure.find("img")
+        if not img or not img.get("src"):
+            continue
+        figcaption = figure.find("figcaption")
+        caption = figcaption.get_text(strip=True) if figcaption else img.get("alt", "")
+        images.append(
+            {
+                "@type": "ImageObject",
+                "url": img["src"],
+                "contentUrl": img["src"],
+                "description": caption or img.get("alt", ""),
+                "caption": caption,
+                "name": img.get("title") or img.get("alt", ""),
+            }
+        )
+    if not images:
+        for img in soup.find_all("img", class_=re.compile(r"aeo-content-image")):
+            if not img.get("src"):
+                continue
+            images.append(
+                {
+                    "@type": "ImageObject",
+                    "url": img["src"],
+                    "contentUrl": img["src"],
+                    "description": img.get("alt", ""),
+                    "caption": img.get("alt", ""),
+                    "name": img.get("title") or img.get("alt", ""),
+                }
+            )
+    return images
+
+
+def build_article_schema(post: ContentPiece, brand: Brand, author: dict | None = None, html: str = "") -> str:
+    if author is None and html:
+        author = extract_author_from_html(html, brand)
+    author = author or {"name": f"{brand.name} Technical Team", "url": brand.wp_url}
     now = datetime.now(timezone.utc).isoformat()
     schema = {
         "@context": "https://schema.org",
@@ -138,8 +315,9 @@ def build_article_schema(post: ContentPiece, brand: Brand, author: dict | None =
         "headline": post.title,
         "author": {
             "@type": "Person",
-            "name": author.get("name", "Axxiom Technical Team"),
+            "name": author.get("name", f"{brand.name} Technical Team"),
             "url": author.get("url", brand.wp_url),
+            "jobTitle": author.get("jobTitle", "IUEC-Certified Elevator Technician"),
         },
         "datePublished": (post.published_at or datetime.utcnow()).isoformat() if post.published_at else now,
         "dateModified": now,
@@ -148,6 +326,11 @@ def build_article_schema(post: ContentPiece, brand: Brand, author: dict | None =
         "articleSection": post.content_type or "Elevator Services",
         "keywords": post.target_query or "",
     }
+    if html:
+        image_objects = extract_images_from_html(html)
+        if image_objects:
+            schema["image"] = image_objects
+            schema["thumbnailUrl"] = image_objects[0].get("url")
     return _wrap_json_ld(schema)
 
 
@@ -187,6 +370,7 @@ def build_combined_schema(html: str, brand: Brand, title: str, content_type: str
         build_article_schema(
             ContentPiece(title=title, content_type=content_type, word_count=len(html.split())),
             brand,
+            html=html,
         )
     )
     schemas.append(article_data)

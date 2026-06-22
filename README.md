@@ -106,7 +106,10 @@ Create a WordPress Application Password for each site (Users → Profile → App
 | Weekly content | Monday 9am | Generates draft → `pending_review` (no auto-publish) |
 | Citation audit | 1st & 15th, 8am | Peec.ai audit across all brands |
 | Schema validation | 1st of month, 7am | Validates pages; queues fixes for approval |
+| Content refresh | Sunday 6am | Re-publishes stale content (90+ days); re-audits gap-sourced posts |
 | Monthly report | Last day, 11pm | Compiles and stores report JSON |
+
+Rollout: [wordpress/ROLLOUT_VERIFICATION.md](wordpress/ROLLOUT_VERIFICATION.md) · Authority: [wordpress/AUTHORITY_CHECKLIST.md](wordpress/AUTHORITY_CHECKLIST.md)
 
 ## Approval Workflow
 

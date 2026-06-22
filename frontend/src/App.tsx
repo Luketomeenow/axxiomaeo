@@ -7,11 +7,13 @@ import { CitationsPage } from "./pages/CitationsPage";
 import { ContentQueuePage } from "./pages/ContentQueuePage";
 import { ContentReviewDetailPage } from "./pages/ContentReviewDetailPage";
 import { ContentReviewPage } from "./pages/ContentReviewPage";
+import { PublishedContentPage } from "./pages/PublishedContentPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SchemaHealthPage } from "./pages/SchemaHealthPage";
+import { PublishedSchemaPage } from "./pages/PublishedSchemaPage";
 import { SchemaReviewPage } from "./pages/SchemaReviewPage";
 import { supabase } from "./lib/supabase";
 
@@ -24,8 +26,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cream">
-        <p className="text-black/50">Loading…</p>
+      <div className="min-h-screen flex items-center justify-center bg-void">
+        <p className="text-muted">Loading…</p>
       </div>
     );
   }
@@ -52,8 +54,10 @@ function AppRoutes() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/content/review" element={<ContentReviewPage />} />
         <Route path="/content/review/:id" element={<ContentReviewDetailPage />} />
+        <Route path="/content/published" element={<PublishedContentPage />} />
         <Route path="/content/queue" element={<ContentQueuePage />} />
         <Route path="/schema/review" element={<SchemaReviewPage />} />
+        <Route path="/schema/published" element={<PublishedSchemaPage />} />
         <Route path="/citations" element={<CitationsPage />} />
         <Route path="/schema/health" element={<SchemaHealthPage />} />
         <Route path="/reports" element={<ReportsPage />} />

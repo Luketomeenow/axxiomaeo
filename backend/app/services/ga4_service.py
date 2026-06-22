@@ -15,6 +15,8 @@ AI_REFERRERS = [
     "claude.ai",
     "bard.google.com",
     "gemini.google.com",
+    "copilot.microsoft.com",
+    "search.google.com",
 ]
 
 

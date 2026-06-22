@@ -65,7 +65,12 @@ class CitationService:
             return bool(get_settings().peec_api_key)
         return provider == "none"
 
-    async def run_audit(self, brand: Brand, queries: list[str]) -> tuple[list[CitationResult], str]:
+    async def run_audit(
+        self,
+        brand: Brand,
+        queries: list[str],
+        query_meta: dict | None = None,
+    ) -> tuple[list[CitationResult], str]:
         provider = self.provider
         if provider == "auto":
             if self.geo_aeo._configured():
@@ -77,7 +82,7 @@ class CitationService:
 
         try:
             if provider == "geo_aeo":
-                results = await self.geo_aeo.get_citation_share(brand, queries)
+                results = await self.geo_aeo.get_citation_share(brand, queries, query_meta=query_meta)
                 return results, "completed"
             if provider == "peec":
                 results = await self.peec.get_citation_share(brand.name, queries)

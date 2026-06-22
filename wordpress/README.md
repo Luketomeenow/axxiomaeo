@@ -2,6 +2,10 @@
 
 Required for **Approve & Publish** and **Schema Review** to show JSON-LD on live pages.
 
+**WP Engine (step-by-step):** see [WP_ENGINE_SETUP.md](WP_ENGINE_SETUP.md)  
+**Elementor Pro (Theme Builder + Post Content):** see [ELEMENTOR.md](ELEMENTOR.md)  
+**v1.1.0 redeploy (all 8 sites):** [REDEPLOY_CHECKLIST.md](REDEPLOY_CHECKLIST.md)
+
 ## 1. Application Password
 
 On each WordPress site:
@@ -23,7 +27,7 @@ On each WordPress site:
 
 ## 2. Schema output (must-have)
 
-Copy [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) to:
+Copy [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) (**v1.1.0+** — registers meta for REST + outputs JSON-LD) to:
 
 ```
 wp-content/mu-plugins/axxiom-aeo-schema.php

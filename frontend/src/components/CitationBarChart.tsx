@@ -13,14 +13,14 @@ export function CitationBarChart({ data, dataKey, title }: Props) {
   }));
 
   return (
-    <div className="bg-white rounded border border-black/8 p-5">
-      <h3 className="font-display text-base font-bold text-navy mb-4">{title}</h3>
+    <div className="aeo-panel p-5">
+      <h3 className="aeo-title mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
           <XAxis type="number" domain={[0, 100]} unit="%" />
           <YAxis type="category" dataKey="name" width={75} tick={{ fontSize: 11 }} />
           <Tooltip formatter={(v) => [`${v}%`, "Citation Share"]} />
-          <Bar dataKey="share" fill="#1a3a5c" radius={[0, 4, 4, 0]} />
+          <Bar dataKey="share" fill="#22d3ee" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

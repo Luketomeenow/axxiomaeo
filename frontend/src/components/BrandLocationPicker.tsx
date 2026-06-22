@@ -3,7 +3,7 @@ import { BRAND_LOCATIONS, locationInitial, type BrandLocation } from "../data/br
 function PinIcon() {
   return (
     <svg
-      className="w-4 h-4 text-black/25 shrink-0"
+      className="w-4 h-4 text-muted/40 shrink-0"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -39,14 +39,14 @@ export function BrandLocationPicker({ selectedId, onSelect }: BrandLocationPicke
           >
             <span
               className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                selected ? "bg-navy text-white" : "bg-black/8 text-black/50"
+                selected ? "bg-cyan text-void" : "bg-black/8 text-muted"
               }`}
             >
               {locationInitial(location.name)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-black truncate">{location.name}</span>
-              <span className="block text-xs text-black/45 truncate">{location.address}</span>
+              <span className="block text-sm font-semibold text-ink truncate">{location.name}</span>
+              <span className="block text-xs text-muted truncate">{location.address}</span>
             </span>
             <PinIcon />
           </button>

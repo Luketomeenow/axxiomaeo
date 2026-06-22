@@ -14,10 +14,10 @@ export function NotificationBell() {
   return (
     <Link
       to="/notifications"
-      className="relative p-2 rounded-full hover:bg-cream transition-colors"
+      className="relative p-2 rounded-full hover:bg-void transition-colors"
       title="Notifications"
     >
-      <svg className="w-5 h-5 text-navy" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-5 h-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -26,7 +26,7 @@ export function NotificationBell() {
         />
       </svg>
       {count > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 bg-orange text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium">
+        <span className="absolute -top-0.5 -right-0.5 bg-cyan text-void text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium">
           {count > 9 ? "9+" : count}
         </span>
       )}

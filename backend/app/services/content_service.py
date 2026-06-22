@@ -4,10 +4,17 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.models.approval import ApprovalEvent
 from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece, ContentQueue
 from app.services.claude_service import ClaudeService, validate_answer_first
+from app.services.content_enrichment import (
+    ensure_author_byline,
+    ensure_tldr_block,
+    inject_internal_links,
+)
+from app.services.content_image_pipeline import ContentImagePipeline
 from app.services.notification_service import NotificationService
 from app.services.schema_service import build_combined_schema
 from app.services.wordpress_service import WordPressService
@@ -68,9 +75,109 @@ def _inject_brand_phone(html: str, phone: str | None) -> str:
 class ContentGenerationService:
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.settings = get_settings()
         self.claude = ClaudeService()
         self.wp = WordPressService()
         self.notifications = NotificationService(db)
+
+    def _resolve_publish_targets(
+        self,
+        draft_brand_id: str,
+        brand_ids: list[str] | None,
+        publish_all: bool,
+    ) -> list[str]:
+        if publish_all:
+            configured = self.settings.wp_configured_brand_ids()
+            if not configured:
+                raise ValueError("No WordPress credentials configured for any brand")
+            return configured
+
+        if brand_ids:
+            seen: set[str] = set()
+            targets: list[str] = []
+            for brand_id in brand_ids:
+                if brand_id not in seen:
+                    seen.add(brand_id)
+                    targets.append(brand_id)
+            return targets
+
+        return [draft_brand_id]
+
+    async def _publish_draft_to_brand(self, draft: ContentDraft, brand_id: str) -> dict:
+        brand = await self.db.get(Brand, brand_id)
+        if not brand:
+            raise ValueError(f"Brand {brand_id} not found")
+        if not self.settings.wp_publish_configured(brand_id):
+            raise ValueError(f"WordPress credentials not configured for {brand_id}")
+
+        html_content = _inject_brand_phone(draft.html_content or "", brand.phone)
+        schema_json, schema_types = build_combined_schema(
+            html_content,
+            brand,
+            draft.title or "",
+            draft.content_type or "faq_hub",
+        )
+        slug = draft.slug or self.wp.generate_slug(draft.title or "", brand.name)
+
+        existing = await self.db.execute(
+            select(ContentPiece).where(
+                ContentPiece.brand_id == brand_id,
+                ContentPiece.slug == slug,
+            )
+        )
+        piece = existing.scalar_one_or_none()
+
+        if piece and piece.wp_post_id:
+            result = await self.wp.update_post(
+                brand,
+                piece.wp_post_id,
+                html_content,
+                schema_json,
+                featured_media=draft.featured_media_id,
+            )
+        else:
+            result = await self.wp.create_post(
+                brand=brand,
+                title=draft.title or "",
+                content=html_content,
+                slug=slug,
+                schema_json=schema_json,
+                featured_media=draft.featured_media_id,
+            )
+
+        if piece:
+            piece.status = "published"
+            piece.last_refreshed_at = datetime.utcnow()
+            piece.wp_post_url = result.get("post_url")
+            piece.wp_post_id = result.get("post_id") or piece.wp_post_id
+        else:
+            source_citation_id = None
+            if draft.queue_id:
+                queue_item = await self.db.get(ContentQueue, draft.queue_id)
+                if queue_item:
+                    source_citation_id = queue_item.source_citation_id
+            piece = ContentPiece(
+                brand_id=brand_id,
+                content_type=draft.content_type,
+                title=draft.title,
+                target_query=draft.target_query,
+                slug=slug,
+                wp_post_id=result.get("post_id"),
+                wp_post_url=result.get("post_url"),
+                word_count=count_words(html_content),
+                schema_types=schema_types,
+                status="published",
+                published_at=datetime.utcnow(),
+                source_citation_id=source_citation_id,
+            )
+            self.db.add(piece)
+
+        await self.wp.ping_bing_sitemap(brand)
+        return {
+            "post_id": result.get("post_id"),
+            "post_url": result.get("post_url"),
+            "brand_id": brand_id,
+        }
 
     async def generate_draft(
         self,
@@ -102,6 +209,8 @@ class ContentGenerationService:
             draft.slug = None
             draft.validation_result = None
             draft.validation_attempts = 0
+            draft.images_json = []
+            draft.featured_media_id = None
             draft_id = draft.id
             queue_id = draft.queue_id or queue_id
         else:
@@ -146,7 +255,9 @@ class ContentGenerationService:
                         previous_content=html_content,
                     )
 
-                is_valid, failure_reason = await validate_answer_first(html_content, target_query)
+                is_valid, failure_reason = await validate_answer_first(
+                    html_content, target_query, content_type
+                )
                 if is_valid:
                     break
         except Exception as exc:
@@ -171,6 +282,26 @@ class ContentGenerationService:
         if not brand:
             raise ValueError(f"Brand {brand_id} not found")
 
+        related_posts = await self.wp.get_existing_pages(brand, post_type="posts")
+        related_pages = await self.wp.get_existing_pages(brand, post_type="pages")
+        related = (related_posts + related_pages)[:8]
+        html_content = ensure_tldr_block(html_content, target_query)
+        html_content = ensure_author_byline(html_content, brand)
+        html_content = inject_internal_links(html_content, brand, related)
+
+        image_pipeline = ContentImagePipeline()
+        image_result = await image_pipeline.enrich_with_images(
+            html_content,
+            brand,
+            target_query,
+            content_type,
+            draft_title,
+        )
+        html_content = image_result.html
+        images_json = image_result.images_json
+        featured_media_id = image_result.featured_media_id
+        images_status = image_result.status
+
         schema_json, schema_types = build_combined_schema(
             html_content, brand, draft_title, content_type
         )
@@ -183,8 +314,11 @@ class ContentGenerationService:
         draft.html_content = html_content
         draft.schema_json = schema_json
         draft.slug = slug
+        draft.images_json = images_json
+        draft.featured_media_id = featured_media_id
         draft.validation_attempts = validation_attempts
         ratio, h2_questions, h2_total = h2_question_ratio(html_content)
+        image_count = len(images_json)
         draft.validation_result = {
             "valid": is_valid,
             "reason": failure_reason,
@@ -193,6 +327,9 @@ class ContentGenerationService:
             "h2_question_ratio": round(ratio, 2),
             "h2_questions": h2_questions,
             "h2_total": h2_total,
+            "images_status": images_status,
+            "image_count": image_count,
+            "images_with_alt": sum(1 for img in images_json if img.get("alt")),
         }
 
         if is_valid:
@@ -223,58 +360,38 @@ class ContentGenerationService:
         draft = await self.db.get(ContentDraft, draft_id)
         return draft
 
-    async def approve_and_publish(self, draft_id: int, user_id: str) -> ContentPiece:
+    async def approve_and_publish(
+        self,
+        draft_id: int,
+        user_id: str,
+        brand_ids: list[str] | None = None,
+        publish_all: bool = False,
+    ) -> dict:
         draft = await self.db.get(ContentDraft, draft_id)
         if not draft:
             raise ValueError("Draft not found")
-        if draft.status not in ("pending_review", "needs_review", "approved"):
+        if draft.status not in ("pending_review", "approved"):
             raise ValueError(f"Cannot publish draft in status: {draft.status}")
-
-        brand = await self.db.get(Brand, draft.brand_id)
-        if not brand:
-            raise ValueError("Brand not found")
-
-        existing = await self.db.execute(
-            select(ContentPiece).where(
-                ContentPiece.brand_id == draft.brand_id,
-                ContentPiece.slug == draft.slug,
-            )
-        )
-        piece = existing.scalar_one_or_none()
-
-        if piece and piece.wp_post_id:
-            result = await self.wp.update_post(
-                brand, piece.wp_post_id, draft.html_content or "", draft.schema_json or ""
-            )
-        else:
-            result = await self.wp.create_post(
-                brand=brand,
-                title=draft.title or "",
-                content=draft.html_content or "",
-                slug=draft.slug or "",
-                schema_json=draft.schema_json or "",
+        if draft.validation_result and draft.validation_result.get("valid") is False:
+            raise ValueError(
+                "Cannot publish: validation failed. Fix content or regenerate before publishing."
             )
 
-        schema_types = (draft.validation_result or {}).get("schema_types", [])
-        if piece:
-            piece.status = "published"
-            piece.last_refreshed_at = datetime.utcnow()
-            piece.wp_post_url = result.get("post_url")
-        else:
-            piece = ContentPiece(
-                brand_id=draft.brand_id,
-                content_type=draft.content_type,
-                title=draft.title,
-                target_query=draft.target_query,
-                slug=draft.slug,
-                wp_post_id=result.get("post_id"),
-                wp_post_url=result.get("post_url"),
-                word_count=count_words(draft.html_content or ""),
-                schema_types=schema_types,
-                status="published",
-                published_at=datetime.utcnow(),
-            )
-            self.db.add(piece)
+        targets = self._resolve_publish_targets(draft.brand_id, brand_ids, publish_all)
+        results: list[dict] = []
+
+        for brand_id in targets:
+            try:
+                published = await self._publish_draft_to_brand(draft, brand_id)
+                results.append({**published, "error": None})
+            except Exception as exc:
+                logger.exception("Publish failed for draft %s → %s", draft_id, brand_id)
+                results.append({"brand_id": brand_id, "post_id": None, "post_url": None, "error": str(exc)})
+
+        successes = [r for r in results if not r.get("error")]
+        if not successes:
+            errors = "; ".join(f"{r['brand_id']}: {r['error']}" for r in results)
+            raise ValueError(f"Publish failed for all targets. {errors}")
 
         draft.status = "published"
         draft.reviewer_id = user_id
@@ -293,16 +410,25 @@ class ContentGenerationService:
             )
         )
 
-        await self.wp.ping_bing_sitemap(brand)
+        urls = [r["post_url"] for r in successes if r.get("post_url")]
         await self.notifications.create(
             type="published",
             title=f"Published: {draft.title}",
-            body=f"Live at {result.get('post_url')}",
+            body="; ".join(urls) if urls else f"Published to {len(successes)} site(s)",
             entity_type="content_draft",
             entity_id=draft_id,
         )
         await self.db.flush()
-        return piece
+
+        skipped = [r for r in results if r.get("error")]
+        return {
+            "status": "published",
+            "published_count": len(successes),
+            "results": results,
+            "post_id": successes[0].get("post_id"),
+            "post_url": successes[0].get("post_url"),
+            "skipped": skipped,
+        }
 
     async def reject_draft(self, draft_id: int, user_id: str, notes: str = "") -> ContentDraft:
         draft = await self.db.get(ContentDraft, draft_id)
@@ -320,5 +446,39 @@ class ContentGenerationService:
                 notes=notes,
             )
         )
+        await self.db.flush()
+        return draft
+
+    async def update_draft_html(self, draft_id: int, html_content: str) -> ContentDraft:
+        draft = await self.db.get(ContentDraft, draft_id)
+        if not draft:
+            raise ValueError("Draft not found")
+        if draft.status not in ("pending_review", "needs_review"):
+            raise ValueError("Cannot edit draft in current status")
+
+        brand = await self.db.get(Brand, draft.brand_id)
+        if not brand:
+            raise ValueError("Brand not found")
+
+        html_content = _inject_brand_phone(html_content, brand.phone)
+        is_valid, failure_reason = await validate_answer_first(
+            html_content, draft.target_query or "", draft.content_type or "faq_hub"
+        )
+        schema_json, schema_types = build_combined_schema(
+            html_content, brand, draft.title or "", draft.content_type or "faq_hub"
+        )
+        ratio, h2_questions, h2_total = h2_question_ratio(html_content)
+        draft.html_content = html_content
+        draft.schema_json = schema_json
+        draft.validation_result = {
+            "valid": is_valid,
+            "reason": failure_reason,
+            "schema_types": schema_types,
+            "word_count": count_words(html_content),
+            "h2_question_ratio": round(ratio, 2),
+            "h2_questions": h2_questions,
+            "h2_total": h2_total,
+        }
+        draft.status = "pending_review" if is_valid else "needs_review"
         await self.db.flush()
         return draft

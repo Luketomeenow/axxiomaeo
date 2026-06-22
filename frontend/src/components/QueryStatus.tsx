@@ -16,12 +16,12 @@ export function QueryStatus({
   children,
 }: Props) {
   if (isLoading) {
-    return <p className="text-black/50">{loadingText}</p>;
+    return <p className="text-muted">{loadingText}</p>;
   }
 
   if (isError) {
     return (
-      <div className="bg-orange/10 border border-orange/30 text-orange text-sm px-4 py-3 rounded">
+      <div className="bg-warning/10 border border-warning/30 text-warning text-sm px-4 py-3 rounded">
         {error?.message?.includes("Failed to fetch") || error?.message?.includes("NetworkError")
           ? "Cannot reach the API — make sure the backend is running on port 8000 and refresh the page."
           : error?.message || "Something went wrong loading data."}

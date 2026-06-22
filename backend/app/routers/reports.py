@@ -43,12 +43,18 @@ async def get_dashboard(
     kpis = await service.get_dashboard_kpis()
     by_brand = await service.get_citation_by_brand()
     by_category = await service.get_citation_by_category()
+    by_funnel = await service.get_citation_by_funnel()
+    by_platform = await service.get_visibility_by_platform()
+    topic_coverage = await service.get_topic_coverage()
     gaps = await service.get_gap_queries()
     gsc = await service.get_gsc_highlights()
     return {
         **kpis,
         "citation_by_brand": by_brand,
         "citation_by_category": by_category,
+        "citation_by_funnel": by_funnel,
+        "visibility_by_platform": by_platform,
+        "topic_coverage": topic_coverage,
         "gap_queries": gaps[:20],
         "gsc_highlights": gsc,
     }

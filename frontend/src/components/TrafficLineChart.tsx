@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import type { TrafficTrendResponse } from "../types";
 
-const COLORS = ["#1a3a5c", "#c8410a", "#1a7a4a", "#b8962e", "#4b6899"];
+const COLORS = ["#22d3ee", "#34d399", "#a78bfa", "#fbbf24", "#60a5fa"];
 
 interface Props {
   data: TrafficTrendResponse;
@@ -24,15 +24,13 @@ export function TrafficLineChart({ data }: Props) {
         : "Connect GA4 property IDs in Brand Settings to see AI-referred traffic from ChatGPT, Perplexity, and other AI sources.";
 
     return (
-      <div className="bg-white rounded border border-black/8 p-5">
-        <h3 className="font-display text-base font-bold text-navy mb-2">
-          AI-Referred Traffic Trend (90 days)
-        </h3>
-        <p className="text-sm text-black/50">
+      <div className="aeo-panel p-5">
+        <h3 className="aeo-title mb-2">AI-Referred Traffic Trend (90 days)</h3>
+        <p className="text-sm text-muted">
           {data.reason === "no_ga4" ? (
             <>
               Connect GA4 property IDs in{" "}
-              <a href="/settings/brands" className="text-orange hover:underline">
+              <a href="/settings/brands" className="aeo-link">
                 Brand Settings
               </a>{" "}
               to see AI-referred traffic from ChatGPT, Perplexity, and other AI sources.
@@ -66,13 +64,11 @@ export function TrafficLineChart({ data }: Props) {
     .map(([date, values]) => ({ date, ...values }));
 
   return (
-    <div className="bg-white rounded border border-black/8 p-5">
-      <h3 className="font-display text-base font-bold text-navy mb-4">
-        AI-Referred Traffic Trend (90 days)
-      </h3>
+    <div className="aeo-panel p-5">
+      <h3 className="aeo-title mb-4">AI-Referred Traffic Trend (90 days)</h3>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#00000010" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
           <XAxis
             dataKey="date"
             tick={{ fontSize: 10 }}

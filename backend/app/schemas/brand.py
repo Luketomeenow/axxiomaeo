@@ -20,6 +20,8 @@ class BrandUpdate(BaseModel):
     ga4_property_id: str | None = None
     gsc_site_url: str | None = None
     logo_url: str | None = None
+    target_queries: list[str] | None = None
+    service_page_urls: dict[str, str] | None = None
 
     @field_validator("ga4_property_id", mode="before")
     @classmethod
@@ -40,6 +42,9 @@ class BrandUpdate(BaseModel):
 
 
 def brand_to_dict(b) -> dict:
+    from app.config import get_settings
+
+    settings = get_settings()
     return {
         "id": b.id,
         "name": b.name,
@@ -50,4 +55,7 @@ def brand_to_dict(b) -> dict:
         "ga4_property_id": b.ga4_property_id,
         "gsc_site_url": b.gsc_site_url,
         "logo_url": b.logo_url,
+        "target_queries": b.target_queries or [],
+        "service_page_urls": b.service_page_urls or {},
+        "wp_publish_configured": settings.wp_publish_configured(b.id),
     }

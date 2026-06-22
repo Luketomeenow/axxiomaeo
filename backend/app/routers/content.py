@@ -8,14 +8,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
+from app.config import get_settings
 from app.database import get_db
-from app.models.content import ContentDraft, ContentQueue
+from app.models.content import ContentDraft, ContentPiece, ContentQueue
 from app.services.content_service import ContentGenerationService, recover_stale_generating_drafts
 
 router = APIRouter(prefix="/api/content", tags=["content"])
 
-# One Claude generation at a time — parallel runs cause Supabase lock timeouts.
-_generate_semaphore = asyncio.Semaphore(1)
+# Limit concurrent Claude generations — set via CONTENT_GENERATION_CONCURRENCY.
+_MAX_CONCURRENT_GENERATIONS = max(1, get_settings().content_generation_concurrency)
+_generate_semaphore = asyncio.Semaphore(_MAX_CONCURRENT_GENERATIONS)
 
 
 class GenerateRequest(BaseModel):
@@ -31,12 +33,22 @@ class RejectRequest(BaseModel):
     notes: str = ""
 
 
+class ApproveRequest(BaseModel):
+    brand_ids: list[str] | None = None
+    publish_all: bool = False
+
+
 class GapQueueRequest(BaseModel):
     brand_id: str
     target_query: str
     content_type: str = "faq_hub"
     title: str = ""
     priority: int = 3
+    citation_record_id: int | None = None
+
+
+class UpdateDraftHtmlRequest(BaseModel):
+    html_content: str
 
 
 @router.post("/queue/from-gap")
@@ -52,6 +64,7 @@ async def queue_from_gap(
         target_query=req.target_query,
         title=req.title or req.target_query,
         priority=max(1, min(5, req.priority)),
+        source_citation_id=req.citation_record_id,
         status="pending",
     )
     db.add(item)
@@ -131,6 +144,41 @@ async def list_drafts(
     ]
 
 
+@router.get("/published")
+async def list_published(
+    brand_id: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Live WordPress posts created via Approve & Publish."""
+    query = (
+        select(ContentPiece)
+        .where(ContentPiece.status == "published")
+        .order_by(ContentPiece.published_at.desc().nullslast(), ContentPiece.created_at.desc())
+    )
+    if brand_id:
+        query = query.where(ContentPiece.brand_id == brand_id)
+    result = await db.execute(query)
+    pieces = result.scalars().all()
+    return [
+        {
+            "id": p.id,
+            "brand_id": p.brand_id,
+            "content_type": p.content_type,
+            "title": p.title,
+            "target_query": p.target_query,
+            "slug": p.slug,
+            "wp_post_id": p.wp_post_id,
+            "wp_post_url": p.wp_post_url,
+            "word_count": p.word_count,
+            "schema_types": p.schema_types or [],
+            "published_at": p.published_at.isoformat() if p.published_at else None,
+            "last_refreshed_at": p.last_refreshed_at.isoformat() if p.last_refreshed_at else None,
+        }
+        for p in pieces
+    ]
+
+
 @router.get("/drafts/{draft_id}")
 async def get_draft(
     draft_id: int,
@@ -151,6 +199,8 @@ async def get_draft(
         "schema_json": draft.schema_json,
         "validation_result": draft.validation_result,
         "validation_attempts": draft.validation_attempts,
+        "images_json": draft.images_json or [],
+        "featured_media_id": draft.featured_media_id,
         "status": draft.status,
         "review_notes": draft.review_notes,
         "created_at": draft.created_at.isoformat() if draft.created_at else None,
@@ -232,10 +282,13 @@ async def generate_content(
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
-    if await _count_active_generations(db) > 0:
+    if await _count_active_generations(db) >= _MAX_CONCURRENT_GENERATIONS:
         raise HTTPException(
             status_code=429,
-            detail="Another draft is still generating. Wait for it to finish (1–2 min) before starting a new one.",
+            detail=(
+                f"{_MAX_CONCURRENT_GENERATIONS} drafts are already generating. "
+                "Wait for one to finish before starting another."
+            ),
         )
     background_tasks.add_task(
         _generate_task,
@@ -273,10 +326,13 @@ async def generate_from_queue(
             status_code=409,
             detail="A draft for this queue item already exists — check Content Review",
         )
-    if await _count_active_generations(db) > 0:
+    if await _count_active_generations(db) >= _MAX_CONCURRENT_GENERATIONS:
         raise HTTPException(
             status_code=429,
-            detail="Another draft is still generating. Wait for it to finish before starting another.",
+            detail=(
+                f"{_MAX_CONCURRENT_GENERATIONS} drafts are already generating. "
+                "Wait for one to finish before starting another."
+            ),
         )
 
     city, state = _parse_local_market(item)
@@ -296,16 +352,42 @@ async def generate_from_queue(
     return {"status": "generating", "queue_id": queue_id, "message": "Content generation started"}
 
 
+@router.patch("/drafts/{draft_id}")
+async def update_draft_html(
+    draft_id: int,
+    req: UpdateDraftHtmlRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    service = ContentGenerationService(db)
+    try:
+        draft = await service.update_draft_html(draft_id, req.html_content)
+        return {
+            "id": draft.id,
+            "status": draft.status,
+            "validation_result": draft.validation_result,
+            "schema_json": draft.schema_json,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
 @router.post("/drafts/{draft_id}/approve")
 async def approve_draft(
     draft_id: int,
+    req: ApproveRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
     service = ContentGenerationService(db)
+    body = req or ApproveRequest()
     try:
-        piece = await service.approve_and_publish(draft_id, user.get("sub", "unknown"))
-        return {"status": "published", "post_id": piece.wp_post_id, "post_url": piece.wp_post_url}
+        return await service.approve_and_publish(
+            draft_id,
+            user.get("sub", "unknown"),
+            brand_ids=body.brand_ids,
+            publish_all=body.publish_all,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -335,10 +417,13 @@ async def regenerate_draft(
     draft = await db.get(ContentDraft, draft_id)
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
-    if await _count_active_generations(db) > 0:
+    if await _count_active_generations(db) >= _MAX_CONCURRENT_GENERATIONS:
         raise HTTPException(
             status_code=429,
-            detail="Another draft is still generating. Wait for it to finish before regenerating.",
+            detail=(
+                f"{_MAX_CONCURRENT_GENERATIONS} drafts are already generating. "
+                "Wait for one to finish before regenerating."
+            ),
         )
 
     city, state = "", ""

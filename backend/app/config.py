@@ -19,8 +19,9 @@ class Settings(BaseSettings):
 
     citation_provider: str = "geo_aeo"  # geo_aeo | peec | none | auto
     geo_aeo_tracker_url: str = "http://localhost:3000"
-    geo_aeo_providers: str = "perplexity,google_ai"
+    geo_aeo_providers: str = "perplexity,chatgpt,google_ai"
     geo_aeo_concurrency: int = 2
+    citation_sample_runs: int = 3
 
     google_service_account_json: str = ""
     bing_api_key: str = ""
@@ -54,8 +55,25 @@ class Settings(BaseSettings):
     wp_username_evolution: str = "admin"
     wp_username_ironhawk: str = "admin"
 
-    claude_model: str = "claude-sonnet-4-20250514"
+    brand_ids: tuple[str, ...] = (
+        "axxiom",
+        "ameritex",
+        "arizona_es",
+        "liftech",
+        "motion",
+        "quality",
+        "evolution",
+        "ironhawk",
+    )
+
+    claude_model: str = "claude-sonnet-4-6"
     weekly_content_batch_size: int = 5
+
+    openai_api_key: str = ""
+    openai_image_model: str = "gpt-image-1"
+    content_max_images: int = 3
+    image_generation_enabled: bool = True
+    content_generation_concurrency: int = 3
 
     @field_validator("supabase_jwt_secret", mode="before")
     @classmethod
@@ -92,10 +110,18 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     def get_wp_password(self, brand_id: str) -> str:
-        return getattr(self, f"wp_app_password_{brand_id}", "")
+        raw = getattr(self, f"wp_app_password_{brand_id}", "")
+        # Application passwords are shown with spaces; strip for Basic auth.
+        return raw.replace(" ", "") if isinstance(raw, str) else ""
 
     def get_wp_username(self, brand_id: str) -> str:
         return getattr(self, f"wp_username_{brand_id}", "admin")
+
+    def wp_publish_configured(self, brand_id: str) -> bool:
+        return bool(self.get_wp_password(brand_id).strip())
+
+    def wp_configured_brand_ids(self) -> list[str]:
+        return [brand_id for brand_id in self.brand_ids if self.wp_publish_configured(brand_id)]
 
 
 @lru_cache

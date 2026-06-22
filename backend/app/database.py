@@ -49,6 +49,26 @@ async def get_db():
             raise
 
 
+async def run_alter_migrations():
+    """Apply additive SQL migrations (idempotent)."""
+    migrations_dir = Path(__file__).parent.parent / "migrations"
+    sql_files = sorted(migrations_dir.glob("alter_aeo_*.sql"))
+    if not sql_files:
+        return
+    async with engine.begin() as conn:
+        for sql_path in sql_files:
+            sql = sql_path.read_text(encoding="utf-8")
+            for statement in sql.split(";"):
+                lines = [
+                    line
+                    for line in statement.splitlines()
+                    if line.strip() and not line.strip().startswith("--")
+                ]
+                stmt = "\n".join(lines).strip()
+                if stmt:
+                    await conn.exec_driver_sql(stmt)
+
+
 async def init_db():
     """Create schema (if configured) and all tables from ORM models."""
     import app.models  # noqa: F401
@@ -57,6 +77,7 @@ async def init_db():
         if settings.db_schema:
             await conn.exec_driver_sql(f'CREATE SCHEMA IF NOT EXISTS "{settings.db_schema}"')
         await conn.run_sync(Base.metadata.create_all)
+    await run_alter_migrations()
 
 
 async def run_sql_migration():
