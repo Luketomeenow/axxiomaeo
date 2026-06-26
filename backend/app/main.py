@@ -42,9 +42,12 @@ def create_app() -> FastAPI:
         "allow_methods": ["*"],
         "allow_headers": ["*"],
     }
-    # Vite may use 5174+ if 5173 is taken — allow any local dev port.
     if settings.environment == "development":
+        # Vite may use 5174+ if 5173 is taken — allow any local dev port.
         cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+    elif settings.cors_origin_regex:
+        # Production: e.g. allow Netlify deploy previews / branch deploys.
+        cors_kwargs["allow_origin_regex"] = settings.cors_origin_regex
     app.add_middleware(CORSMiddleware, **cors_kwargs)
 
     @app.exception_handler(SQLAlchemyError)

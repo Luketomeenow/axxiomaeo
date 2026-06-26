@@ -1,0 +1,17 @@
+# Netlify config for the Axxiom AEO frontend (Vite + React SPA).
+# The backend (FastAPI) is NOT hosted here — deploy it to Railway and point
+# VITE_API_URL at that URL (set in Netlify → Site settings → Environment variables).
+
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback: let React Router handle client-side routes.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

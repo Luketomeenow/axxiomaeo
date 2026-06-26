@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     environment: str = "development"
     secret_key: str = "change-me"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Optional regex for additional allowed origins (e.g. Netlify deploy previews):
+    # https://([a-z0-9-]+--)?your-site\.netlify\.app
+    cors_origin_regex: str = ""
 
     wp_app_password_axxiom: str = ""
     wp_app_password_ameritex: str = ""
@@ -107,7 +110,11 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        # Always trust the configured frontend URL (Netlify production site).
+        if self.frontend_url and self.frontend_url not in origins:
+            origins.append(self.frontend_url.rstrip("/"))
+        return origins
 
     def get_wp_password(self, brand_id: str) -> str:
         raw = getattr(self, f"wp_app_password_{brand_id}", "")
