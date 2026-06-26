@@ -1,6 +1,16 @@
 import { supabase } from "./supabase";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+function normalizeApiUrl(raw: string | undefined): string {
+  const value = (raw || "http://localhost:8000").trim().replace(/\/+$/, "");
+  // A scheme-less value (e.g. "api.example.com") would be treated as a relative
+  // path by fetch() and hit the Netlify site instead of the backend.
+  if (value && !/^https?:\/\//i.test(value)) {
+    return `https://${value}`;
+  }
+  return value;
+}
+
+const API_URL = normalizeApiUrl(import.meta.env.VITE_API_URL);
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const headers: HeadersInit = { "Content-Type": "application/json" };
