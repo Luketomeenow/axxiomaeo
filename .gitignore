@@ -11,6 +11,9 @@ node_modules/
 frontend/dist/
 frontend/.env
 
+# Separate app (own git repo / deployed independently) — not part of this repo
+geo-aeo-tracker-app/
+
 # IDE
 .idea/
 .vscode/
