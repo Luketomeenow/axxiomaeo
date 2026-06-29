@@ -1,11 +1,21 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import type { Brand, PublishedContent } from "../types";
 
 export function PublishedContentPage() {
   const [brandFilter, setBrandFilter] = useState("all");
+  const queryClient = useQueryClient();
+
+  const returnToReview = useMutation({
+    mutationFn: (pieceId: number) =>
+      apiFetch(`/api/content/published/${pieceId}/return-to-review`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["published-content"] });
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+    },
+  });
 
   const { data: brands } = useQuery({
     queryKey: ["brands"],
@@ -65,18 +75,19 @@ export function PublishedContentPage() {
               <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">Published</th>
               <th className="px-4 py-3 font-medium">Live URL</th>
+              <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted/80">
+                <td colSpan={6} className="px-4 py-8 text-center text-muted/80">
                   Loading published content…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted/80">
+                <td colSpan={6} className="px-4 py-8 text-center text-muted/80">
                   No published content yet. Approve a draft in{" "}
                   <Link to="/content/review" className="text-ink hover:text-cyan font-medium">
                     Content Review
@@ -110,6 +121,19 @@ export function PublishedContentPage() {
                     ) : (
                       <span className="text-muted/50 text-xs">No URL</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => returnToReview.mutate(item.id)}
+                      disabled={returnToReview.isPending}
+                      title="Set the WordPress post back to draft and return this to Content Review"
+                      className="px-3 py-1.5 border border-warning/40 text-warning rounded text-xs font-medium hover:bg-warning/5 disabled:opacity-50"
+                    >
+                      {returnToReview.isPending && returnToReview.variables === item.id
+                        ? "Returning…"
+                        : "Return to Review"}
+                    </button>
                   </td>
                 </tr>
               ))

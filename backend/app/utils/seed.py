@@ -14,6 +14,11 @@ async def seed_brands_and_queue():
         for brand_data in BRANDS:
             existing = await session.get(Brand, brand_data["id"])
             if existing:
+                # Refresh author/phone so seed edits reach brands already in the DB.
+                if brand_data.get("author_name") is not None:
+                    existing.author_name = brand_data["author_name"]
+                if "phone" in brand_data:
+                    existing.phone = brand_data["phone"]
                 continue
             session.add(Brand(**brand_data))
 
