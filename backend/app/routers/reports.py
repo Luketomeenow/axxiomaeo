@@ -69,6 +69,16 @@ async def get_gsc_highlights(
     return await service.get_gsc_highlights()
 
 
+@router.get("/search-vs-generative")
+async def get_search_vs_generative(
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Side-by-side traditional-search vs generative-AI visibility & traffic."""
+    service = ReportService(db)
+    return await service.get_search_vs_generative()
+
+
 @router.get("/traffic-trend")
 async def get_traffic_trend(
     days: int = Query(90, ge=7, le=365),
