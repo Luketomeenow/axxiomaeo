@@ -63,7 +63,27 @@ export interface TrafficTrendResponse {
     brand_id: string;
     brand_name: string;
     data: { date: string; sessions: number }[];
+    ai_data?: { date: string; sessions: number }[];
+    organic_data?: { date: string; sessions: number }[];
   }[];
+}
+
+export interface SearchVsGenerative {
+  search: {
+    configured: boolean;
+    visibility: { impressions: number; clicks: number; avg_position: number };
+    traffic: { organic_search_sessions: number };
+  };
+  generative: {
+    configured: boolean;
+    visibility: {
+      citation_share: number;
+      avg_visibility_pct: number;
+      share_of_voice: number;
+    };
+    traffic: { ai_referred_sessions: number };
+  };
+  last_updated: string;
 }
 
 export interface Brand {
