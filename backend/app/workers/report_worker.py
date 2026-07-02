@@ -1,8 +1,7 @@
 import logging
 
 from app.database import AsyncSessionLocal
-from app.models.approval import WorkerError
-from app.services.notification_service import NotificationService
+from app.services.notification_service import NotificationService, record_worker_error
 from app.services.report_service import ReportService
 
 logger = logging.getLogger(__name__)
@@ -24,5 +23,5 @@ async def run_monthly_report():
             logger.info("Monthly report generated: id=%s", report.id)
         except Exception as e:
             logger.exception("Monthly report failed: %s", e)
-            session.add(WorkerError(worker_name="monthly_report", error_message=str(e)))
+            await record_worker_error(session, "monthly_report", str(e))
             await session.commit()

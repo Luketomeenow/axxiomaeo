@@ -220,7 +220,7 @@ async def _generate_task(
     import logging
 
     from app.database import AsyncSessionLocal
-    from app.models.approval import WorkerError
+    from app.services.notification_service import record_worker_error
 
     logger = logging.getLogger(__name__)
 
@@ -242,17 +242,16 @@ async def _generate_task(
             logger.exception("Background content generation failed")
             try:
                 async with AsyncSessionLocal() as session:
-                    session.add(
-                        WorkerError(
-                            worker_name="content_generate",
-                            error_message=str(exc)[:500],
-                            error_details={
-                                "brand_id": brand_id,
-                                "target_query": target_query,
-                                "queue_id": queue_id,
-                                "draft_id": existing_draft_id,
-                            },
-                        )
+                    await record_worker_error(
+                        session,
+                        "content_generate",
+                        str(exc)[:500],
+                        error_details={
+                            "brand_id": brand_id,
+                            "target_query": target_query,
+                            "queue_id": queue_id,
+                            "draft_id": existing_draft_id,
+                        },
                     )
                     await session.commit()
             except Exception:

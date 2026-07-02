@@ -62,7 +62,7 @@ Open http://localhost:5173
 
 ### Development Auth
 
-If Supabase is not configured, the backend accepts requests without JWT validation in `development` mode when `SUPABASE_URL` and `SUPABASE_JWT_SECRET` are empty.
+Local no-auth mode requires an explicit opt-in: set `AUTH_DEV_BYPASS=true` together with `ENVIRONMENT=development` and empty `SUPABASE_URL`/`SUPABASE_JWT_SECRET`. Without the flag the API always requires a valid Supabase JWT — a misconfigured deploy fails closed instead of open.
 
 ## Environment Variables
 
@@ -104,7 +104,7 @@ Create a WordPress Application Password for each site (Users → Profile → App
 | Job | Schedule | Behavior |
 |---|---|---|
 | Weekly content | Monday 9am | Generates draft → `pending_review` (no auto-publish) |
-| Citation audit | 1st & 15th, 8am | Peec.ai audit across all brands |
+| Citation audit | 1st & 15th, 8am | GEO/AEO Tracker audit (Perplexity, ChatGPT, Google AI by default) across all brands |
 | Schema validation | 1st of month, 7am | Validates pages; queues fixes for approval |
 | Content refresh | Sunday 6am | Re-publishes stale content (90+ days); re-audits gap-sourced posts |
 | Monthly report | Last day, 11pm | Compiles and stores report JSON |

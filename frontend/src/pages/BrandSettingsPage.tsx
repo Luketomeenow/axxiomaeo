@@ -28,12 +28,17 @@ export function BrandSettingsPage() {
   });
 
   const [form, setForm] = useState<Partial<Brand>>({});
+  const [serviceUrlsRaw, setServiceUrlsRaw] = useState("");
 
   useEffect(() => {
     setForm({});
     setSaveMsg("");
     setSaveError("");
   }, [brandId]);
+
+  useEffect(() => {
+    setServiceUrlsRaw(brand ? JSON.stringify(brand.service_page_urls ?? {}, null, 2) : "");
+  }, [brandId, brand]);
 
   const update = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
@@ -123,12 +128,6 @@ export function BrandSettingsPage() {
   const targetQueriesText = Array.isArray(values.target_queries)
     ? values.target_queries.join("\n")
     : "";
-
-  const [serviceUrlsRaw, setServiceUrlsRaw] = useState("");
-
-  useEffect(() => {
-    setServiceUrlsRaw(JSON.stringify(brand.service_page_urls ?? {}, null, 2));
-  }, [brandId, brand.service_page_urls]);
 
   const handleSave = () => {
     const ga4 = normalizeGa4PropertyId(values.ga4_property_id);

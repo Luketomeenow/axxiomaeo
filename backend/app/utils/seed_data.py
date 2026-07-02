@@ -5,7 +5,6 @@ BRANDS = [
         "wp_url": "https://axxiomelevator.com",
         "markets": ["National"],
         "is_corporate": True,
-        "phone": "[BRAND_PHONE]",
         "logo_url": "https://axxiomelevator.com/wp-content/uploads/2023/10/Axxiom_Color_NoTag.png",
     },
     {

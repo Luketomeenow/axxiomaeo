@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     google_service_account_json: str = ""
     bing_api_key: str = ""
+    # Comma-separated override of AI-assistant referrer hosts for GA4 segmentation.
+    ai_referrer_hosts: str = ""
 
     supabase_url: str = ""
     supabase_jwt_secret: str = ""
@@ -34,6 +36,8 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
 
     environment: str = "development"
+    # Explicit opt-in for the local no-auth shortcut (see app.auth.verify_token).
+    auth_dev_bypass: bool = False
     secret_key: str = "change-me"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     # Optional regex for additional allowed origins (e.g. Netlify deploy previews):

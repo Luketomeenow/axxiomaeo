@@ -13,6 +13,20 @@ AUTHOR_BYLINE_HTML = (
     "IUEC-Certified Elevator Technician at {brand_name}</em></p>"
 )
 
+# Unresolved phone token, optionally with a leading "at"/"on" so CTAs like
+# "Call us at [BRAND_PHONE] today" degrade to "Call us today".
+_PHONE_TOKEN_RE = re.compile(r"(?:\s+(?:at|on)\s+)?\(?\[BRAND_PHONE\]\)?", re.IGNORECASE)
+
+
+def strip_phone_placeholder(html: str) -> str:
+    """Remove unresolved [BRAND_PHONE] tokens so the literal placeholder never
+    reaches published HTML when a brand has no phone configured."""
+    if "[BRAND_PHONE]" not in html:
+        return html
+    cleaned = _PHONE_TOKEN_RE.sub("", html)
+    cleaned = re.sub(r" {2,}", " ", cleaned)
+    return re.sub(r"\s+([,.])", r"\1", cleaned)
+
 
 def ensure_author_byline(html: str, brand: Brand, author_name: str | None = None) -> str:
     if "aeo-author-byline" in html:
@@ -29,16 +43,40 @@ def ensure_author_byline(html: str, brand: Brand, author_name: str | None = None
     return str(soup)
 
 
-def ensure_tldr_block(html: str, target_query: str) -> str:
+def ensure_tldr_block(html: str, target_query: str, max_words: int = 60) -> str:
+    """Guarantee an aeo-tldr block with a real answer.
+
+    When the model omitted the block, summarize from the first substantive
+    paragraph (the answer-first opener) instead of emitting placeholder text.
+    If there is nothing to summarize, skip the block entirely.
+    """
     if "aeo-tldr" in html:
         return html
     soup = BeautifulSoup(html, "lxml")
     body = soup.find("body") or soup
+
+    summary = ""
+    for p in body.find_all("p"):
+        if "aeo-author-byline" in " ".join(p.get("class") or []):
+            continue
+        text = p.get_text(" ", strip=True)
+        if len(text) >= 40:
+            summary = text
+            break
+    if not summary:
+        return html
+
+    words = summary.split()
+    if len(words) > max_words:
+        summary = " ".join(words[:max_words]).rstrip(",;:") + "…"
+
     tldr = soup.new_tag("div", attrs={"class": "aeo-tldr"})
-    tldr.string = f"Quick answer: See the opening paragraph for {target_query}."
+    tldr.string = f"Quick answer: {summary}"
     h1 = body.find("h1")
     if h1:
         h1.insert_after(tldr)
+    else:
+        body.insert(0, tldr)
     return str(soup)
 
 

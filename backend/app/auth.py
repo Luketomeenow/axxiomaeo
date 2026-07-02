@@ -52,7 +52,14 @@ def _decode_with_secret(token: str, secret: str) -> dict:
 
 def verify_token(token: str) -> dict:
     settings = get_settings()
-    if settings.environment == "development" and not settings.supabase_jwt_secret and not settings.supabase_url:
+    # Fail closed: the no-auth dev shortcut requires an explicit opt-in flag,
+    # so a deploy that forgets ENVIRONMENT/Supabase vars is never left open.
+    if (
+        settings.auth_dev_bypass
+        and settings.environment == "development"
+        and not settings.supabase_jwt_secret
+        and not settings.supabase_url
+    ):
         return {"sub": "dev-user", "email": "dev@localhost"}
 
     header_alg = jwt.get_unverified_header(token).get("alg")

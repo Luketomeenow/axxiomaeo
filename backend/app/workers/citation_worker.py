@@ -4,12 +4,11 @@ import uuid
 from sqlalchemy import select
 
 from app.database import AsyncSessionLocal
-from app.models.approval import WorkerError
 from app.models.brand import Brand
 from app.models.citation import CitationRecord
 from app.services.citation_service import CitationService
 from app.services.geo_aeo_tracker_service import QueryAuditMeta
-from app.services.notification_service import NotificationService
+from app.services.notification_service import NotificationService, record_worker_error
 from app.utils.query_bank import QUERY_BANK, interpolate_query
 from app.utils.query_fanout import CATEGORY_FUNNEL_STAGE, expand_queries_with_fanout
 
@@ -82,12 +81,12 @@ async def _notify_tracker_unavailable(brand_id: str | None = None):
             title="Citation audit skipped — tracker unavailable",
             body="Start GEO/AEO Tracker on :3000 with Bright Data keys, or set CITATION_PROVIDER=none",
         )
-        session.add(
-            WorkerError(
-                worker_name="citation_audit",
-                error_message="Citation provider unavailable",
-                error_details={"brand_id": brand_id} if brand_id else None,
-            )
+        await record_worker_error(
+            session,
+            "citation_audit",
+            "Citation provider unavailable",
+            error_details={"brand_id": brand_id} if brand_id else None,
+            notify=False,  # the citation_manual notification above already alerts
         )
         await session.commit()
 
@@ -132,12 +131,12 @@ async def run_citation_audit():
                     title=f"Citation audit requires manual review: {brand.name}",
                     body="Citation provider unavailable — check GEO_AEO_TRACKER_URL or CITATION_PROVIDER",
                 )
-                session.add(
-                    WorkerError(
-                        worker_name="citation_audit",
-                        error_message="Citation provider unavailable",
-                        error_details={"brand_id": brand.id},
-                    )
+                await record_worker_error(
+                    session,
+                    "citation_audit",
+                    "Citation provider unavailable",
+                    error_details={"brand_id": brand.id},
+                    notify=False,  # the citation_manual notification above already alerts
                 )
                 await session.commit()
                 continue

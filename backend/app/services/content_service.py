@@ -13,6 +13,7 @@ from app.services.content_enrichment import (
     ensure_author_byline,
     ensure_tldr_block,
     inject_internal_links,
+    strip_phone_placeholder,
 )
 from app.services.content_image_pipeline import ContentImagePipeline
 from app.services.notification_service import NotificationService
@@ -66,10 +67,20 @@ async def recover_stale_generating_drafts(db: AsyncSession) -> int:
     return count
 
 
+def _usable_phone(phone: str | None) -> str | None:
+    cleaned = (phone or "").strip()
+    if not cleaned or cleaned == "[BRAND_PHONE]":
+        return None
+    return cleaned
+
+
 def _inject_brand_phone(html: str, phone: str | None) -> str:
-    if not phone:
+    if not html:
         return html
-    return html.replace("[BRAND_PHONE]", phone.strip())
+    cleaned = _usable_phone(phone)
+    if cleaned:
+        return html.replace("[BRAND_PHONE]", cleaned)
+    return strip_phone_placeholder(html)
 
 
 class ContentGenerationService:
@@ -276,6 +287,7 @@ class ContentGenerationService:
                     await _set_queue_status(queue_id, "needs_review")
             raise
 
+        phone_missing = "[BRAND_PHONE]" in html_content and not _usable_phone(brand_phone)
         html_content = _inject_brand_phone(html_content, brand_phone)
 
         brand = await self.db.get(Brand, brand_id)
@@ -330,6 +342,9 @@ class ContentGenerationService:
             "images_status": images_status,
             "image_count": image_count,
             "images_with_alt": sum(1 for img in images_json if img.get("alt")),
+            # Reviewer heads-up: CTAs were de-phoned because the brand has no
+            # phone configured — set one in Brand Settings and regenerate.
+            "phone_missing": phone_missing,
         }
 
         if is_valid:

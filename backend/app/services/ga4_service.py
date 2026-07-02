@@ -9,15 +9,49 @@ from app.schemas.brand import normalize_ga4_property_id
 
 logger = logging.getLogger(__name__)
 
+# Hosts whose referrals count as AI-assistant traffic. Matched case-insensitively
+# with CONTAINS against GA4 sessionSource, so bare domains also cover www./m.
+# variants. Override via AI_REFERRER_HOSTS (comma-separated) without a deploy.
 AI_REFERRERS = [
-    "chat.openai.com",
+    "chatgpt.com",
+    "chat.openai.com",  # pre-2024 ChatGPT host — keep for historical ranges
     "perplexity.ai",
     "claude.ai",
-    "bard.google.com",
     "gemini.google.com",
     "copilot.microsoft.com",
-    "search.google.com",
+    "chat.deepseek.com",
+    "grok.com",
+    "meta.ai",
 ]
+
+
+def _ai_referrer_hosts() -> list[str]:
+    raw = get_settings().ai_referrer_hosts
+    hosts = [h.strip() for h in raw.split(",") if h.strip()] if raw else []
+    return hosts or AI_REFERRERS
+
+
+def _ai_referrer_filter():
+    """OR-group of case-insensitive CONTAINS filters on sessionSource."""
+    from google.analytics.data_v1beta.types import Filter, FilterExpression, FilterExpressionList
+
+    return FilterExpression(
+        or_group=FilterExpressionList(
+            expressions=[
+                FilterExpression(
+                    filter=Filter(
+                        field_name="sessionSource",
+                        string_filter=Filter.StringFilter(
+                            match_type=Filter.StringFilter.MatchType.CONTAINS,
+                            value=host,
+                            case_sensitive=False,
+                        ),
+                    )
+                )
+                for host in _ai_referrer_hosts()
+            ]
+        )
+    )
 
 
 class GA4Service:
@@ -53,7 +87,7 @@ class GA4Service:
 
         try:
             from google.analytics.data_v1beta import BetaAnalyticsDataClient
-            from google.analytics.data_v1beta.types import DateRange, Dimension, Filter, FilterExpression, Metric, RunReportRequest
+            from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
 
             client = BetaAnalyticsDataClient(credentials=creds)
             end = end_date or date.today().isoformat()
@@ -64,12 +98,7 @@ class GA4Service:
                 date_ranges=[DateRange(start_date=start, end_date=end)],
                 dimensions=[Dimension(name="sessionSource"), Dimension(name="landingPage")],
                 metrics=[Metric(name="sessions"), Metric(name="conversions")],
-                dimension_filter=FilterExpression(
-                    filter=Filter(
-                        field_name="sessionSource",
-                        in_list_filter=Filter.InListFilter(values=AI_REFERRERS),
-                    )
-                ),
+                dimension_filter=_ai_referrer_filter(),
             )
             response = client.run_report(request)
             total_sessions = 0
@@ -109,8 +138,6 @@ class GA4Service:
             from google.analytics.data_v1beta.types import (
                 DateRange,
                 Dimension,
-                Filter,
-                FilterExpression,
                 Metric,
                 RunReportRequest,
             )
@@ -126,12 +153,7 @@ class GA4Service:
                 ],
                 dimensions=[Dimension(name="date")],
                 metrics=[Metric(name="sessions")],
-                dimension_filter=FilterExpression(
-                    filter=Filter(
-                        field_name="sessionSource",
-                        in_list_filter=Filter.InListFilter(values=AI_REFERRERS),
-                    )
-                ),
+                dimension_filter=_ai_referrer_filter(),
             )
             response = client.run_report(request)
             rows = []

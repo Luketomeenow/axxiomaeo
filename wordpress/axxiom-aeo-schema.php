@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Axxiom AEO Schema
  * Description: Registers aeo_schema_json for REST API and outputs JSON-LD in wp_head (Axxiom AEO Automation Platform).
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Axxiom Elevator
  *
  * Install: copy to wp-content/mu-plugins/axxiom-aeo-schema.php on each brand site.
@@ -45,5 +45,8 @@ add_action('wp_head', function () {
     if ($schema[0] !== '{' && $schema[0] !== '[') {
         return;
     }
+    // '</' inside the JSON (e.g. '</script>' in a string) would end the block
+    // early; '<\/' is a valid JSON escape, so the JSON-LD stays parseable.
+    $schema = str_replace('</', '<\/', $schema);
     echo '<script type="application/ld+json">' . $schema . '</script>' . "\n";
 }, 5);
