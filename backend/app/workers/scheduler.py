@@ -9,6 +9,7 @@ from app.workers.content_refresh_worker import run_content_refresh
 from app.workers.content_worker import run_weekly_content
 from app.workers.report_worker import run_monthly_report
 from app.workers.schema_worker import run_schema_validation
+from app.workers.topic_worker import run_topic_discovery
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,13 @@ scheduler = AsyncIOScheduler(timezone="America/Chicago")
 
 
 def setup_scheduler():
+    # One hour before content generation so new topics flow into the same run.
+    scheduler.add_job(
+        run_topic_discovery,
+        CronTrigger(day_of_week="mon", hour=8, minute=0),
+        id="topic_discovery",
+        replace_existing=True,
+    )
     scheduler.add_job(
         run_weekly_content,
         CronTrigger(day_of_week="mon", hour=9, minute=0),
@@ -46,7 +54,7 @@ def setup_scheduler():
         id="content_refresh",
         replace_existing=True,
     )
-    logger.info("APScheduler configured with 5 cron jobs (America/Chicago)")
+    logger.info("APScheduler configured with 6 cron jobs (America/Chicago)")
 
 
 def start_scheduler():

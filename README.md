@@ -103,6 +103,7 @@ Create a WordPress Application Password for each site (Users → Profile → App
 
 | Job | Schedule | Behavior |
 |---|---|---|
+| Topic discovery | Monday 8am | Mines GSC search demand + citation gaps + coverage gaps into the content queue (deduped, capped, source-tagged) |
 | Weekly content | Monday 9am | Generates draft → `pending_review` (no auto-publish) |
 | Citation audit | 1st & 15th, 8am | GEO/AEO Tracker audit (Perplexity, ChatGPT, Google AI by default) across all brands |
 | Schema validation | 1st of month, 7am | Validates pages; queues fixes for approval |
@@ -153,6 +154,7 @@ See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](b
 | GET | `/api/content/drafts` | List drafts |
 | POST | `/api/content/generate` | Trigger generation |
 | POST | `/api/content/queue/from-gap` | Add gap query to content queue |
+| POST | `/api/content/topics/discover` | Run topic discovery now (auto-queue demand-driven topics) |
 | GET | `/api/reports/gsc` | GSC query highlights by brand |
 | POST | `/api/content/drafts/{id}/approve` | Approve + publish |
 | POST | `/api/content/drafts/{id}/reject` | Reject draft |

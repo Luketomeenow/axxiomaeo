@@ -106,6 +106,55 @@ class GSCService:
             logger.warning("GSC timeseries query failed for %s: %s", site_url, e)
             return []
 
+    async def get_query_rows_compare(
+        self, site_url: str, days: int = 28, row_limit: int = 250
+    ) -> tuple[list[dict], list[dict]]:
+        """Per-query performance for the last ``days`` vs the ``days`` before.
+
+        Returns (current_rows, previous_rows); each row has query, clicks,
+        impressions, position. Used by topic discovery to spot rising demand.
+        """
+        return await asyncio.to_thread(self._get_query_rows_compare_sync, site_url, days, row_limit)
+
+    def _get_query_rows_compare_sync(
+        self, site_url: str, days: int, row_limit: int
+    ) -> tuple[list[dict], list[dict]]:
+        creds = self._get_credentials()
+        if not creds:
+            return [], []
+        try:
+            from googleapiclient.discovery import build
+
+            service = build("searchconsole", "v1", credentials=creds)
+            end = date.today()
+            mid = end - timedelta(days=days)
+            start = mid - timedelta(days=days)
+            current = self._query_rows(service, site_url, mid, end, row_limit)
+            previous = self._query_rows(service, site_url, start, mid - timedelta(days=1), row_limit)
+            return current, previous
+        except Exception as e:
+            logger.warning("GSC query-rows compare failed for %s: %s", site_url, e)
+            return [], []
+
+    @staticmethod
+    def _query_rows(service, site_url: str, start: date, end: date, row_limit: int) -> list[dict]:
+        body = {
+            "startDate": start.isoformat(),
+            "endDate": end.isoformat(),
+            "dimensions": ["query"],
+            "rowLimit": row_limit,
+        }
+        response = service.searchanalytics().query(siteUrl=site_url, body=body).execute()
+        return [
+            {
+                "query": r["keys"][0],
+                "clicks": int(r.get("clicks", 0)),
+                "impressions": int(r.get("impressions", 0)),
+                "position": round(r.get("position", 0), 1),
+            }
+            for r in response.get("rows", [])
+        ]
+
     def _get_featured_snippets_sync(self, site_url: str, queries: list[str]) -> list[dict]:
         creds = self._get_credentials()
         if not creds:

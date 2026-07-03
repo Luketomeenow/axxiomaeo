@@ -207,6 +207,8 @@ export interface ContentQueueItem {
   priority: number;
   status: string;
   scheduled_for?: string;
+  source?: string | null;
+  source_detail?: Record<string, unknown> | null;
 }
 
 export interface PublishedContent {

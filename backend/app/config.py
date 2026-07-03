@@ -76,6 +76,12 @@ class Settings(BaseSettings):
     claude_model: str = "claude-sonnet-4-6"
     weekly_content_batch_size: int = 5
 
+    # Weekly automated topic discovery (GSC demand + citation gaps + coverage).
+    topic_discovery_enabled: bool = True
+    topic_discovery_max_per_brand: int = 2
+    topic_discovery_max_total: int = 10
+    topic_discovery_min_impressions: int = 20
+
     openai_api_key: str = ""
     openai_image_model: str = "gpt-image-1"
     content_max_images: int = 3

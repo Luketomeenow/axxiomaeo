@@ -77,6 +77,22 @@ async def queue_from_gap(
     }
 
 
+@router.post("/topics/discover")
+async def discover_topics(
+    brand_id: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Run topic discovery now (all brands, or one) and enqueue the results.
+
+    Same logic as the Monday 8am worker: citation gaps + GSC search demand +
+    coverage fill, deduped against existing queue/drafts/published content.
+    """
+    from app.services.topic_discovery_service import TopicDiscoveryService
+
+    return await TopicDiscoveryService(db).discover(brand_ids=[brand_id] if brand_id else None)
+
+
 @router.get("/queue")
 async def get_content_queue(
     db: AsyncSession = Depends(get_db),
@@ -94,6 +110,8 @@ async def get_content_queue(
             "priority": i.priority,
             "status": i.status,
             "scheduled_for": i.scheduled_for.isoformat() if i.scheduled_for else None,
+            "source": i.source,
+            "source_detail": i.source_detail,
         }
         for i in items
     ]

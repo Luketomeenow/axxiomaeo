@@ -20,6 +20,34 @@ const CONTENT_TYPES = [
   { value: "data_stats", label: "Data & Statistics" },
 ];
 
+const SOURCE_LABEL: Record<string, string> = {
+  citation_gap: "Citation gap",
+  search_demand: "Search demand",
+  coverage: "Coverage",
+};
+
+const SOURCE_STYLE: Record<string, string> = {
+  citation_gap: "bg-red-100 text-red-700",
+  search_demand: "bg-cyan/15 text-cyan",
+  coverage: "bg-gray-100 text-gray-600",
+};
+
+function sourceTooltip(item: ContentQueueItem): string {
+  const d = item.source_detail ?? {};
+  if (item.source === "search_demand") {
+    return `GSC: ${d.impressions ?? 0} impressions (prev ${d.prev_impressions ?? 0}), position ${d.position ?? "—"} — ${d.trigger ?? ""}`;
+  }
+  if (item.source === "citation_gap") {
+    return d.competitor_cited
+      ? `AI engines cite ${d.competitor_cited} for this query (${d.platform ?? "—"})`
+      : `Brand not cited for this query (${d.platform ?? "—"})`;
+  }
+  if (item.source === "coverage") {
+    return `${d.reason ?? "coverage gap"}${d.market ? `: ${d.market}` : ""}${d.category ? ` (${d.category})` : ""}`;
+  }
+  return "";
+}
+
 export function ContentQueuePage() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
@@ -101,17 +129,40 @@ export function ContentQueuePage() {
     },
   });
 
+  const discover = useMutation({
+    mutationFn: () =>
+      apiFetch<{ count: number }>("/api/content/topics/discover", { method: "POST" }),
+    onSuccess: (res) => {
+      showSuccess(
+        res.count
+          ? `${res.count} new topic${res.count === 1 ? "" : "s"} queued from live demand signals (citation gaps, search demand, coverage).`
+          : "No new topics found — current demand is already covered by existing content and queue.",
+      );
+    },
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-xl font-bold text-ink">Content Queue</h2>
-        <button
-          type="button"
-          onClick={openModal}
-          className="px-4 py-2 bg-cyan text-void rounded text-sm hover:bg-cyan/90"
-        >
-          Generate Content
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => discover.mutate()}
+            disabled={discover.isPending}
+            title="Mine citation gaps, Search Console demand, and coverage gaps into the queue now (runs automatically every Monday 8am)"
+            className="px-4 py-2 border border-border text-ink rounded text-sm hover:border-cyan disabled:opacity-50"
+          >
+            {discover.isPending ? "Discovering…" : "Discover Topics"}
+          </button>
+          <button
+            type="button"
+            onClick={openModal}
+            className="px-4 py-2 bg-cyan text-void rounded text-sm hover:bg-cyan/90"
+          >
+            Generate Content
+          </button>
+        </div>
       </div>
 
       {successMsg && (
@@ -123,10 +174,10 @@ export function ContentQueuePage() {
         </div>
       )}
 
-      {(generate.isError || generateFromQueue.isError) && (
+      {(generate.isError || generateFromQueue.isError || discover.isError) && (
         <div className="bg-warning/10 border border-warning/30 text-warning text-sm px-4 py-3 rounded">
           {(() => {
-            const err = (generate.error || generateFromQueue.error) as Error | null;
+            const err = (generate.error || generateFromQueue.error || discover.error) as Error | null;
             const msg = err?.message ?? "Generation failed";
             if (msg === "Not Found") {
               return "Generate endpoint unavailable — restart the backend server (uvicorn) and try again.";
@@ -149,6 +200,7 @@ export function ContentQueuePage() {
               <th className="px-4 py-3">Title</th>
               <th className="px-4 py-3">Brand</th>
               <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Source</th>
               <th className="px-4 py-3">Priority</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Scheduled</th>
@@ -158,14 +210,14 @@ export function ContentQueuePage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted/80">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted/80">
                   Loading…
                 </td>
               </tr>
             ) : !data?.length ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted/80">
-                  Queue is empty
+                <td colSpan={8} className="px-4 py-8 text-center text-muted/80">
+                  Queue is empty — click Discover Topics to mine live demand signals
                 </td>
               </tr>
             ) : (
@@ -174,6 +226,20 @@ export function ContentQueuePage() {
                   <td className="px-4 py-3 font-medium">{item.title}</td>
                   <td className="px-4 py-3 text-muted">{brandsById?.[item.brand_id] ?? item.brand_id}</td>
                   <td className="px-4 py-3 text-muted">{item.content_type}</td>
+                  <td className="px-4 py-3">
+                    {item.source ? (
+                      <span
+                        title={sourceTooltip(item)}
+                        className={`text-xs px-2 py-0.5 rounded font-medium cursor-help ${
+                          SOURCE_STYLE[item.source] ?? "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {SOURCE_LABEL[item.source] ?? item.source}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted/60">Manual</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`text-xs px-2 py-0.5 rounded font-medium ${
