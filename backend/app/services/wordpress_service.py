@@ -110,6 +110,9 @@ class WordPressService:
             "status": "publish",
             "meta": meta_fields,
         }
+        author_id = self.settings.get_wp_author_id(brand.id)
+        if author_id:
+            payload["author"] = author_id
         if featured_media:
             payload["featured_media"] = featured_media
         result = await self._request(brand, "POST", post_type, json=payload)
@@ -183,6 +186,11 @@ class WordPressService:
         payload["meta"] = meta
         if featured_media:
             payload["featured_media"] = featured_media
+        # Reassign on update too, so republishing an existing post moves it
+        # from the API account to the brand's configured author.
+        author_id = self.settings.get_wp_author_id(brand.id)
+        if author_id:
+            payload["author"] = author_id
         result = await self._request(brand, "POST", f"{post_type}/{post_id}", json=payload)
         return {"post_id": result.get("id"), "post_url": result.get("link"), "brand_id": brand.id}
 
