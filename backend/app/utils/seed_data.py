@@ -1,10 +1,13 @@
 BRANDS = [
     {
         "id": "axxiom",
-        "name": "Axxiom Elevator",
-        "wp_url": "https://axxiomelevator.com",
-        "markets": ["National"],
-        "is_corporate": True,
+        "name": "Axxiom Elevator Florida",
+        "wp_url": "https://axxiomelevatorfl.com",
+        # Locations: Pompano Beach + Sarasota (see frontend brandLocations).
+        # Parent company site axxiomelevator.com stays the parentOrganization
+        # reference in schema_service — this row is the FL operating brand.
+        "markets": ["Pompano Beach FL", "Sarasota FL"],
+        "is_corporate": False,
         "logo_url": "https://axxiomelevator.com/wp-content/uploads/2023/10/Axxiom_Color_NoTag.png",
     },
     {

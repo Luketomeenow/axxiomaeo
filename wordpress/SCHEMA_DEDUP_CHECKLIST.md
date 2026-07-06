@@ -10,7 +10,7 @@ Run once per brand after MU plugin v1.1.0 is live and at least one AEO post is p
 
 | Brand ID | Site | Test post URL | Axxiom JSON-LD present | Extra Yoast JSON-LD | Extra Elementor JSON-LD | Settings adjusted |
 |----------|------|---------------|------------------------|---------------------|-------------------------|-------------------|
-| `axxiom` | axxiomelevator.com | | [ ] | [ ] | [ ] | [ ] |
+| `axxiom` | axxiomelevatorfl.com | | [ ] | [ ] | [ ] | [ ] |
 | `ameritex` | ameritexelevator.com | | [ ] | [ ] | [ ] | [ ] |
 | `arizona_es` | azelevatorsolutions.com | | [ ] | [ ] | [ ] | [ ] |
 | `liftech` | liftechelevator.com | | [ ] | [ ] | [ ] | [ ] |

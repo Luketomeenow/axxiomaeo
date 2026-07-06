@@ -41,7 +41,7 @@ in the page `<head>` so search engines, AI crawlers, and **Schema Health** can s
 
 | Brand ID | Typical site | Backend env var (app password) |
 |----------|--------------|--------------------------------|
-| `axxiom` | axxiomelevator.com | `WP_APP_PASSWORD_AXXIOM` |
+| `axxiom` | axxiomelevatorfl.com | `WP_APP_PASSWORD_AXXIOM` |
 | `ameritex` | ameritexelevator.com | `WP_APP_PASSWORD_AMERITEX` |
 | `arizona_es` | azelevatorsolutions.com | `WP_APP_PASSWORD_ARIZONA_ES` |
 | `liftech` | liftechelevator.com | `WP_APP_PASSWORD_LIFTECH` |

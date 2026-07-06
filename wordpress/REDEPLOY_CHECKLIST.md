@@ -11,7 +11,7 @@ Re-upload [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) after pulling this re
 
 | Brand ID | Site | MU plugin v1.1.0 | Must-Use visible | Pilot / test publish |
 |----------|------|------------------|------------------|----------------------|
-| `axxiom` | axxiomelevator.com | [ ] | [ ] | [ ] |
+| `axxiom` | axxiomelevatorfl.com | [ ] | [ ] | [ ] |
 | `ameritex` | ameritexelevator.com | [ ] | [ ] | [ ] ← **pilot first** |
 | `arizona_es` | azelevatorsolutions.com | [ ] | [ ] | [ ] |
 | `liftech` | liftechelevator.com | [ ] | [ ] | [ ] |
