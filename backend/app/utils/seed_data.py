@@ -8,6 +8,8 @@ BRANDS = [
         # reference in schema_service — this row is the FL operating brand.
         "markets": ["Pompano Beach FL", "Sarasota FL"],
         "is_corporate": False,
+        "phone": None,
+        "author_name": "Axxiom Elevator",
         "logo_url": "https://axxiomelevator.com/wp-content/uploads/2023/10/Axxiom_Color_NoTag.png",
     },
     {
@@ -16,6 +18,8 @@ BRANDS = [
         "wp_url": "https://ameritexelevator.com",
         "markets": ["Houston TX", "Dallas TX", "Austin TX", "San Antonio TX", "Los Angeles CA", "San Diego CA"],
         "is_corporate": False,
+        "phone": "866-679-4313",
+        "author_name": "Trey Rast",
     },
     {
         "id": "arizona_es",
@@ -23,6 +27,8 @@ BRANDS = [
         "wp_url": "https://azelevatorsolutions.com",
         "markets": ["Phoenix AZ", "Tucson AZ", "Scottsdale AZ", "Mesa AZ"],
         "is_corporate": False,
+        "phone": "480-319-7157",
+        "author_name": "Axxiom Elevator",
     },
     {
         "id": "liftech",
@@ -30,6 +36,8 @@ BRANDS = [
         "wp_url": "https://liftechelevator.com",
         "markets": ["Signal Hill CA", "Long Beach CA", "Los Angeles CA", "Orange County CA"],
         "is_corporate": False,
+        "phone": "562-609-3478",
+        "author_name": "Axxiom Elevator",
     },
     {
         "id": "motion",
@@ -37,6 +45,8 @@ BRANDS = [
         "wp_url": "https://motionelevator.com",
         "markets": ["Miami FL", "Fort Lauderdale FL", "West Palm Beach FL", "Tampa FL"],
         "is_corporate": False,
+        "phone": "954-833-5503",
+        "author_name": "Axxiom Elevator",
     },
     {
         "id": "quality",
@@ -44,6 +54,8 @@ BRANDS = [
         "wp_url": "https://qualityelevator.com",
         "markets": ["Baltimore MD", "Washington DC", "Philadelphia PA", "Richmond VA"],
         "is_corporate": False,
+        "phone": "301-307-5363",
+        "author_name": "Eric Amundson",
     },
     {
         "id": "evolution",
@@ -51,6 +63,7 @@ BRANDS = [
         "wp_url": "https://evolutionelevator.com",
         "markets": ["Staten Island NY", "Brooklyn NY", "Fort Lauderdale FL"],
         "is_corporate": False,
+        "author_name": "Axxiom Elevator",
     },
     {
         "id": "ironhawk",
@@ -58,6 +71,7 @@ BRANDS = [
         "wp_url": "https://ironhawkelevator.com",
         "markets": ["Phoenix AZ", "Tucson AZ", "Albuquerque NM"],
         "is_corporate": False,
+        "author_name": "Axxiom Elevator",
     },
 ]
 

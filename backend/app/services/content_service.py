@@ -298,7 +298,7 @@ class ContentGenerationService:
         related_pages = await self.wp.get_existing_pages(brand, post_type="pages")
         related = (related_posts + related_pages)[:8]
         html_content = ensure_tldr_block(html_content, target_query)
-        html_content = ensure_author_byline(html_content, brand)
+        html_content = ensure_author_byline(html_content, brand, brand.author_name)
         html_content = inject_internal_links(html_content, brand, related)
 
         image_pipeline = ContentImagePipeline()
@@ -463,6 +463,70 @@ class ContentGenerationService:
         )
         await self.db.flush()
         return draft
+
+    async def return_to_review(self, piece_id: int, user_id: str) -> dict:
+        """Unpublish a published piece: set its live WP post back to draft and
+        return the originating draft to pending_review."""
+        piece = await self.db.get(ContentPiece, piece_id)
+        if not piece:
+            raise ValueError("Published item not found")
+        if piece.status != "published":
+            raise ValueError(f"Item is not published (status: {piece.status})")
+
+        brand = await self.db.get(Brand, piece.brand_id)
+        wp_set_to_draft = False
+        if brand and piece.wp_post_id:
+            try:
+                await self.wp.set_post_status(brand, piece.wp_post_id, "draft")
+                wp_set_to_draft = True
+            except Exception:
+                logger.exception(
+                    "Failed to set WP post %s (%s) to draft", piece.wp_post_id, piece.brand_id
+                )
+        piece.status = "unpublished"
+
+        # Return the originating draft to the review inbox so it can be re-approved.
+        draft = None
+        if piece.slug:
+            result = await self.db.execute(
+                select(ContentDraft)
+                .where(
+                    ContentDraft.brand_id == piece.brand_id,
+                    ContentDraft.slug == piece.slug,
+                    ContentDraft.status == "published",
+                )
+                .order_by(ContentDraft.created_at.desc())
+            )
+            draft = result.scalars().first()
+        if draft:
+            draft.status = "pending_review"
+            draft.reviewer_id = user_id
+
+        self.db.add(
+            ApprovalEvent(
+                entity_type="content_piece",
+                entity_id=piece_id,
+                action="returned_to_review",
+                user_id=user_id,
+            )
+        )
+        await self.notifications.create(
+            type="returned_to_review",
+            title=f"Returned to review: {piece.title}",
+            body=(
+                f"{brand.name if brand else piece.brand_id}: WP post "
+                f"{'set to draft' if wp_set_to_draft else '(WP update failed — check credentials)'}."
+            ),
+            entity_type="content_piece",
+            entity_id=piece_id,
+        )
+        await self.db.flush()
+        return {
+            "status": "unpublished",
+            "piece_id": piece_id,
+            "draft_id": draft.id if draft else None,
+            "wp_set_to_draft": wp_set_to_draft,
+        }
 
     async def update_draft_html(self, draft_id: int, html_content: str) -> ContentDraft:
         draft = await self.db.get(ContentDraft, draft_id)

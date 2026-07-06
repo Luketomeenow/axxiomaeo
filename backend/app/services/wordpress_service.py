@@ -195,6 +195,19 @@ class WordPressService:
     ) -> dict:
         return await self.update_post(brand, post_id, schema_json=schema_json, post_type=post_type)
 
+    async def set_post_status(
+        self, brand: Brand, post_id: int, status: str, post_type: str = "posts"
+    ) -> dict:
+        """Change a post's status (e.g. 'draft' to unpublish, 'publish' to restore)."""
+        result = await self._request(
+            brand, "POST", f"{post_type}/{post_id}", json={"status": status}
+        )
+        return {
+            "post_id": result.get("id"),
+            "status": result.get("status"),
+            "post_url": result.get("link"),
+        }
+
     async def get_post_meta_schema(self, brand: Brand, post_id: int, post_type: str = "posts") -> str | None:
         try:
             result = await self._request(brand, "GET", f"{post_type}/{post_id}")

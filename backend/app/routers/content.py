@@ -424,6 +424,20 @@ async def reject_draft(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+@router.post("/published/{piece_id}/return-to-review")
+async def return_published_to_review(
+    piece_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Unpublish a published piece: set the live WP post to draft and return it to review."""
+    service = ContentGenerationService(db)
+    try:
+        return await service.return_to_review(piece_id, user.get("sub", "unknown"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
 @router.post("/drafts/{draft_id}/regenerate")
 async def regenerate_draft(
     draft_id: int,
