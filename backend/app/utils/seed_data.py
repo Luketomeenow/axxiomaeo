@@ -42,6 +42,7 @@ BRANDS = [
         "wp_url": "https://qualityelevator.com",
         "markets": ["Baltimore MD", "Washington DC", "Philadelphia PA", "Richmond VA"],
         "is_corporate": False,
+        "phone": "301-307-5363",
     },
     {
         "id": "evolution",

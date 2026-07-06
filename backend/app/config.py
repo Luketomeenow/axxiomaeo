@@ -58,6 +58,17 @@ class Settings(BaseSettings):
     wp_username_evolution: str = "admin"
     wp_username_ironhawk: str = "admin"
 
+    # WP user ID to set as the post author (byline) per brand; 0 = default to
+    # the account behind the application password.
+    wp_author_id_axxiom: int = 0
+    wp_author_id_ameritex: int = 0
+    wp_author_id_arizona_es: int = 0
+    wp_author_id_liftech: int = 0
+    wp_author_id_motion: int = 0
+    wp_author_id_quality: int = 0
+    wp_author_id_evolution: int = 0
+    wp_author_id_ironhawk: int = 0
+
     brand_ids: tuple[str, ...] = (
         "axxiom",
         "ameritex",
@@ -123,6 +134,9 @@ class Settings(BaseSettings):
 
     def get_wp_username(self, brand_id: str) -> str:
         return getattr(self, f"wp_username_{brand_id}", "admin")
+
+    def get_wp_author_id(self, brand_id: str) -> int:
+        return getattr(self, f"wp_author_id_{brand_id}", 0) or 0
 
     def wp_publish_configured(self, brand_id: str) -> bool:
         return bool(self.get_wp_password(brand_id).strip())
