@@ -20,10 +20,7 @@ On each WordPress site:
 | ameritex | `WP_APP_PASSWORD_AMERITEX` |
 | arizona_es | `WP_APP_PASSWORD_ARIZONA_ES` |
 | liftech | `WP_APP_PASSWORD_LIFTECH` |
-| motion | `WP_APP_PASSWORD_MOTION` |
 | quality | `WP_APP_PASSWORD_QUALITY` |
-| evolution | `WP_APP_PASSWORD_EVOLUTION` |
-| ironhawk | `WP_APP_PASSWORD_IRONHAWK` |
 
 ## 2. Schema output (must-have)
 

@@ -1,6 +1,6 @@
 # Axxiom AEO Automation Platform
 
-Answer Engine Optimization automation for Axxiom Elevator's 8-brand network. Generates AEO-optimized content via Claude, manages schema markup, monitors AI citations, and publishes to WordPress — with human approval before anything goes live.
+Answer Engine Optimization automation for Axxiom Elevator's 5-brand network. Generates AEO-optimized content via Claude, manages schema markup, monitors AI citations, and publishes to WordPress — with human approval before anything goes live.
 
 ## Architecture
 
@@ -165,7 +165,7 @@ See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](b
 | GET | `/api/reports/dashboard` | Dashboard KPIs |
 | GET | `/api/notifications` | In-app notifications |
 
-## Brands (8 sites)
+## Brands (5 sites)
 
 | ID | Name | URL |
 |---|---|---|
@@ -173,12 +173,9 @@ See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](b
 | ameritex | AmeriTex Elevator | ameritexelevator.com |
 | arizona_es | Arizona Elevator Solutions | azelevatorsolutions.com |
 | liftech | Liftech Elevator | liftechelevator.com |
-| motion | Motion Elevator Services | motionelevator.com |
 | quality | Quality Elevator | qualityelevator.com |
-| evolution | Evolution Elevator | evolutionelevator.com |
-| ironhawk | IronHawk Elevator | ironhawkelevator.com |
 
-Confirm Evolution and IronHawk URLs before production deploy.
+Motion, Evolution, and IronHawk were retired from the AEO system on 2026-07-06 (`alter_aeo_v9.sql`).
 
 ## License
 

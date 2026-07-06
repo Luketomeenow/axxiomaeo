@@ -22,7 +22,7 @@ The tracker is a separate open-source Next.js app ([danishashko/geo-aeo-tracker]
 - [ ] Bright Data account with billing enabled — [brightdata.com](https://brightdata.com/)
 - [ ] Access to the Axxiom backend's Railway variables
 
-**Cost expectation:** tracker software is free; Bright Data charges ~$0.01–0.05 per scrape. At default settings (8 brands × ~30 queries × 3 engines × 3 samples, twice a month) that's ≈ 4,300 scrapes ≈ **$45–220/month**. Knobs to reduce this are in [Cost controls](#cost-controls).
+**Cost expectation:** tracker software is free; Bright Data charges ~$0.01–0.05 per scrape. At default settings (5 brands × ~30 queries × 3 engines × 3 samples, twice a month) that's ≈ 2,700 scrapes ≈ **$27–135/month**. Knobs to reduce this are in [Cost controls](#cost-controls).
 
 ---
 
@@ -87,7 +87,7 @@ CITATION_SAMPLE_RUNS=3
 
 - [ ] Redeploy/restart the backend so settings reload.
 
-**First-audit tip:** for a cheap end-to-end test, temporarily set `GEO_AEO_PROVIDERS=perplexity` and `CITATION_SAMPLE_RUNS=1` — a full 8-brand audit then costs ~240 scrapes (≈ $2.50–12) instead of ~2,160. Restore the full settings once verified.
+**First-audit tip:** for a cheap end-to-end test, temporarily set `GEO_AEO_PROVIDERS=perplexity` and `CITATION_SAMPLE_RUNS=1` — a full 5-brand audit then costs ~150 scrapes (≈ $1.50–8) instead of ~1,350. Restore the full settings once verified.
 
 ## Step 5 — End-to-end verification
 

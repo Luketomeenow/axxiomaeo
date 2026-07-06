@@ -15,10 +15,7 @@ Re-upload [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) after pulling this re
 | `ameritex` | ameritexelevator.com | [ ] | [ ] | [ ] ← **pilot first** |
 | `arizona_es` | azelevatorsolutions.com | [ ] | [ ] | [ ] |
 | `liftech` | liftechelevator.com | [ ] | [ ] | [ ] |
-| `motion` | motionelevator.com | [ ] | [ ] | [ ] |
 | `quality` | qualityelevator.com | [ ] | [ ] | [ ] |
-| `evolution` | evolutionelevator.com | [ ] | [ ] | [ ] |
-| `ironhawk` | ironhawkelevator.com | [ ] | [ ] | [ ] |
 
 ---
 

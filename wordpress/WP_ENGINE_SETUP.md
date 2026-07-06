@@ -45,10 +45,7 @@ in the page `<head>` so search engines, AI crawlers, and **Schema Health** can s
 | `ameritex` | ameritexelevator.com | `WP_APP_PASSWORD_AMERITEX` |
 | `arizona_es` | azelevatorsolutions.com | `WP_APP_PASSWORD_ARIZONA_ES` |
 | `liftech` | liftechelevator.com | `WP_APP_PASSWORD_LIFTECH` |
-| `motion` | motionelevator.com | `WP_APP_PASSWORD_MOTION` |
 | `quality` | qualityelevator.com | `WP_APP_PASSWORD_QUALITY` |
-| `evolution` | evolutionelevator.com | `WP_APP_PASSWORD_EVOLUTION` |
-| `ironhawk` | ironhawkelevator.com | `WP_APP_PASSWORD_IRONHAWK` |
 
 Also set `WP_USERNAME_{BRAND_ID}` in backend env (e.g. `WP_USERNAME_AMERITEX=your-wp-username`).
 

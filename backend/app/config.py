@@ -48,19 +48,13 @@ class Settings(BaseSettings):
     wp_app_password_ameritex: str = ""
     wp_app_password_arizona_es: str = ""
     wp_app_password_liftech: str = ""
-    wp_app_password_motion: str = ""
     wp_app_password_quality: str = ""
-    wp_app_password_evolution: str = ""
-    wp_app_password_ironhawk: str = ""
 
     wp_username_axxiom: str = "admin"
     wp_username_ameritex: str = "admin"
     wp_username_arizona_es: str = "admin"
     wp_username_liftech: str = "admin"
-    wp_username_motion: str = "admin"
     wp_username_quality: str = "admin"
-    wp_username_evolution: str = "admin"
-    wp_username_ironhawk: str = "admin"
 
     # WP user ID to set as the post author (byline) per brand; 0 = default to
     # the account behind the application password.
@@ -68,20 +62,15 @@ class Settings(BaseSettings):
     wp_author_id_ameritex: int = 0
     wp_author_id_arizona_es: int = 0
     wp_author_id_liftech: int = 0
-    wp_author_id_motion: int = 0
     wp_author_id_quality: int = 0
-    wp_author_id_evolution: int = 0
-    wp_author_id_ironhawk: int = 0
 
+    # Retired 2026-07-06: motion, evolution, ironhawk (see alter_aeo_v9.sql).
     brand_ids: tuple[str, ...] = (
         "axxiom",
         "ameritex",
         "arizona_es",
         "liftech",
-        "motion",
         "quality",
-        "evolution",
-        "ironhawk",
     )
 
     claude_model: str = "claude-sonnet-4-6"

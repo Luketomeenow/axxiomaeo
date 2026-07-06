@@ -14,10 +14,7 @@ Run once per brand after MU plugin v1.1.0 is live and at least one AEO post is p
 | `ameritex` | ameritexelevator.com | | [ ] | [ ] | [ ] | [ ] |
 | `arizona_es` | azelevatorsolutions.com | | [ ] | [ ] | [ ] | [ ] |
 | `liftech` | liftechelevator.com | | [ ] | [ ] | [ ] | [ ] |
-| `motion` | motionelevator.com | | [ ] | [ ] | [ ] | [ ] |
 | `quality` | qualityelevator.com | | [ ] | [ ] | [ ] | [ ] |
-| `evolution` | evolutionelevator.com | | [ ] | [ ] | [ ] | [ ] |
-| `ironhawk` | ironhawkelevator.com | | [ ] | [ ] | [ ] | [ ] |
 
 ---
 
