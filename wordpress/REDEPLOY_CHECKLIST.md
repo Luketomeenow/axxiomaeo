@@ -1,7 +1,7 @@
-# MU plugin redeploy — v1.1.0 (all 8 sites)
+# MU plugin redeploy — v1.1.1 (all 5 sites)
 
 Re-upload [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) after pulling this repo change.  
-**Why:** v1.1.0 adds `register_post_meta` so REST API saves `aeo_schema_json` (required for publish + JSON-LD).
+**Why:** v1.1.0 added `register_post_meta` so REST API saves `aeo_schema_json` (required for publish + JSON-LD). v1.1.1 additionally escapes `</` in the JSON-LD output so a `</script>` sequence in schema text can't break out of the script block — re-upload even if you're already on v1.1.0.
 
 **SFTP steps:** [WP_ENGINE_SETUP.md — Part 1](WP_ENGINE_SETUP.md#part-1--upload-the-mu-plugin-sftp)
 
@@ -9,7 +9,7 @@ Re-upload [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) after pulling this re
 
 ## Per-site checklist
 
-| Brand ID | Site | MU plugin v1.1.0 | Must-Use visible | Pilot / test publish |
+| Brand ID | Site | MU plugin v1.1.1 | Must-Use visible | Pilot / test publish |
 |----------|------|------------------|------------------|----------------------|
 | `axxiom` | axxiomelevatorfl.com | [ ] | [ ] | [ ] |
 | `ameritex` | ameritexelevator.com | [ ] | [ ] | [ ] ← **pilot first** |
@@ -24,7 +24,7 @@ Re-upload [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) after pulling this re
 1. WP Engine portal → select environment → **Users & SFTP**
 2. SFTP to port **2222** → `wp-content/mu-plugins/`
 3. Upload / overwrite **`axxiom-aeo-schema.php`** from `axxiomaeo/wordpress/`
-4. wp-admin → **Plugins → Must-Use** → confirm **Axxiom AEO Schema** version **1.1.0**
+4. wp-admin → **Plugins → Must-Use** → confirm **Axxiom AEO Schema** version **1.1.1**
 
 No cache flush or plugin activation required.
 
@@ -32,4 +32,4 @@ No cache flush or plugin activation required.
 
 ## After AmeriTex pilot
 
-Complete [PILOT_PUBLISH.md](PILOT_PUBLISH.md), then roll out remaining 7 sites and spot-check Schema Health per brand.
+Complete [PILOT_PUBLISH.md](PILOT_PUBLISH.md), then roll out remaining 4 sites and spot-check Schema Health per brand.

@@ -1,9 +1,9 @@
 # WP Engine setup — Axxiom AEO Schema plugin
 
-Step-by-step guide for all **8 brand WordPress sites** hosted on **WP Engine**.  
+Step-by-step guide for all **5 brand WordPress sites** hosted on **WP Engine**.  
 Required so **Approve & Publish** and **Schema Review** output JSON-LD on live pages.
 
-**Plugin file in this repo:** [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) (v1.1.0+)  
+**Plugin file in this repo:** [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) (v1.1.1+)  
 **Install path on server:** `wp-content/mu-plugins/axxiom-aeo-schema.php`  
 **Elementor Pro sites:** see [ELEMENTOR.md](ELEMENTOR.md) (Theme Builder + Post Content widget)
 
@@ -13,10 +13,11 @@ Required so **Approve & Publish** and **Schema Review** output JSON-LD on live p
 
 The Axxiom dashboard publishes posts/pages via the WordPress REST API and saves structured data in post meta field **`aeo_schema_json`**.
 
-**v1.1.0** does two things:
+**v1.1.1** does three things:
 
 1. **Registers** `aeo_schema_json` for REST API writes (`show_in_rest`) on **posts** and **pages** — without this, WordPress may silently ignore schema sent by the backend.
 2. **Outputs** that meta in the page `<head>` as JSON-LD.
+3. **Escapes** `</` inside the stored JSON so a `</script>` sequence in schema text can't break out of the script block (added in v1.1.1).
 
 This must-use (MU) plugin reads that meta and outputs:
 
@@ -37,7 +38,7 @@ in the page `<head>` so search engines, AI crawlers, and **Schema Health** can s
 - The plugin file from this repo on your computer
 - WordPress admin access on each site (for Application Passwords)
 
-### All 8 sites (repeat steps per site)
+### All 5 sites (repeat steps per site)
 
 | Brand ID | Typical site | Backend env var (app password) |
 |----------|--------------|--------------------------------|
@@ -47,7 +48,7 @@ in the page `<head>` so search engines, AI crawlers, and **Schema Health** can s
 | `liftech` | liftechelevator.com | `WP_APP_PASSWORD_LIFTECH` |
 | `quality` | qualityelevator.com | `WP_APP_PASSWORD_QUALITY` |
 
-Also set `WP_USERNAME_{BRAND_ID}` in backend env (e.g. `WP_USERNAME_AMERITEX=your-wp-username`).
+Also set `WP_USERNAME_{BRAND_ID}` in backend env (e.g. `WP_USERNAME_AMERITEX=your-wp-username`). Optionally set `WP_AUTHOR_ID_{BRAND_ID}` to a WordPress user ID to credit as the post author/byline instead of the Application Password account (find the ID in **Users → all users**, click a name, `user_id=N` in the URL).
 
 ---
 
@@ -122,12 +123,12 @@ Open **`wp-content`**.
 2. Go to **Plugins → Must-Use** (label may vary; some installs show this only when MU plugins exist).
 3. You should see:
    - **Axxiom AEO Schema**
-   - Version **1.1.0** (or newer)
+   - Version **1.1.1** (or newer)
    - Description mentions REST registration and JSON-LD output
 
 No “Activate” button is required — MU plugins load automatically.
 
-**Upgrading from v1.0.0:** Re-upload the file from this repo (overwrite on server). No wp-admin steps required. See [REDEPLOY_CHECKLIST.md](REDEPLOY_CHECKLIST.md).
+**Upgrading from an older version:** Re-upload the file from this repo (overwrite on server). No wp-admin steps required. See [REDEPLOY_CHECKLIST.md](REDEPLOY_CHECKLIST.md).
 
 ### Optional: Mu Manager
 
@@ -160,9 +161,10 @@ In Railway / `backend/.env` (local) set:
 ```env
 WP_APP_PASSWORD_AMERITEX=xxxx xxxx xxxx xxxx xxxx xxxx
 WP_USERNAME_AMERITEX=your-wordpress-username
+WP_AUTHOR_ID_AMERITEX=9
 ```
 
-Repeat for each brand using the table above.
+Repeat for each brand using the table above. `WP_AUTHOR_ID_*` is optional — omit or set to `0` to leave posts owned by the Application Password account.
 
 **Security:** Never commit real passwords to git. Use Railway secrets or local `.env` only.
 
@@ -193,9 +195,9 @@ If publish succeeds in the dashboard but JSON-LD is **missing** in source → MU
 | File in `plugins/` instead of `mu-plugins/` | Move to `wp-content/mu-plugins/` |
 | Wrong folder name (`mu_plugins`, `muplugins`) | Rename to `mu-plugins` |
 | File named `.php.txt` | Rename to `.php` only |
-| Only installed on one site | Repeat for all 8 environments |
+| Only installed on one site | Repeat for all 5 environments |
 | REST publish works, no JSON-LD in source | MU plugin missing — not an API issue |
-| Publish OK but `aeo_schema_json` meta empty | Upgrade to plugin **v1.1.0+** (`register_post_meta`) |
+| Publish OK but `aeo_schema_json` meta empty | Upgrade to plugin **v1.1.1+** (`register_post_meta`) |
 | Post title shows but body empty on front end | Elementor Single Post template missing **Post Content** widget — [ELEMENTOR.md](ELEMENTOR.md) |
 | Duplicate JSON-LD in page source | Yoast/Elementor schema overlap — [schema dedup checklist](SCHEMA_DEDUP_CHECKLIST.md) |
 
@@ -218,11 +220,11 @@ Full guide: [ELEMENTOR.md](ELEMENTOR.md)
 
 ---
 
-## Part 5 — Repeat for all 8 brands
+## Part 5 — Repeat for all 5 brands
 
 Use [REDEPLOY_CHECKLIST.md](REDEPLOY_CHECKLIST.md) or this summary per site:
 
-- [ ] SFTP upload: `wp-content/mu-plugins/axxiom-aeo-schema.php` (**v1.1.0+**)
+- [ ] SFTP upload: `wp-content/mu-plugins/axxiom-aeo-schema.php` (**v1.1.1+**)
 - [ ] wp-admin: **Axxiom AEO Schema** visible under Must-Use plugins
 - [ ] Elementor Single Post template has **Post Content** widget
 - [ ] Application Password created: `Axxiom AEO`
@@ -255,7 +257,7 @@ Downside: schema output breaks if you change themes. MU plugin is the supported 
 
 - [README.md](README.md) — short overview
 - [ELEMENTOR.md](ELEMENTOR.md) — Theme Builder, Post Content, Yoast conflicts
-- [REDEPLOY_CHECKLIST.md](REDEPLOY_CHECKLIST.md) — v1.1.0 rollout on all 8 sites
+- [REDEPLOY_CHECKLIST.md](REDEPLOY_CHECKLIST.md) — v1.1.1 rollout on all 5 sites
 - [PILOT_PUBLISH.md](PILOT_PUBLISH.md) — AmeriTex first publish verification
 - [SCHEMA_DEDUP_CHECKLIST.md](SCHEMA_DEDUP_CHECKLIST.md) — Yoast/Elementor JSON-LD audit
 - [DEPLOY.md](../DEPLOY.md) — full production checklist

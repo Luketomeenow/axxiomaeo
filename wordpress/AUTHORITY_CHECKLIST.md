@@ -2,7 +2,7 @@
 
 Off-platform work that strongly affects GEO/AEO citation probability.
 
-## Per brand (repeat × 8)
+## Per brand (repeat × 5)
 
 ### Google Business Profile
 - [ ] NAP matches Brand Settings (name, phone, address)

@@ -2,7 +2,7 @@
 
 Sites use **Elementor Pro Theme Builder** with a **Post Content** widget on the single-post template. The Axxiom platform publishes **HTML into `post_content`** via REST API; Elementor wraps that body in your theme shell.
 
-**Plugin:** [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) (v1.1.0+) — registers `aeo_schema_json` for REST and prints JSON-LD in `<head>`.
+**Plugin:** [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) (v1.1.1+) — registers `aeo_schema_json` for REST and prints JSON-LD in `<head>`.
 
 ---
 
@@ -36,7 +36,7 @@ API-created posts stay in **classic content mode** inside an Elementor **templat
 
 ---
 
-## REST API meta (v1.1.0+)
+## REST API meta (v1.1.1+)
 
 The MU plugin registers `aeo_schema_json` with `show_in_rest => true` for **posts** and **pages**.
 
@@ -48,7 +48,7 @@ Without this, WordPress may **ignore** schema sent by the backend even when publ
 2. Field `aeo_schema_json` should contain JSON text.
 3. View page source → one or more `application/ld+json` blocks from Axxiom (see schema dedup below).
 
-Re-upload [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) to all sites after upgrading from v1.0.0 — see [WP_ENGINE_SETUP.md](WP_ENGINE_SETUP.md).
+Re-upload [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) to all sites after upgrading (v1.0.0→v1.1.0 added this REST registration; v1.1.0→v1.1.1 escapes `</` in the JSON-LD output — both require re-uploading the file, no wp-admin steps) — see [WP_ENGINE_SETUP.md](WP_ENGINE_SETUP.md).
 
 ---
 
@@ -91,5 +91,5 @@ See [PILOT_PUBLISH.md](PILOT_PUBLISH.md) for step-by-step verification on amerit
 
 ## Related
 
-- [WP_ENGINE_SETUP.md](WP_ENGINE_SETUP.md) — SFTP install on all 8 brands
+- [WP_ENGINE_SETUP.md](WP_ENGINE_SETUP.md) — SFTP install on all 5 brands
 - [README.md](README.md) — overview

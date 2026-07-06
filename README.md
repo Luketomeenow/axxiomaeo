@@ -73,10 +73,11 @@ Key backend variables:
 - `ANTHROPIC_API_KEY` — Claude content generation
 - `DATABASE_URL` — Supabase PostgreSQL connection string (see `backend/.env.example`)
 - `DB_SCHEMA` — `aeo` (default)
-- `WP_APP_PASSWORD_*` — WordPress Application Password per brand
+- `WP_APP_PASSWORD_*` / `WP_USERNAME_*` — WordPress Application Password + login per brand
+- `WP_AUTHOR_ID_*` — WordPress user ID to set as the post author/byline per brand (optional; 0/unset = posts belong to the application-password account)
 - `PEEC_API_KEY` — Legacy Peec.ai citation monitoring (optional; use `CITATION_PROVIDER=peec`)
 - `CITATION_PROVIDER` — `geo_aeo` (default), `peec`, `none`, or `auto`
-- `GEO_AEO_TRACKER_URL` — URL of self-hosted [GEO/AEO Tracker](geo-aeo-tracker/README.md)
+- `GEO_AEO_TRACKER_URL` — URL of self-hosted [GEO/AEO Tracker](geo-aeo-tracker/README.md) ([deployment runbook](geo-aeo-tracker/DEPLOYMENT.md))
 - `GEO_AEO_PROVIDERS` — Comma-separated AI models (e.g. `perplexity,google_ai`)
 - `GOOGLE_SERVICE_ACCOUNT_JSON` — Base64-encoded service account for GSC + GA4
 - `SUPABASE_JWT_SECRET` — JWT validation for dashboard API calls
@@ -155,7 +156,9 @@ See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](b
 | POST | `/api/content/generate` | Trigger generation |
 | POST | `/api/content/queue/from-gap` | Add gap query to content queue |
 | POST | `/api/content/topics/discover` | Run topic discovery now (auto-queue demand-driven topics) |
+| POST | `/api/content/published/{id}/return-to-review` | Unpublish: set live WP post to draft, return to Content Review |
 | GET | `/api/reports/gsc` | GSC query highlights by brand |
+| GET | `/api/reports/search-vs-generative` | Search vs. AI-generative visibility + traffic, side by side |
 | POST | `/api/content/drafts/{id}/approve` | Approve + publish |
 | POST | `/api/content/drafts/{id}/reject` | Reject draft |
 | GET | `/api/schema/deployments` | Schema approval inbox |
@@ -164,6 +167,8 @@ See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](b
 | POST | `/api/citations/audit` | Trigger audit |
 | GET | `/api/reports/dashboard` | Dashboard KPIs |
 | GET | `/api/notifications` | In-app notifications |
+
+Not exhaustive — see each router in `backend/app/routers/` for the full set.
 
 ## Brands (5 sites)
 
