@@ -28,9 +28,10 @@ The tracker is a separate open-source Next.js app ([danishashko/geo-aeo-tracker]
 
 ## Step 1 — Bright Data setup
 
-1. [ ] Create the account and add a payment method.
-2. [ ] In the Bright Data dashboard: **Scrapers Library** → enable the AI scrapers for each engine you want. Start with **Perplexity**, **ChatGPT**, and **Google AI Overviews** (they match the backend default `GEO_AEO_PROVIDERS=perplexity,chatgpt,google_ai`).
-3. [ ] Copy the **API key** and each scraper's **dataset ID** — you'll paste these into the tracker's env in Step 2.
+1. [ ] Create the account and add a payment method — a **"Low balance"** banner on any scraper page means scrapes (even the dashboard's own "Run manually" test) will fail until funded.
+2. [ ] In the Bright Data dashboard: **Scrapers Library** → enable the AI scrapers for each engine you want. Start with **Perplexity**, **ChatGPT**, and one Google option.
+   - **Gemini** (`gemini.google.com`) and **Google AI Overviews** are two *different* Bright Data products, and the tracker treats them as two different provider values (`gemini` vs `google_ai` — see the Providers list below). If the library only offers "Gemini Search," use `gemini` in `GEO_AEO_PROVIDERS` (Step 4), not the backend's literal default of `google_ai` — they are not interchangeable.
+3. [ ] On each scraper's page, copy the **API token** (the `Authorization: Bearer ...` value in the curl example — it's the same account-wide key on every scraper page) and that scraper's **dataset ID** (the `dataset_id=gd_...` in the same curl example). Both go into the tracker's env in Step 2 — the API token can run up charges on your account, so paste it directly into the env, never share it elsewhere.
 
 ## Step 2 — Deploy the tracker app
 
