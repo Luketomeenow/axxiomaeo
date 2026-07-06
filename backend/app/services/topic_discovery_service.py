@@ -1,22 +1,27 @@
 """Automated topic discovery — mines real demand signals into the content queue.
 
-Sources, in priority order:
+Each brand gets a pick from one of two philosophies, alternating day-to-day
+(or both the same day, once ``TOPIC_DISCOVERY_MAX_PER_BRAND`` &gt;= 2):
 
-1. ``citation_gap``  — queries from the latest citation audit where AI engines
-   skip the brand or cite a competitor (the strongest "will get us cited" signal).
-2. ``search_demand`` — Google Search Console queries with real impressions where
-   the site ranks weak or demand is rising (what users actually search right now).
-3. ``coverage``      — query-bank × brand-market combinations with no content yet
-   (works before GSC / the citation tracker are connected).
+1. ``trend``       — a ``search_demand`` (GSC) candidate with a genuine rising
+   trigger: what people are actually searching for right now.
+2. ``crucial gap`` — a ``citation_gap`` candidate: a query where AI engines
+   currently skip the brand or cite a competitor (the strongest "will get us
+   cited" signal).
+
+``coverage`` (query-bank × brand-market combinations with no content yet)
+is the fallback of last resort when neither philosophy has data — e.g.
+before GSC / the citation tracker are connected.
 
 Every candidate is deduped against existing queue items, drafts, and published
 pieces, then capped and inserted as ``ContentQueue`` rows with source metadata.
-The weekly content worker generates drafts from the queue as usual — the human
+The daily content worker generates drafts from the queue as usual — the human
 approval gate before publishing is unchanged.
 """
 
 import logging
 import re
+from datetime import date
 from urllib.parse import urlparse
 
 from sqlalchemy import select
@@ -30,6 +35,11 @@ from app.utils.query_bank import get_all_queries, interpolate_query
 from app.utils.query_fanout import CATEGORY_CONTENT_TYPE
 
 logger = logging.getLogger(__name__)
+
+# GSC triggers that represent genuine rising demand — "weak_position" alone
+# means "we rank badly," not "this is trending," and is excluded from the
+# trend bucket so provenance data stays honest.
+_TREND_TRIGGERS = {"rising_demand", "rising_and_weak"}
 
 _STOPWORDS = {
     "the", "a", "an", "in", "for", "of", "to", "and", "or", "is", "are",
@@ -70,6 +80,36 @@ def queries_similar(a: str, b: str, threshold: float = 0.75) -> bool:
     if not ta or not tb:
         return False
     return len(ta & tb) / len(ta | tb) >= threshold
+
+
+def todays_primary_bucket(today: date | None = None) -> str:
+    """Deterministic day-to-day flip between the two discovery philosophies.
+
+    ``today`` is an explicit override so a test/replay can pin the day
+    without patching the clock.
+    """
+    day = today or date.today()
+    return "search_demand" if day.toordinal() % 2 == 0 else "citation_gap"
+
+
+def pick_from_pool(pool: list[dict], known: list[str], limit: int) -> list[dict]:
+    """Walk ``pool`` in order, skip anything similar to ``known``, take up to ``limit``.
+
+    Mutates ``known`` in place with every accepted pick, so a subsequent call
+    against a different pool sees it too — same cross-source dedup as a
+    single flat-list walk.
+    """
+    picked: list[dict] = []
+    if limit <= 0:
+        return picked
+    for cand in pool:
+        if len(picked) >= limit:
+            break
+        if any(queries_similar(cand["target_query"], k) for k in known):
+            continue
+        known.append(cand["target_query"])
+        picked.append(cand)
+    return picked
 
 
 def brand_search_terms(brand_name: str, wp_url: str) -> list[str]:
@@ -186,7 +226,7 @@ class TopicDiscoveryService:
 
     async def discover(self, brand_ids: list[str] | None = None) -> dict:
         """Discover topics for all (or given) brands and enqueue them."""
-        brands_q = select(Brand)
+        brands_q = select(Brand).order_by(Brand.id)
         if brand_ids:
             brands_q = brands_q.where(Brand.id.in_(brand_ids))
         brands = list((await self.db.execute(brands_q)).scalars().all())
@@ -195,30 +235,56 @@ class TopicDiscoveryService:
         existing = await self._existing_queries_by_brand()
 
         max_per_brand = max(1, self.settings.topic_discovery_max_per_brand)
-        max_total = max(1, self.settings.topic_discovery_max_total)
+        # Never let the global cap bind tighter than every brand's full
+        # allotment — the old fixed default (10) exactly equalled 5
+        # brands x 2, with zero headroom, so any growth (brand count or
+        # max_per_brand) could silently starve whichever brand sorted last.
+        max_total = max(1, self.settings.topic_discovery_max_total, len(brands) * max_per_brand)
 
         queued: list[dict] = []
         sources_active = {"citation_gap": bool(gaps_by_brand), "search_demand": False, "coverage": True}
+        today_primary = todays_primary_bucket()
 
         for brand in brands:
             if len(queued) >= max_total:
                 break
-            candidates = self._from_gaps(brand, gaps_by_brand.get(brand.id, []))
+
+            gap_pool = self._from_gaps(brand, gaps_by_brand.get(brand.id, []))
             gsc_candidates = await self._from_gsc(brand)
             if gsc_candidates:
                 sources_active["search_demand"] = True
-            candidates += gsc_candidates
-            candidates += self._from_coverage(brand, existing.get(brand.id, []))
+            trend_pool = [
+                c for c in gsc_candidates
+                if (c.get("source_detail") or {}).get("trigger") in _TREND_TRIGGERS
+            ]
+            coverage_pool = self._from_coverage(brand, existing.get(brand.id, []))
 
-            picked: list[dict] = []
             known = list(existing.get(brand.id, []))
-            for cand in candidates:
-                if len(picked) >= max_per_brand or len(queued) + len(picked) >= max_total:
-                    break
-                if any(queries_similar(cand["target_query"], k) for k in known):
-                    continue
-                known.append(cand["target_query"])
-                picked.append(cand)
+            picked: list[dict] = []
+
+            def _budget() -> int:
+                return min(max_per_brand - len(picked), max_total - len(queued) - len(picked))
+
+            if max_per_brand == 1:
+                # Alternate which philosophy leads, day to day; fall through
+                # to the other philosophy, then coverage, if today's primary
+                # has nothing new for this brand.
+                primary_pool, secondary_pool = (
+                    (trend_pool, gap_pool) if today_primary == "search_demand" else (gap_pool, trend_pool)
+                )
+                for pool in (primary_pool, secondary_pool, coverage_pool):
+                    if _budget() <= 0:
+                        break
+                    picked += pick_from_pool(pool, known, _budget())
+            else:
+                # One of each philosophy (when budget/data allow), then
+                # coverage fills any remaining slots.
+                for pool in (trend_pool, gap_pool):
+                    if _budget() <= 0:
+                        break
+                    picked += pick_from_pool(pool, known, min(1, _budget()))
+                if _budget() > 0:
+                    picked += pick_from_pool(coverage_pool, known, _budget())
 
             for cand in picked:
                 item = ContentQueue(
@@ -252,7 +318,10 @@ class TopicDiscoveryService:
         from app.services.report_service import ReportService
 
         try:
-            gaps = await ReportService(self.db).get_gap_queries()
+            # Discovery needs every brand's rows, not the dashboard's top-N —
+            # the default limit=50 is cross-brand and can crowd out whichever
+            # brand's rows sort later by checked_at.
+            gaps = await ReportService(self.db).get_gap_queries(limit=500)
         except Exception as e:  # citation data optional — discovery must not die on it
             logger.warning("Topic discovery: gap lookup failed: %s", e)
             return {}
@@ -316,7 +385,13 @@ class TopicDiscoveryService:
             previous,
             brand_terms=brand_search_terms(brand.name, brand.wp_url),
             min_impressions=self.settings.topic_discovery_min_impressions,
-            max_candidates=max(1, self.settings.topic_discovery_max_per_brand) * 2,
+            # Wide pre-filter window: select_gsc_candidates already does the
+            # real filtering (impressions/branding/rising-or-weak) before
+            # this truncates by impressions — a narrow window here can let a
+            # couple of high-impression weak_position rows crowd out lower-
+            # impression rising_demand ones before the trend-bucket split
+            # in discover() ever sees them.
+            max_candidates=max(20, max(1, self.settings.topic_discovery_max_per_brand) * 10),
         )
         return [
             {

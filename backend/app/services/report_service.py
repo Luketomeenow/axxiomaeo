@@ -240,12 +240,17 @@ class ReportService:
             )
         return rows
 
-    async def get_gap_queries(self) -> list[dict]:
+    async def get_gap_queries(self, limit: int | None = 50) -> list[dict]:
         latest_run = await _latest_audit_run_id(self.db)
         query = select(CitationRecord).where(CitationRecord.is_cited == False)  # noqa: E712
         if latest_run:
             query = query.where(CitationRecord.audit_run_id == latest_run)
-        query = query.order_by(CitationRecord.checked_at.desc()).limit(50)
+        query = query.order_by(CitationRecord.checked_at.desc())
+        # Default limit is a dashboard/report top-N view — it's cross-brand,
+        # so callers needing every brand's rows (e.g. topic discovery) must
+        # raise it, or a brand whose rows sort later can be crowded out.
+        if limit is not None:
+            query = query.limit(limit)
         result = await self.db.execute(query)
         from app.utils.query_fanout import CATEGORY_CONTENT_TYPE
 

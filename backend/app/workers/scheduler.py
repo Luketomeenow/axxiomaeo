@@ -6,7 +6,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.workers.citation_worker import run_citation_audit
 from app.workers.content_refresh_worker import run_content_refresh
-from app.workers.content_worker import run_weekly_content
+from app.workers.content_worker import run_daily_content
 from app.workers.report_worker import run_monthly_report
 from app.workers.schema_worker import run_schema_validation
 from app.workers.topic_worker import run_topic_discovery
@@ -20,14 +20,14 @@ def setup_scheduler():
     # One hour before content generation so new topics flow into the same run.
     scheduler.add_job(
         run_topic_discovery,
-        CronTrigger(day_of_week="mon", hour=8, minute=0),
+        CronTrigger(hour=8, minute=0),
         id="topic_discovery",
         replace_existing=True,
     )
     scheduler.add_job(
-        run_weekly_content,
-        CronTrigger(day_of_week="mon", hour=9, minute=0),
-        id="weekly_content",
+        run_daily_content,
+        CronTrigger(hour=9, minute=0),
+        id="daily_content",
         replace_existing=True,
     )
     scheduler.add_job(

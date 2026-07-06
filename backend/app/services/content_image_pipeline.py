@@ -20,7 +20,7 @@ class ImagePipelineResult:
     html: str
     images_json: list[dict]
     featured_media_id: int | None
-    status: str  # ok | skipped | partial | failed
+    status: str  # ok | skipped | no_plan | partial | failed
 
 
 class ContentImagePipeline:
@@ -53,7 +53,11 @@ class ContentImagePipeline:
         try:
             plans = await self.planner.plan_images(html, target_query, brand, content_type)
             if not plans:
-                return ImagePipelineResult(html, [], None, "skipped")
+                # Config was fine (all 3 gates above passed) — Claude just
+                # didn't return a usable image plan this attempt. Distinct
+                # from "skipped" so reviewers get an accurate diagnosis
+                # instead of a false "no OpenAI key or WP creds" message.
+                return ImagePipelineResult(html, [], None, "no_plan")
 
             resolved: list[dict] = []
             featured_media_id: int | None = None
