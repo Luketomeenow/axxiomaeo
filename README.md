@@ -82,6 +82,8 @@ Key backend variables:
 - `GOOGLE_SERVICE_ACCOUNT_JSON` — Base64-encoded service account for GSC + GA4
 - `SUPABASE_JWT_SECRET` — JWT validation for dashboard API calls
 - `SLACK_WEBHOOK_URL` — Worker notifications (optional)
+- `DISCORD_WEBHOOK_URL` — Published-post notifications with live links (optional; Discord channel → Integrations → Webhooks)
+- `AUTO_PUBLISH_ENABLED` — `true` (default) publishes validated drafts automatically; `false` restores the approval gate
 - `FRONTEND_URL` — Deep links in Slack messages
 - `CORS_ORIGINS` — Netlify URL + localhost
 
@@ -105,7 +107,7 @@ Create a WordPress Application Password for each site (Users → Profile → App
 | Job | Schedule | Behavior |
 |---|---|---|
 | Topic discovery | Daily 8am | Picks 1 topic/brand (default), alternating a search-demand trend pick with a citation-gap AEO pick day-to-day; falls back to coverage gaps. Deduped, source-tagged |
-| Daily content | Daily 9am | Generates up to `CONTENT_GENERATION_MAX_PER_BRAND` drafts per brand → `pending_review` (no auto-publish) |
+| Daily content | Daily 9am | Generates up to `CONTENT_GENERATION_MAX_PER_BRAND` drafts per brand; drafts that pass validation **publish automatically** (`AUTO_PUBLISH_ENABLED=true`, the default) — failed-validation drafts stop in `needs_review` |
 | Citation audit | 1st & 15th, 8am | GEO/AEO Tracker audit (Perplexity, ChatGPT, Google AI by default) across all brands |
 | Schema validation | 1st of month, 7am | Validates pages; queues fixes for approval |
 | Content refresh | Sunday 6am | Re-publishes stale content (90+ days); re-audits gap-sourced posts |
@@ -113,15 +115,15 @@ Create a WordPress Application Password for each site (Users → Profile → App
 
 Rollout: [wordpress/ROLLOUT_VERIFICATION.md](wordpress/ROLLOUT_VERIFICATION.md) · Authority: [wordpress/AUTHORITY_CHECKLIST.md](wordpress/AUTHORITY_CHECKLIST.md)
 
-## Approval Workflow
+## Publish Workflow (monitor-after model)
 
-1. Worker or manual trigger generates content + schema
-2. Draft appears in **Content Review** inbox (`pending_review`)
-3. Reviewer previews HTML + JSON-LD in dashboard
-4. **Approve & Publish** pushes to WordPress via REST API
-5. Schema-only deployments follow the same flow in **Schema Review**
+1. The daily worker generates content + schema per brand
+2. Drafts that **pass validation publish to their own brand automatically** (`AUTO_PUBLISH_ENABLED=true`, the default); an audit event records `auto-publish` as the approver, and a notification with the live post links goes to the in-app feed, Slack, and Discord (`DISCORD_WEBHOOK_URL`)
+3. Drafts that **fail validation stop** in `needs_review` and wait for a human
+4. **Monitoring/undo:** the **Published Content** page lists everything live; **Return to Review** sets the WordPress post back to draft and pulls the item back into Content Review
+5. Manually-triggered generations (dashboard Generate/Regenerate buttons) still land in **Content Review** for manual approval; schema-only deployments still require approval in **Schema Review**
 
-Nothing publishes to WordPress without explicit approval.
+Kill switch: set `AUTO_PUBLISH_ENABLED=false` in Railway to restore the approve-before-publish gate for the daily worker.
 
 ## Deploy to Railway (Backend)
 

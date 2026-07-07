@@ -35,7 +35,7 @@ Copy from local [`backend/.env`](.env) (never commit `.env`). Required:
 | `WP_USERNAME_*` | WordPress usernames per brand |
 | `WP_AUTHOR_ID_*` | WordPress user ID for the post author/byline per brand (optional) |
 
-Optional: `GOOGLE_SERVICE_ACCOUNT_JSON`, `SLACK_WEBHOOK_URL`, `BING_API_KEY`
+Optional: `GOOGLE_SERVICE_ACCOUNT_JSON`, `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` (published-post links for monitoring), `BING_API_KEY`
 
 Citation monitoring (GEO/AEO Tracker sidecar):
 
@@ -71,7 +71,7 @@ python scripts/smoke_test.py
 APScheduler cron jobs run in the same Railway process (no separate worker service):
 
 - Daily 8am CT — topic discovery (auto-queues trend/citation-gap/coverage topics per brand)
-- Daily 9am CT — content generation
+- Daily 9am CT — content generation (validated drafts publish automatically; `AUTO_PUBLISH_ENABLED=false` restores the approval gate)
 - 1st & 15th 8am CT — citation audit
 - 1st 7am CT — schema validation
 - Sunday 6am CT — content refresh (stale posts, gap re-audit)

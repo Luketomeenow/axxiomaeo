@@ -37,10 +37,15 @@ async def run_topic_discovery():
                 breakdown = ", ".join(
                     f"{n} from {SOURCE_LABELS.get(source, source)}" for source, n in counts.most_common()
                 )
+                next_step = (
+                    "publish automatically if they pass validation"
+                    if settings.auto_publish_enabled
+                    else "await your review"
+                )
                 await NotificationService(session).create(
                     type="topics_queued",
                     title=f"{len(queued)} new content topics queued",
-                    body=f"{breakdown}. Drafts generate at 9am today, then await your review.",
+                    body=f"{breakdown}. Drafts generate at 9am today, then {next_step}.",
                     entity_type="content_queue",
                 )
             else:
