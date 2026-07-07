@@ -75,10 +75,10 @@ Key backend variables:
 - `DB_SCHEMA` — `aeo` (default)
 - `WP_APP_PASSWORD_*` / `WP_USERNAME_*` — WordPress Application Password + login per brand
 - `WP_AUTHOR_ID_*` — WordPress user ID to set as the post author/byline per brand (optional; 0/unset = posts belong to the application-password account)
+- `CITATION_PROVIDER` — `brightdata` (recommended — direct Bright Data AI-search APIs), `geo_aeo` (self-hosted tracker), `peec` (legacy), `none`, or `auto`
+- `BRIGHT_DATA_API_KEY` — Bright Data API key (store as a secret) for `CITATION_PROVIDER=brightdata`; engines via `BRIGHT_DATA_PROVIDERS` (default `chatgpt,gemini,perplexity`)
+- `GEO_AEO_TRACKER_URL` / `GEO_AEO_PROVIDERS` — only for the self-hosted [GEO/AEO Tracker](geo-aeo-tracker/README.md) path ([deployment runbook](geo-aeo-tracker/DEPLOYMENT.md))
 - `PEEC_API_KEY` — Legacy Peec.ai citation monitoring (optional; use `CITATION_PROVIDER=peec`)
-- `CITATION_PROVIDER` — `geo_aeo` (default), `peec`, `none`, or `auto`
-- `GEO_AEO_TRACKER_URL` — URL of self-hosted [GEO/AEO Tracker](geo-aeo-tracker/README.md) ([deployment runbook](geo-aeo-tracker/DEPLOYMENT.md))
-- `GEO_AEO_PROVIDERS` — Comma-separated AI models (e.g. `perplexity,google_ai`)
 - `GOOGLE_SERVICE_ACCOUNT_JSON` — Base64-encoded service account for GSC + GA4
 - `SUPABASE_JWT_SECRET` — JWT validation for dashboard API calls
 - `SLACK_WEBHOOK_URL` — Worker notifications (optional)

@@ -17,11 +17,21 @@ class Settings(BaseSettings):
 
     peec_api_key: str = ""
 
-    citation_provider: str = "geo_aeo"  # geo_aeo | peec | none | auto
+    citation_provider: str = "geo_aeo"  # brightdata | geo_aeo | peec | none | auto
     geo_aeo_tracker_url: str = "http://localhost:3000"
     geo_aeo_providers: str = "perplexity,chatgpt,google_ai"
     geo_aeo_concurrency: int = 2
     citation_sample_runs: int = 3
+
+    # Bright Data native AI-search APIs (CITATION_PROVIDER=brightdata) — calls
+    # api.brightdata.com directly, no self-hosted tracker app needed.
+    bright_data_api_key: str = ""
+    bright_data_providers: str = "chatgpt,gemini,perplexity"
+    bright_data_concurrency: int = 2
+    # Dataset ids from the Bright Data Scrapers Library (override if reassigned).
+    bright_data_dataset_chatgpt: str = "gd_m7aof0k82r803d5bjm"
+    bright_data_dataset_gemini: str = "gd_mbz66arm2mf9cu856y"
+    bright_data_dataset_perplexity: str = "gd_m7dhdot1vw9a7gc1n"
 
     google_service_account_json: str = ""
     bing_api_key: str = ""
