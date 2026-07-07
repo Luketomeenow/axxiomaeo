@@ -109,6 +109,10 @@ class WordPressService:
             "slug": slug,
             "status": "publish",
             "meta": meta_fields,
+            # Enforce our discussion policy regardless of the site's default —
+            # keeps spam bots off unattended auto-published posts.
+            "comment_status": self.settings.wp_comment_status,
+            "ping_status": self.settings.wp_ping_status,
         }
         author_id = self.settings.get_wp_author_id(brand.id)
         if author_id:
@@ -186,6 +190,10 @@ class WordPressService:
         payload["meta"] = meta
         if featured_media:
             payload["featured_media"] = featured_media
+        # Re-assert discussion policy on updates too, so a refresh/republish
+        # can't silently revert a post to the site's open default.
+        payload["comment_status"] = self.settings.wp_comment_status
+        payload["ping_status"] = self.settings.wp_ping_status
         # Reassign on update too, so republishing an existing post moves it
         # from the API account to the brand's configured author.
         author_id = self.settings.get_wp_author_id(brand.id)
