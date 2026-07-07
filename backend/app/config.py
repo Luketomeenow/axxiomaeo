@@ -58,6 +58,16 @@ class Settings(BaseSettings):
     wp_username_liftech: str = "admin"
     wp_username_quality: str = "admin"
 
+    # Discussion settings applied to every post we publish (and re-applied on
+    # every update), so it never depends on each WP site's inconsistent
+    # Settings -> Discussion defaults. Both default off:
+    #  - comments off: prevents spam-bot comments on unattended auto-posts.
+    #  - pings off: ping_status=open only invites inbound trackback spam (it
+    #    does NOT earn backlinks — that's a separate outbound setting) and is
+    #    a dead SEO/AEO signal. Flip WP_ALLOW_PINGS=true to experiment.
+    wp_allow_comments: bool = False
+    wp_allow_pings: bool = False
+
     # WP user ID to set as the post author (byline) per brand; 0 = default to
     # the account behind the application password.
     wp_author_id_axxiom: int = 0
@@ -134,6 +144,14 @@ class Settings(BaseSettings):
         if self.frontend_url and self.frontend_url not in origins:
             origins.append(self.frontend_url.rstrip("/"))
         return origins
+
+    @property
+    def wp_comment_status(self) -> str:
+        return "open" if self.wp_allow_comments else "closed"
+
+    @property
+    def wp_ping_status(self) -> str:
+        return "open" if self.wp_allow_pings else "closed"
 
     def get_wp_password(self, brand_id: str) -> str:
         raw = getattr(self, f"wp_app_password_{brand_id}", "")

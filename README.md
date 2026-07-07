@@ -102,6 +102,10 @@ add_action('wp_head', function() {
 
 Create a WordPress Application Password for each site (Users → Profile → Application Passwords). Store in `WP_APP_PASSWORD_{BRAND_ID}` env vars.
 
+### Discussion policy on published posts
+
+Every published post (and every update) is sent with explicit `comment_status` and `ping_status`, so it never depends on a site's *Settings → Discussion* default. Both default **closed** (`WP_ALLOW_COMMENTS` / `WP_ALLOW_PINGS`) — comments off stops spam-bot comments on unattended auto-published posts; pings off avoids inbound trackback spam (`ping_status: open` does not earn backlinks — that's a separate outbound setting — and is a dead SEO/AEO signal). To retro-fit posts published before this policy: `python backend/scripts/lock_discussion.py --apply`.
+
 ## Scheduled Workers (America/Chicago)
 
 | Job | Schedule | Behavior |
