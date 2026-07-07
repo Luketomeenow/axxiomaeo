@@ -1,6 +1,6 @@
 # Schema dedup audit — Yoast / Elementor (per site)
 
-Run once per brand after MU plugin v1.1.0 is live and at least one AEO post is published.
+Run once per brand after MU plugin v1.1.1 is live and at least one AEO post is published.
 
 **Goal:** Page source should show Axxiom schema from `aeo_schema_json` without conflicting duplicate JSON-LD for the same entities.
 
@@ -60,7 +60,7 @@ Use Content Review **Approve & Publish** or an existing AEO post URL.
 | One Axxiom FAQPage/Article block only | Ideal |
 | Yoast adds Organization/WebSite + Axxiom adds Article/FAQPage | Often OK if `@type` differ |
 | Two Article or two FAQPage for same page | Adjust Yoast or Elementor — bad for SEO |
-| JSON-LD missing entirely | Fix MU plugin v1.1.0 + meta — not a dedup issue |
+| JSON-LD missing entirely | Fix MU plugin v1.1.1 + meta — not a dedup issue |
 
 ---
 

@@ -9,10 +9,11 @@ cd backend
 python scripts/verify_rollout.py
 ```
 
-## Per-brand checklist (all 8)
+## Per-brand checklist (all 5)
 
-- [ ] MU plugin `axxiom-aeo-schema.php` v1.1.0+ in `wp-content/mu-plugins/`
+- [ ] MU plugin `axxiom-aeo-schema.php` v1.1.1+ in `wp-content/mu-plugins/`
 - [ ] Application Password `Axxiom AEO` + `WP_APP_PASSWORD_{BRAND}` in backend env
+- [ ] (Optional) `WP_AUTHOR_ID_{BRAND}` set for the post author/byline
 - [ ] Elementor Single Post template includes **Post Content** widget ([ELEMENTOR.md](ELEMENTOR.md))
 - [ ] Yoast schema dedup audit ([SCHEMA_DEDUP_CHECKLIST.md](SCHEMA_DEDUP_CHECKLIST.md))
 - [ ] Test publish → view source → `application/ld+json` present
@@ -20,15 +21,16 @@ python scripts/verify_rollout.py
 
 ## GEO tracker
 
-1. Clone [geo-aeo-tracker](https://github.com/danishashko/geo-aeo-tracker) and deploy (Railway/Vercel)
-2. Set Bright Data API keys on tracker
-3. Backend env:
+Full step-by-step runbook (Bright Data setup, Railway/Vercel deploy, smoke test, cost controls, troubleshooting): [geo-aeo-tracker/DEPLOYMENT.md](../geo-aeo-tracker/DEPLOYMENT.md). Quick summary:
+
+1. Deploy the tracker (Railway recommended) and set Bright Data API keys on it
+2. Backend env:
    ```env
    CITATION_PROVIDER=geo_aeo
    GEO_AEO_TRACKER_URL=https://your-tracker.example.com
-   GEO_AEO_PROVIDERS=perplexity,google_ai
+   GEO_AEO_PROVIDERS=perplexity,chatgpt,google_ai
    ```
-4. Run **Citations → Run validation** in dashboard or wait for 1st/15th cron
+3. Run **Citations → Run validation** in dashboard or wait for 1st/15th cron
 
 ## Authority (off-platform)
 

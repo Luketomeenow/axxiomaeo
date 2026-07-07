@@ -5,7 +5,7 @@ Deploy the FastAPI backend to Railway using **Supabase PostgreSQL** (`aeo` schem
 ## Prerequisites
 
 1. GitHub repo pushed: `https://github.com/Luketomeenow/axxiomaeo`
-2. Supabase `aeo` schema applied — run [`migrations/aeo_schema.sql`](migrations/aeo_schema.sql) in Supabase SQL Editor
+2. Supabase project created — no manual schema step needed. On startup the backend auto-creates all tables from its ORM models and auto-applies every `migrations/alter_aeo_v*.sql` file (`run_alter_migrations()`); [`migrations/aeo_schema.sql`](migrations/aeo_schema.sql) is a legacy reference only, not part of the actual deploy path.
 3. Supabase database password from **Project Settings → Database**
 
 ## 1. Create Railway project
@@ -31,8 +31,9 @@ Copy from local [`backend/.env`](.env) (never commit `.env`). Required:
 | `CORS_ORIGINS` | `https://YOUR-NETLIFY-URL.netlify.app,http://localhost:5173` |
 | `ANTHROPIC_API_KEY` | Claude API key |
 | `FRONTEND_URL` | Netlify dashboard URL |
-| `WP_APP_PASSWORD_*` | WordPress app passwords (8 brands) |
+| `WP_APP_PASSWORD_*` | WordPress app passwords (5 brands) |
 | `WP_USERNAME_*` | WordPress usernames per brand |
+| `WP_AUTHOR_ID_*` | WordPress user ID for the post author/byline per brand (optional) |
 
 Optional: `GOOGLE_SERVICE_ACCOUNT_JSON`, `SLACK_WEBHOOK_URL`, `BING_API_KEY`
 
@@ -42,7 +43,7 @@ Citation monitoring (GEO/AEO Tracker sidecar):
 |----------|--------|
 | `CITATION_PROVIDER` | `none` until tracker is deployed, then `geo_aeo` |
 | `GEO_AEO_TRACKER_URL` | Deployed tracker URL (e.g. second Railway service) |
-| `GEO_AEO_PROVIDERS` | `perplexity,google_ai` |
+| `GEO_AEO_PROVIDERS` | `perplexity,chatgpt,google_ai` |
 | `CONTENT_GENERATION_MAX_PER_BRAND` | Queue items generated per brand, each daily run (default `1`) |
 
 See [backend/.env.production.example](.env.production.example) for a full Railway template.
@@ -69,9 +70,11 @@ python scripts/smoke_test.py
 
 APScheduler cron jobs run in the same Railway process (no separate worker service):
 
+- Daily 8am CT — topic discovery (auto-queues trend/citation-gap/coverage topics per brand)
 - Daily 9am CT — content generation
 - 1st & 15th 8am CT — citation audit
 - 1st 7am CT — schema validation
+- Sunday 6am CT — content refresh (stale posts, gap re-audit)
 - Last day 11pm CT — monthly report
 
 Ensure the Railway service stays **always on** (not serverless sleep) so cron fires reliably.

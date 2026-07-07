@@ -5,7 +5,7 @@
 1. [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import from Git**
 2. Repository: `Luketomeenow/axxiomaeo`
 3. **Base directory:** `frontend`
-4. **Build command:** `npm run build` (from [netlify.toml](netlify.toml))
+4. **Build command:** `npm run build` (from [netlify.toml](../netlify.toml), repo root — sets `base = "frontend"`)
 5. **Publish directory:** `frontend/dist`
 
 ## 2. Environment variables

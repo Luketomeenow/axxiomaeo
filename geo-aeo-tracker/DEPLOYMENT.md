@@ -97,7 +97,7 @@ CITATION_SAMPLE_RUNS=3
 3. [ ] Wait a few minutes per brand (each query×engine×sample is one scrape with a 120s ceiling; the backend runs 2 at a time and retries each scrape twice).
 4. [ ] Citations page fills with per-query results (cited / mentioned / visibility %); dashboard citation KPIs and the Gap Analysis table populate.
 5. [ ] Slack (if `SLACK_WEBHOOK_URL` set): "Bi-weekly citation audit complete."
-6. [ ] From then on it runs automatically on the **1st & 15th at 8:00am Central**, and newly found gaps feed Monday's automated topic discovery.
+6. [ ] From then on it runs automatically on the **1st & 15th at 8:00am Central**, and newly found gaps feed the daily automated topic discovery.
 
 ---
 

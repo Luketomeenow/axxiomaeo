@@ -1,16 +1,16 @@
 # Pilot publish — AmeriTex (Elementor + AEO)
 
-Use this checklist for the **first end-to-end publish** on AmeriTex before rolling out to all 8 brands.
+Use this checklist for the **first end-to-end publish** on AmeriTex before rolling out to all 5 brands.
 
 **Site:** ameritexelevator.com  
 **Brand ID:** `ameritex`  
-**Backend env:** `WP_APP_PASSWORD_AMERITEX`, `WP_USERNAME_AMERITEX`
+**Backend env:** `WP_APP_PASSWORD_AMERITEX`, `WP_USERNAME_AMERITEX`, `WP_AUTHOR_ID_AMERITEX` (optional — post author/byline)
 
 ---
 
 ## Before you start
 
-- [ ] [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) **v1.1.0+** uploaded to `wp-content/mu-plugins/` on AmeriTex WP Engine environment
+- [ ] [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) **v1.1.1+** uploaded to `wp-content/mu-plugins/` on AmeriTex WP Engine environment
 - [ ] **Plugins → Must-Use** shows **Axxiom AEO Schema**
 - [ ] Application Password `Axxiom AEO` created; credentials in `backend/.env`
 - [ ] Elementor **Single Post** template includes **Post Content** widget ([ELEMENTOR.md](ELEMENTOR.md))
@@ -41,7 +41,7 @@ Use this checklist for the **first end-to-end publish** on AmeriTex before rolli
 1. **View Page Source** (Ctrl+U).
 2. Search: `application/ld+json`
 3. Confirm JSON-LD from Axxiom (FAQPage / Article) is present in `<head>`.
-4. If publish succeeded but **no** JSON-LD → MU plugin missing or `aeo_schema_json` meta empty (re-upload v1.1.0 plugin).
+4. If publish succeeded but **no** JSON-LD → MU plugin missing or `aeo_schema_json` meta empty (re-upload v1.1.1 plugin).
 
 ### C. Meta in WordPress
 
@@ -72,6 +72,6 @@ Use this checklist for the **first end-to-end publish** on AmeriTex before rolli
 
 ---
 
-## Roll out to other 7 brands
+## Roll out to other 4 brands
 
 Repeat [WP_ENGINE_SETUP.md](WP_ENGINE_SETUP.md) SFTP + Application Password for each brand, then one test publish each (or spot-check Schema Health).
