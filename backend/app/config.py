@@ -74,11 +74,14 @@ class Settings(BaseSettings):
     )
 
     claude_model: str = "claude-sonnet-4-6"
-    weekly_content_batch_size: int = 5
+    # Max pending queue items generated per brand, each daily content run.
+    content_generation_max_per_brand: int = 1
 
-    # Weekly automated topic discovery (GSC demand + citation gaps + coverage).
+    # Daily automated topic discovery (GSC demand + citation gaps + coverage).
+    # max_per_brand=1 -> alternate trend/AEO-gap picks day-to-day (recommended
+    # starting cadence). max_per_brand>=2 -> pick one of each, same day.
     topic_discovery_enabled: bool = True
-    topic_discovery_max_per_brand: int = 2
+    topic_discovery_max_per_brand: int = 1
     topic_discovery_max_total: int = 10
     topic_discovery_min_impressions: int = 20
 

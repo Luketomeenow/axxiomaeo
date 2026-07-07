@@ -150,7 +150,7 @@ export function ContentQueuePage() {
             type="button"
             onClick={() => discover.mutate()}
             disabled={discover.isPending}
-            title="Mine citation gaps, Search Console demand, and coverage gaps into the queue now (runs automatically every Monday 8am)"
+            title="Mine citation gaps, Search Console demand, and coverage gaps into the queue now (runs automatically every day at 8am)"
             className="px-4 py-2 border border-border text-ink rounded text-sm hover:border-cyan disabled:opacity-50"
           >
             {discover.isPending ? "Discovering…" : "Discover Topics"}

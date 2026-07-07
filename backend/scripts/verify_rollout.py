@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Verify AEO/GEO rollout readiness: DB, WordPress API, GEO tracker, MU plugin hint."""
+"""Verify AEO/GEO rollout readiness: DB, WordPress API, GEO tracker, MU plugin hint, images."""
+import argparse
 import asyncio
 import sys
 from pathlib import Path
@@ -13,6 +14,7 @@ from app.config import get_settings
 from app.database import AsyncSessionLocal, check_db_connection
 from app.models.brand import Brand
 from app.services.citation_service import CitationService
+from app.services.openai_image_service import OpenAIImageService
 
 
 async def check_wordpress(brand: Brand) -> dict:
@@ -46,7 +48,52 @@ async def check_wordpress(brand: Brand) -> dict:
         return {"brand": brand.id, "ok": False, "detail": str(e)}
 
 
+async def check_image_pipeline(test_image: bool) -> None:
+    settings = get_settings()
+    openai = OpenAIImageService()
+    openai_ok = openai.is_configured()
+
+    print("\nImage generation:")
+    print(f"  [{'OK' if settings.image_generation_enabled else 'WARN'}] IMAGE_GENERATION_ENABLED="
+          f"{settings.image_generation_enabled}")
+    print(f"  [{'OK' if openai_ok else 'FAIL'}] OPENAI_API_KEY: "
+          f"{'configured' if openai_ok else 'not set'} (model={settings.openai_image_model})")
+
+    async with AsyncSessionLocal() as session:
+        brands = list((await session.execute(select(Brand))).scalars().all())
+
+    print(f"  Per brand (all 3 gates must pass for that brand's drafts to get images):")
+    for brand in brands:
+        wp_ok = settings.wp_publish_configured(brand.id)
+        ready = settings.image_generation_enabled and openai_ok and wp_ok
+        print(f"    [{'OK' if ready else 'WARN'}] {brand.id}: "
+              f"WP creds {'configured' if wp_ok else 'MISSING'}")
+
+    if not test_image:
+        print("  (pass --test-image to run one real OpenAI generation, ~$0.02-0.19)")
+        return
+    if not openai_ok:
+        print("  [SKIP] --test-image requested but OPENAI_API_KEY not set")
+        return
+
+    print("  Running one real test generation (no upload, bytes discarded)...")
+    try:
+        image_bytes = await openai.generate_image(
+            "A clean, professional photo of a modern commercial elevator interior."
+        )
+        print(f"  [OK] Generated {len(image_bytes):,} bytes — OpenAI image generation is working")
+    except Exception as e:
+        print(f"  [FAIL] Generation failed: {e}")
+
+
 async def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--test-image", action="store_true",
+        help="Also run one real OpenAI image generation to fully confirm access (small cost)",
+    )
+    args = parser.parse_args()
+
     settings = get_settings()
     print("=== Axxiom AEO Rollout Verification ===\n")
 
@@ -76,6 +123,8 @@ async def main():
         elif result.get("json_ld_on_sample_page"):
             extra = " — JSON-LD detected"
         print(f"  [{status}] {result['brand']}: {result['detail']}{extra}")
+
+    await check_image_pipeline(args.test_image)
 
     print("\nNext steps: wordpress/ROLLOUT_VERIFICATION.md")
     return 0

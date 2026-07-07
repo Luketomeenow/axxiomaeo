@@ -1,6 +1,6 @@
-"""Weekly topic discovery — feeds demand-driven topics into the content queue.
+"""Daily topic discovery — feeds demand-driven topics into the content queue.
 
-Runs Monday 08:00 (America/Chicago), one hour before the weekly content worker,
+Runs daily 08:00 (America/Chicago), one hour before the daily content worker,
 so freshly discovered topics flow straight into that run's draft generation.
 """
 
@@ -40,7 +40,7 @@ async def run_topic_discovery():
                 await NotificationService(session).create(
                     type="topics_queued",
                     title=f"{len(queued)} new content topics queued",
-                    body=f"{breakdown}. Drafts generate Monday 9am, then await your review.",
+                    body=f"{breakdown}. Drafts generate at 9am today, then await your review.",
                     entity_type="content_queue",
                 )
             else:

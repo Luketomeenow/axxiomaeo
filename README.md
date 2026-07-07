@@ -103,8 +103,8 @@ Create a WordPress Application Password for each site (Users → Profile → App
 
 | Job | Schedule | Behavior |
 |---|---|---|
-| Topic discovery | Monday 8am | Mines GSC search demand + citation gaps + coverage gaps into the content queue (deduped, capped, source-tagged) |
-| Weekly content | Monday 9am | Generates draft → `pending_review` (no auto-publish) |
+| Topic discovery | Daily 8am | Picks 1 topic/brand (default), alternating a search-demand trend pick with a citation-gap AEO pick day-to-day; falls back to coverage gaps. Deduped, source-tagged |
+| Daily content | Daily 9am | Generates up to `CONTENT_GENERATION_MAX_PER_BRAND` drafts per brand → `pending_review` (no auto-publish) |
 | Citation audit | 1st & 15th, 8am | GEO/AEO Tracker audit (Perplexity, ChatGPT, Google AI by default) across all brands |
 | Schema validation | 1st of month, 7am | Validates pages; queues fixes for approval |
 | Content refresh | Sunday 6am | Re-publishes stale content (90+ days); re-audits gap-sourced posts |

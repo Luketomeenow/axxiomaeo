@@ -85,7 +85,7 @@ async def discover_topics(
 ):
     """Run topic discovery now (all brands, or one) and enqueue the results.
 
-    Same logic as the Monday 8am worker: citation gaps + GSC search demand +
+    Same logic as the daily 8am worker: citation gaps + GSC search demand +
     coverage fill, deduped against existing queue/drafts/published content.
     """
     from app.services.topic_discovery_service import TopicDiscoveryService

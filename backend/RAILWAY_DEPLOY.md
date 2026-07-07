@@ -43,7 +43,7 @@ Citation monitoring (GEO/AEO Tracker sidecar):
 | `CITATION_PROVIDER` | `none` until tracker is deployed, then `geo_aeo` |
 | `GEO_AEO_TRACKER_URL` | Deployed tracker URL (e.g. second Railway service) |
 | `GEO_AEO_PROVIDERS` | `perplexity,google_ai` |
-| `WEEKLY_CONTENT_BATCH_SIZE` | Queue items processed each Monday (default `5`) |
+| `CONTENT_GENERATION_MAX_PER_BRAND` | Queue items generated per brand, each daily run (default `1`) |
 
 See [backend/.env.production.example](.env.production.example) for a full Railway template.
 Bright Data keys go in the **tracker** app env, not Railway backend. See [geo-aeo-tracker/README.md](../geo-aeo-tracker/README.md).
@@ -69,7 +69,7 @@ python scripts/smoke_test.py
 
 APScheduler cron jobs run in the same Railway process (no separate worker service):
 
-- Monday 9am CT — content generation
+- Daily 9am CT — content generation
 - 1st & 15th 8am CT — citation audit
 - 1st 7am CT — schema validation
 - Last day 11pm CT — monthly report

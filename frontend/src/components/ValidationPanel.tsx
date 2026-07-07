@@ -146,17 +146,19 @@ export function ValidationPanel({ validationResult, validationAttempts, targetQu
       label: "Images with AEO descriptions",
       rule: "Generated images include alt text and figcaptions for AI crawlers and accessibility.",
       passed:
-        imagesStatus === "skipped"
+        imagesStatus === "skipped" || imagesStatus === "no_plan"
           ? null
           : (imageCount ?? 0) > 0 && (imagesWithAlt ?? 0) >= (imageCount ?? 0),
       detail:
         imagesStatus === "skipped"
           ? "Image generation skipped (no OpenAI key or WP creds)."
-          : imagesStatus === "failed"
-            ? "Image generation failed — text draft kept."
-            : (imageCount ?? 0) > 0
-              ? `${imagesWithAlt ?? 0}/${imageCount} images with alt text (${imagesStatus})`
-              : "No images generated.",
+          : imagesStatus === "no_plan"
+            ? "OpenAI and WordPress are configured, but no image plan was produced for this draft — try Regenerate."
+            : imagesStatus === "failed"
+              ? "Image generation failed — text draft kept."
+              : (imageCount ?? 0) > 0
+                ? `${imagesWithAlt ?? 0}/${imageCount} images with alt text (${imagesStatus})`
+                : "No images generated.",
     },
   ];
 
