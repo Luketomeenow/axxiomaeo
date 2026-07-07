@@ -5,6 +5,7 @@ import httpx
 from app.config import get_settings
 from app.models.brand import Brand
 from app.schemas.citation import CitationResult
+from app.services.bright_data_service import BrightDataService
 from app.services.geo_aeo_tracker_service import GeoAeoTrackerService
 from app.utils.helpers import retry_with_backoff
 
@@ -52,13 +53,18 @@ class CitationService:
         self.provider = settings.citation_provider.lower()
         self.peec = PeecService()
         self.geo_aeo = GeoAeoTrackerService()
+        self.bright_data = BrightDataService()
 
     async def provider_available(self) -> bool:
         provider = self.provider
         if provider == "auto":
+            if self.bright_data._configured():
+                return True
             if self.geo_aeo._configured():
                 return await self.geo_aeo.health_check()
             return bool(get_settings().peec_api_key)
+        if provider == "brightdata":
+            return self.bright_data._configured()
         if provider == "geo_aeo":
             return self.geo_aeo._configured() and await self.geo_aeo.health_check()
         if provider == "peec":
@@ -73,7 +79,9 @@ class CitationService:
     ) -> tuple[list[CitationResult], str]:
         provider = self.provider
         if provider == "auto":
-            if self.geo_aeo._configured():
+            if self.bright_data._configured():
+                provider = "brightdata"
+            elif self.geo_aeo._configured():
                 provider = "geo_aeo"
             elif get_settings().peec_api_key:
                 provider = "peec"
@@ -81,6 +89,9 @@ class CitationService:
                 provider = "none"
 
         try:
+            if provider == "brightdata":
+                results = await self.bright_data.get_citation_share(brand, queries, query_meta=query_meta)
+                return results, "completed"
             if provider == "geo_aeo":
                 results = await self.geo_aeo.get_citation_share(brand, queries, query_meta=query_meta)
                 return results, "completed"
