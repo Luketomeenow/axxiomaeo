@@ -4,5 +4,8 @@ builder = "nixpacks"
 [deploy]
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
-healthcheckTimeout = 30
+# 300 to match railway.json — startup runs create_all + all alter_aeo_v*.sql
+# migrations + seed against Supabase before the app binds; 30s was too tight
+# once the migration count grew (deploy of PR #9 failed at the 30s window).
+healthcheckTimeout = 300
 restartPolicyType = "on_failure"
