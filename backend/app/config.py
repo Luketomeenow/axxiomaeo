@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     bright_data_api_key: str = ""
     bright_data_providers: str = "chatgpt,gemini,perplexity"
     bright_data_concurrency: int = 2
+    # Async scrapes: how often to poll a snapshot, and how long to wait for it.
+    bright_data_poll_seconds: int = 10
+    bright_data_max_wait_seconds: int = 600
     # Dataset ids from the Bright Data Scrapers Library (override if reassigned).
     bright_data_dataset_chatgpt: str = "gd_m7aof0k82r803d5bjm"
     bright_data_dataset_gemini: str = "gd_mbz66arm2mf9cu856y"
