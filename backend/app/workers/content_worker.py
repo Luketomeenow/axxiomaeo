@@ -14,8 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 async def run_daily_content():
-    per_brand_limit = max(1, get_settings().content_generation_max_per_brand)
-    logger.info("Starting daily content generation (per_brand_limit=%s)", per_brand_limit)
+    settings = get_settings()
+    per_brand_limit = max(1, settings.content_generation_max_per_brand)
+    logger.info(
+        "Starting daily content generation (per_brand_limit=%s, auto_publish=%s)",
+        per_brand_limit,
+        settings.auto_publish_enabled,
+    )
 
     async with AsyncSessionLocal() as session:
         try:
@@ -45,7 +50,7 @@ async def run_daily_content():
             service = ContentGenerationService(session)
             for queue_item in items:
                 try:
-                    await service.generate_draft(
+                    draft = await service.generate_draft(
                         brand_id=queue_item.brand_id,
                         content_type=queue_item.content_type or "faq_hub",
                         target_query=queue_item.target_query or "",
@@ -62,6 +67,29 @@ async def run_daily_content():
                         str(e),
                         error_details={"queue_id": queue_item.id},
                     )
+                    continue
+
+                # Monitor-after model: drafts that PASS validation publish to
+                # their own brand immediately. Invalid drafts still stop in
+                # needs_review; a failed publish keeps the draft in
+                # pending_review and alerts, so nothing is ever lost.
+                if settings.auto_publish_enabled and draft is not None and draft.status == "pending_review":
+                    try:
+                        result = await service.approve_and_publish(draft.id, user_id="auto-publish")
+                        # Persist immediately so a later item's failure can't
+                        # roll back a publish that already hit WordPress.
+                        await session.commit()
+                        logger.info(
+                            "Auto-published draft %s → %s", draft.id, result.get("post_url")
+                        )
+                    except Exception as e:
+                        logger.exception("Auto-publish failed for draft %s: %s", draft.id, e)
+                        await record_worker_error(
+                            session,
+                            "daily_content",
+                            f"Auto-publish failed for draft {draft.id} ({queue_item.brand_id}): {e}",
+                            error_details={"draft_id": draft.id, "queue_id": queue_item.id},
+                        )
 
             await session.commit()
         except Exception as e:

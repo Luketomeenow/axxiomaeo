@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     supabase_jwks_url: str = ""
 
     slack_webhook_url: str = ""
+    # Discord channel webhook — receives published-post notifications with links.
+    discord_webhook_url: str = ""
     frontend_url: str = "http://localhost:5173"
 
     environment: str = "development"
@@ -76,6 +78,10 @@ class Settings(BaseSettings):
     claude_model: str = "claude-sonnet-4-6"
     # Max pending queue items generated per brand, each daily content run.
     content_generation_max_per_brand: int = 1
+    # Publish drafts automatically when they pass validation (monitor-after
+    # model). Set false to restore the approve-before-publish gate — drafts
+    # then wait in Content Review as before.
+    auto_publish_enabled: bool = True
 
     # Daily automated topic discovery (GSC demand + citation gaps + coverage).
     # max_per_brand=1 -> alternate trend/AEO-gap picks day-to-day (recommended

@@ -66,7 +66,22 @@ class NotificationService:
         if send_slack and self.settings.slack_webhook_url:
             await self._send_slack(title, body, entity_type, entity_id)
 
+        # Published posts also go to Discord (with live links) so the team
+        # can monitor what went out from the channel.
+        if type == "published" and self.settings.discord_webhook_url:
+            await self._send_discord(title, body)
+
         return notification
+
+    async def _send_discord(self, title: str, body: str) -> None:
+        # approve_and_publish joins URLs with "; " — one per line keeps
+        # Discord's auto-linking clean (a trailing ";" breaks the link).
+        content = f"**{title}**\n{body.replace('; ', chr(10))}"[:1900]
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.post(self.settings.discord_webhook_url, json={"content": content})
+        except Exception as e:
+            logger.warning("Discord notification failed: %s", e)
 
     async def _send_slack(
         self,
