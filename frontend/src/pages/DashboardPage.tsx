@@ -2,9 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { CitationBarChart } from "../components/CitationBarChart";
 import { GapAnalysisTable } from "../components/GapAnalysisTable";
 import { KpiStrip } from "../components/KpiStrip";
+import { SearchVsGenerativePanel } from "../components/SearchVsGenerativePanel";
 import { TrafficLineChart } from "../components/TrafficLineChart";
 import { apiFetch } from "../lib/api";
-import type { DashboardData, TrafficTrendResponse } from "../types";
+import type { DashboardData, SearchVsGenerative, TrafficTrendResponse } from "../types";
 
 export function DashboardPage() {
   const { data, isLoading, error } = useQuery({
@@ -17,6 +18,13 @@ export function DashboardPage() {
   const { data: traffic } = useQuery({
     queryKey: ["traffic-trend"],
     queryFn: () => apiFetch<TrafficTrendResponse>("/api/reports/traffic-trend?days=90"),
+    refetchInterval: 60000,
+    retry: 1,
+  });
+
+  const { data: searchVsGen } = useQuery({
+    queryKey: ["search-vs-generative"],
+    queryFn: () => apiFetch<SearchVsGenerative>("/api/reports/search-vs-generative"),
     refetchInterval: 60000,
     retry: 1,
   });
@@ -35,6 +43,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <KpiStrip data={data} />
+      {searchVsGen && <SearchVsGenerativePanel data={searchVsGen} />}
       {traffic && <TrafficLineChart data={traffic} />}
       <div className="grid lg:grid-cols-2 gap-6">
         <CitationBarChart

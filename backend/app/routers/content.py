@@ -77,6 +77,22 @@ async def queue_from_gap(
     }
 
 
+@router.post("/topics/discover")
+async def discover_topics(
+    brand_id: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Run topic discovery now (all brands, or one) and enqueue the results.
+
+    Same logic as the Monday 8am worker: citation gaps + GSC search demand +
+    coverage fill, deduped against existing queue/drafts/published content.
+    """
+    from app.services.topic_discovery_service import TopicDiscoveryService
+
+    return await TopicDiscoveryService(db).discover(brand_ids=[brand_id] if brand_id else None)
+
+
 @router.get("/queue")
 async def get_content_queue(
     db: AsyncSession = Depends(get_db),
@@ -94,6 +110,8 @@ async def get_content_queue(
             "priority": i.priority,
             "status": i.status,
             "scheduled_for": i.scheduled_for.isoformat() if i.scheduled_for else None,
+            "source": i.source,
+            "source_detail": i.source_detail,
         }
         for i in items
     ]
@@ -220,7 +238,7 @@ async def _generate_task(
     import logging
 
     from app.database import AsyncSessionLocal
-    from app.models.approval import WorkerError
+    from app.services.notification_service import record_worker_error
 
     logger = logging.getLogger(__name__)
 
@@ -242,17 +260,16 @@ async def _generate_task(
             logger.exception("Background content generation failed")
             try:
                 async with AsyncSessionLocal() as session:
-                    session.add(
-                        WorkerError(
-                            worker_name="content_generate",
-                            error_message=str(exc)[:500],
-                            error_details={
-                                "brand_id": brand_id,
-                                "target_query": target_query,
-                                "queue_id": queue_id,
-                                "draft_id": existing_draft_id,
-                            },
-                        )
+                    await record_worker_error(
+                        session,
+                        "content_generate",
+                        str(exc)[:500],
+                        error_details={
+                            "brand_id": brand_id,
+                            "target_query": target_query,
+                            "queue_id": queue_id,
+                            "draft_id": existing_draft_id,
+                        },
                     )
                     await session.commit()
             except Exception:
@@ -403,6 +420,20 @@ async def reject_draft(
     try:
         draft = await service.reject_draft(draft_id, user.get("sub", "unknown"), req.notes)
         return {"status": "rejected", "id": draft.id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/published/{piece_id}/return-to-review")
+async def return_published_to_review(
+    piece_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Unpublish a published piece: set the live WP post to draft and return it to review."""
+    service = ContentGenerationService(db)
+    try:
+        return await service.return_to_review(piece_id, user.get("sub", "unknown"))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

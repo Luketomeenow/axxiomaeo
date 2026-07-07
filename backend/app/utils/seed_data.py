@@ -1,11 +1,15 @@
 BRANDS = [
     {
         "id": "axxiom",
-        "name": "Axxiom Elevator",
-        "wp_url": "https://axxiomelevator.com",
-        "markets": ["National"],
-        "is_corporate": True,
-        "phone": "[BRAND_PHONE]",
+        "name": "Axxiom Elevator Florida",
+        "wp_url": "https://axxiomelevatorfl.com",
+        # Locations: Pompano Beach + Sarasota (see frontend brandLocations).
+        # Parent company site axxiomelevator.com stays the parentOrganization
+        # reference in schema_service — this row is the FL operating brand.
+        "markets": ["Pompano Beach FL", "Sarasota FL"],
+        "is_corporate": False,
+        "phone": None,
+        "author_name": "Robin Volesky",
         "logo_url": "https://axxiomelevator.com/wp-content/uploads/2023/10/Axxiom_Color_NoTag.png",
     },
     {
@@ -14,6 +18,8 @@ BRANDS = [
         "wp_url": "https://ameritexelevator.com",
         "markets": ["Houston TX", "Dallas TX", "Austin TX", "San Antonio TX", "Los Angeles CA", "San Diego CA"],
         "is_corporate": False,
+        "phone": "866-679-4313",
+        "author_name": "Jennifer Gonzales",
     },
     {
         "id": "arizona_es",
@@ -21,6 +27,8 @@ BRANDS = [
         "wp_url": "https://azelevatorsolutions.com",
         "markets": ["Phoenix AZ", "Tucson AZ", "Scottsdale AZ", "Mesa AZ"],
         "is_corporate": False,
+        "phone": "480-319-7157",
+        "author_name": "Taylor Tack",
     },
     {
         "id": "liftech",
@@ -28,13 +36,8 @@ BRANDS = [
         "wp_url": "https://liftechelevator.com",
         "markets": ["Signal Hill CA", "Long Beach CA", "Los Angeles CA", "Orange County CA"],
         "is_corporate": False,
-    },
-    {
-        "id": "motion",
-        "name": "Motion Elevator Services",
-        "wp_url": "https://motionelevator.com",
-        "markets": ["Miami FL", "Fort Lauderdale FL", "West Palm Beach FL", "Tampa FL"],
-        "is_corporate": False,
+        "phone": "562-609-3478",
+        "author_name": "Ian Post",
     },
     {
         "id": "quality",
@@ -42,20 +45,8 @@ BRANDS = [
         "wp_url": "https://qualityelevator.com",
         "markets": ["Baltimore MD", "Washington DC", "Philadelphia PA", "Richmond VA"],
         "is_corporate": False,
-    },
-    {
-        "id": "evolution",
-        "name": "Evolution Elevator & Escalator Corp.",
-        "wp_url": "https://evolutionelevator.com",
-        "markets": ["Staten Island NY", "Brooklyn NY", "Fort Lauderdale FL"],
-        "is_corporate": False,
-    },
-    {
-        "id": "ironhawk",
-        "name": "IronHawk Elevator",
-        "wp_url": "https://ironhawkelevator.com",
-        "markets": ["Phoenix AZ", "Tucson AZ", "Albuquerque NM"],
-        "is_corporate": False,
+        "phone": "301-307-5363",
+        "author_name": "Eric Amundson",
     },
 ]
 
@@ -77,5 +68,4 @@ CONTENT_QUEUE_SEED = [
     {"brand_id": "axxiom", "content_type": "data_stats", "title": "Elevator Industry Statistics 2025-2026", "target_query": "elevator industry statistics 2025", "priority": 5, "scheduled_for": "2026-07-28"},
     {"brand_id": "quality", "content_type": "local_page", "title": "Elevator Service in Baltimore MD", "target_query": "elevator service Baltimore MD", "priority": 1, "scheduled_for": "2026-06-23"},
     {"brand_id": "liftech", "content_type": "local_page", "title": "Elevator Service in Los Angeles CA", "target_query": "elevator service Los Angeles CA", "priority": 3, "scheduled_for": "2026-07-07"},
-    {"brand_id": "motion", "content_type": "local_page", "title": "Elevator Service in Miami FL", "target_query": "elevator service Miami FL", "priority": 3, "scheduled_for": "2026-07-07"},
 ]

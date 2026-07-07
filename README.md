@@ -1,6 +1,6 @@
 # Axxiom AEO Automation Platform
 
-Answer Engine Optimization automation for Axxiom Elevator's 8-brand network. Generates AEO-optimized content via Claude, manages schema markup, monitors AI citations, and publishes to WordPress — with human approval before anything goes live.
+Answer Engine Optimization automation for Axxiom Elevator's 5-brand network. Generates AEO-optimized content via Claude, manages schema markup, monitors AI citations, and publishes to WordPress — with human approval before anything goes live.
 
 ## Architecture
 
@@ -62,7 +62,7 @@ Open http://localhost:5173
 
 ### Development Auth
 
-If Supabase is not configured, the backend accepts requests without JWT validation in `development` mode when `SUPABASE_URL` and `SUPABASE_JWT_SECRET` are empty.
+Local no-auth mode requires an explicit opt-in: set `AUTH_DEV_BYPASS=true` together with `ENVIRONMENT=development` and empty `SUPABASE_URL`/`SUPABASE_JWT_SECRET`. Without the flag the API always requires a valid Supabase JWT — a misconfigured deploy fails closed instead of open.
 
 ## Environment Variables
 
@@ -103,8 +103,9 @@ Create a WordPress Application Password for each site (Users → Profile → App
 
 | Job | Schedule | Behavior |
 |---|---|---|
+| Topic discovery | Monday 8am | Mines GSC search demand + citation gaps + coverage gaps into the content queue (deduped, capped, source-tagged) |
 | Weekly content | Monday 9am | Generates draft → `pending_review` (no auto-publish) |
-| Citation audit | 1st & 15th, 8am | Peec.ai audit across all brands |
+| Citation audit | 1st & 15th, 8am | GEO/AEO Tracker audit (Perplexity, ChatGPT, Google AI by default) across all brands |
 | Schema validation | 1st of month, 7am | Validates pages; queues fixes for approval |
 | Content refresh | Sunday 6am | Re-publishes stale content (90+ days); re-audits gap-sourced posts |
 | Monthly report | Last day, 11pm | Compiles and stores report JSON |
@@ -153,6 +154,7 @@ See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](b
 | GET | `/api/content/drafts` | List drafts |
 | POST | `/api/content/generate` | Trigger generation |
 | POST | `/api/content/queue/from-gap` | Add gap query to content queue |
+| POST | `/api/content/topics/discover` | Run topic discovery now (auto-queue demand-driven topics) |
 | GET | `/api/reports/gsc` | GSC query highlights by brand |
 | POST | `/api/content/drafts/{id}/approve` | Approve + publish |
 | POST | `/api/content/drafts/{id}/reject` | Reject draft |
@@ -163,20 +165,17 @@ See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](b
 | GET | `/api/reports/dashboard` | Dashboard KPIs |
 | GET | `/api/notifications` | In-app notifications |
 
-## Brands (8 sites)
+## Brands (5 sites)
 
 | ID | Name | URL |
 |---|---|---|
-| axxiom | Axxiom Elevator | axxiomelevator.com |
+| axxiom | Axxiom Elevator Florida | axxiomelevatorfl.com |
 | ameritex | AmeriTex Elevator | ameritexelevator.com |
 | arizona_es | Arizona Elevator Solutions | azelevatorsolutions.com |
 | liftech | Liftech Elevator | liftechelevator.com |
-| motion | Motion Elevator Services | motionelevator.com |
 | quality | Quality Elevator | qualityelevator.com |
-| evolution | Evolution Elevator | evolutionelevator.com |
-| ironhawk | IronHawk Elevator | ironhawkelevator.com |
 
-Confirm Evolution and IronHawk URLs before production deploy.
+Motion, Evolution, and IronHawk were retired from the AEO system on 2026-07-06 (`alter_aeo_v9.sql`).
 
 ## License
 

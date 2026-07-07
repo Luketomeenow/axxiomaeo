@@ -5,9 +5,9 @@ from sqlalchemy import select
 
 from app.config import get_settings
 from app.database import AsyncSessionLocal
-from app.models.approval import WorkerError
 from app.models.content import ContentQueue
 from app.services.content_service import ContentGenerationService
+from app.services.notification_service import record_worker_error
 
 logger = logging.getLogger(__name__)
 
@@ -47,18 +47,17 @@ async def run_weekly_content():
                 except Exception as e:
                     logger.exception("Failed queue item %s: %s", queue_item.id, e)
                     queue_item.status = "pending"
-                    session.add(
-                        WorkerError(
-                            worker_name="weekly_content",
-                            error_message=str(e),
-                            error_details={"queue_id": queue_item.id},
-                        )
+                    await record_worker_error(
+                        session,
+                        "weekly_content",
+                        str(e),
+                        error_details={"queue_id": queue_item.id},
                     )
 
             await session.commit()
         except Exception as e:
             logger.exception("Weekly content job failed: %s", e)
-            session.add(WorkerError(worker_name="weekly_content", error_message=str(e)))
+            await record_worker_error(session, "weekly_content", str(e))
             await session.commit()
 
     await asyncio.sleep(0)

@@ -44,7 +44,7 @@ export const BRAND_LOCATIONS: BrandLocation[] = [
   {
     id: "axxiom_pompano",
     brandId: "axxiom",
-    name: "Axxiom Elevator",
+    name: "Axxiom Elevator Florida",
     address: "2101 W Atlantic Blvd STE 104, Pompano Beach, FL",
     city: "Pompano Beach",
     state: "FL",

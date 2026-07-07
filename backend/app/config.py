@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     google_service_account_json: str = ""
     bing_api_key: str = ""
+    # Comma-separated override of AI-assistant referrer hosts for GA4 segmentation.
+    ai_referrer_hosts: str = ""
 
     supabase_url: str = ""
     supabase_jwt_secret: str = ""
@@ -34,6 +36,8 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
 
     environment: str = "development"
+    # Explicit opt-in for the local no-auth shortcut (see app.auth.verify_token).
+    auth_dev_bypass: bool = False
     secret_key: str = "change-me"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     # Optional regex for additional allowed origins (e.g. Netlify deploy previews):
@@ -44,33 +48,39 @@ class Settings(BaseSettings):
     wp_app_password_ameritex: str = ""
     wp_app_password_arizona_es: str = ""
     wp_app_password_liftech: str = ""
-    wp_app_password_motion: str = ""
     wp_app_password_quality: str = ""
-    wp_app_password_evolution: str = ""
-    wp_app_password_ironhawk: str = ""
 
     wp_username_axxiom: str = "admin"
     wp_username_ameritex: str = "admin"
     wp_username_arizona_es: str = "admin"
     wp_username_liftech: str = "admin"
-    wp_username_motion: str = "admin"
     wp_username_quality: str = "admin"
-    wp_username_evolution: str = "admin"
-    wp_username_ironhawk: str = "admin"
 
+    # WP user ID to set as the post author (byline) per brand; 0 = default to
+    # the account behind the application password.
+    wp_author_id_axxiom: int = 0
+    wp_author_id_ameritex: int = 0
+    wp_author_id_arizona_es: int = 0
+    wp_author_id_liftech: int = 0
+    wp_author_id_quality: int = 0
+
+    # Retired 2026-07-06: motion, evolution, ironhawk (see alter_aeo_v9.sql).
     brand_ids: tuple[str, ...] = (
         "axxiom",
         "ameritex",
         "arizona_es",
         "liftech",
-        "motion",
         "quality",
-        "evolution",
-        "ironhawk",
     )
 
     claude_model: str = "claude-sonnet-4-6"
     weekly_content_batch_size: int = 5
+
+    # Weekly automated topic discovery (GSC demand + citation gaps + coverage).
+    topic_discovery_enabled: bool = True
+    topic_discovery_max_per_brand: int = 2
+    topic_discovery_max_total: int = 10
+    topic_discovery_min_impressions: int = 20
 
     openai_api_key: str = ""
     openai_image_model: str = "gpt-image-1"
@@ -123,6 +133,9 @@ class Settings(BaseSettings):
 
     def get_wp_username(self, brand_id: str) -> str:
         return getattr(self, f"wp_username_{brand_id}", "admin")
+
+    def get_wp_author_id(self, brand_id: str) -> int:
+        return getattr(self, f"wp_author_id_{brand_id}", 0) or 0
 
     def wp_publish_configured(self, brand_id: str) -> bool:
         return bool(self.get_wp_password(brand_id).strip())

@@ -12,6 +12,14 @@ def _wrap_json_ld(data: dict) -> str:
     return json.dumps(data, indent=2)
 
 
+def _brand_phone(brand: Brand) -> str | None:
+    """Brand phone usable in published output — never the [BRAND_PHONE] token."""
+    phone = (brand.phone or "").strip()
+    if not phone or phone == "[BRAND_PHONE]":
+        return None
+    return phone
+
+
 def build_organization_schema(brand: Brand) -> str:
     schema = {
         "@context": "https://schema.org",
@@ -21,17 +29,19 @@ def build_organization_schema(brand: Brand) -> str:
         "url": brand.wp_url,
         "logo": brand.logo_url or f"{brand.wp_url}/wp-content/uploads/logo.png",
         "description": f"{brand.name} provides certified elevator maintenance, repair, modernization, and installation services.",
-        "contactPoint": {
-            "@type": "ContactPoint",
-            "telephone": brand.phone or "[BRAND_PHONE]",
-            "contactType": "customer service",
-            "availableLanguage": "English",
-            "hoursAvailable": "24/7",
-        },
         "areaServed": brand.markets or [],
         "numberOfEmployees": {"@type": "QuantitativeValue", "minValue": 50, "maxValue": 500},
         "foundingDate": "2023",
     }
+    phone = _brand_phone(brand)
+    if phone:
+        schema["contactPoint"] = {
+            "@type": "ContactPoint",
+            "telephone": phone,
+            "contactType": "customer service",
+            "availableLanguage": "English",
+            "hoursAvailable": "24/7",
+        }
     if not brand.is_corporate:
         schema["parentOrganization"] = {
             "@type": "Organization",
@@ -48,7 +58,6 @@ def build_local_business_schema(brand: Brand, city: str = "") -> str:
         "@type": "LocalBusiness",
         "name": brand.name,
         "url": brand.wp_url,
-        "telephone": brand.phone or "[BRAND_PHONE]",
         "priceRange": "$$",
         "openingHours": "Mo-Su 00:00-23:59",
         "address": {
@@ -62,6 +71,9 @@ def build_local_business_schema(brand: Brand, city: str = "") -> str:
             for _ in (brand.markets or ["National"])
         ],
     }
+    phone = _brand_phone(brand)
+    if phone:
+        schema["telephone"] = phone
     return _wrap_json_ld(schema)
 
 
@@ -223,6 +235,13 @@ def _service_page_url(brand: Brand, service_type: str) -> str | None:
 
 def build_service_schema(brand: Brand, service_type: str) -> str:
     service_url = _service_page_url(brand, service_type)
+    phone = _brand_phone(brand)
+    available_channel: dict = {
+        "@type": "ServiceChannel",
+        "availableLanguage": "English",
+    }
+    if phone:
+        available_channel["servicePhone"] = {"@type": "ContactPoint", "telephone": phone}
     schema = {
         "@context": "https://schema.org",
         "@type": "Service",
@@ -230,11 +249,7 @@ def build_service_schema(brand: Brand, service_type: str) -> str:
         "serviceType": service_type,
         "provider": {"@type": "Organization", "name": brand.name, "url": brand.wp_url},
         "areaServed": brand.markets or [],
-        "availableChannel": {
-            "@type": "ServiceChannel",
-            "servicePhone": {"@type": "ContactPoint", "telephone": brand.phone or "[BRAND_PHONE]"},
-            "availableLanguage": "English",
-        },
+        "availableChannel": available_channel,
         "hasOfferCatalog": {
             "@type": "OfferCatalog",
             "name": f"{brand.name} Services",

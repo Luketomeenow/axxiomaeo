@@ -314,18 +314,79 @@ class ReportService:
 
         brand_series = []
         for brand in configured_brands:
-            data = await self.ga4.get_ai_referred_sessions_timeseries(
+            ai_data = await self.ga4.get_ai_referred_sessions_timeseries(
+                brand.ga4_property_id, days=days
+            )
+            organic_data = await self.ga4.get_organic_search_sessions_timeseries(
                 brand.ga4_property_id, days=days
             )
             brand_series.append(
                 {
                     "brand_id": brand.id,
                     "brand_name": brand.name,
-                    "data": data,
+                    "data": ai_data,  # retained for backward compatibility (AI-referred)
+                    "ai_data": ai_data,
+                    "organic_data": organic_data,
                 }
             )
 
         return {"configured": True, "brands": brand_series}
+
+    async def get_search_vs_generative(self) -> dict:
+        """Side-by-side comparison of traditional-search vs generative-AI
+        visibility and traffic, aggregated across configured brands."""
+        from app.config import get_settings
+
+        has_google = bool(get_settings().google_service_account_json)
+        kpis = await self.get_dashboard_kpis()
+
+        brands_result = await self.db.execute(select(Brand))
+        brands = brands_result.scalars().all()
+        ga4_brands = [b for b in brands if b.ga4_property_id]
+        gsc_brands = [b for b in brands if b.gsc_site_url]
+
+        # --- Traditional search visibility (GSC site totals) ---
+        gsc_impressions = 0
+        gsc_clicks = 0
+        weighted_pos = 0.0
+        pos_weight = 0
+        for brand in gsc_brands:
+            totals = await self.gsc.get_site_totals(brand.gsc_site_url)
+            gsc_impressions += totals.get("impressions", 0)
+            gsc_clicks += totals.get("clicks", 0)
+            impr = totals.get("impressions", 0)
+            if impr:
+                weighted_pos += totals.get("avg_position", 0) * impr
+                pos_weight += impr
+        avg_position = round(weighted_pos / pos_weight, 1) if pos_weight else 0
+
+        # --- Traditional search traffic (GA4 Organic Search sessions) ---
+        organic_sessions = 0
+        for brand in ga4_brands:
+            data = await self.ga4.get_organic_search_sessions(brand.ga4_property_id)
+            organic_sessions += data.get("sessions", 0)
+
+        return {
+            "search": {
+                "configured": has_google and bool(gsc_brands or ga4_brands),
+                "visibility": {
+                    "impressions": gsc_impressions,
+                    "clicks": gsc_clicks,
+                    "avg_position": avg_position,
+                },
+                "traffic": {"organic_search_sessions": organic_sessions},
+            },
+            "generative": {
+                "configured": True,
+                "visibility": {
+                    "citation_share": kpis["citation_share"],
+                    "avg_visibility_pct": kpis["avg_visibility_pct"],
+                    "share_of_voice": kpis["share_of_voice"],
+                },
+                "traffic": {"ai_referred_sessions": kpis["ai_referred_sessions"]},
+            },
+            "last_updated": datetime.utcnow().isoformat(),
+        }
 
     async def get_gsc_highlights(self, limit: int = 15) -> dict:
         """Top GSC queries per brand with gsc_site_url configured."""

@@ -25,7 +25,7 @@ export function TrafficLineChart({ data }: Props) {
 
     return (
       <div className="aeo-panel p-5">
-        <h3 className="aeo-title mb-2">AI-Referred Traffic Trend (90 days)</h3>
+        <h3 className="aeo-title mb-2">Search vs Generative Traffic (90 days)</h3>
         <p className="text-sm text-muted">
           {data.reason === "no_ga4" ? (
             <>
@@ -43,29 +43,30 @@ export function TrafficLineChart({ data }: Props) {
     );
   }
 
-  const topBrands = [...data.brands]
-    .sort(
-      (a, b) =>
-        b.data.reduce((s, d) => s + d.sessions, 0) -
-        a.data.reduce((s, d) => s + d.sessions, 0)
-    )
-    .slice(0, 5);
-
-  const dateMap = new Map<string, Record<string, number>>();
-  for (const brand of topBrands) {
-    for (const point of brand.data) {
-      if (!dateMap.has(point.date)) dateMap.set(point.date, {});
-      dateMap.get(point.date)![brand.brand_id] = point.sessions;
+  // Aggregate across brands into two series: organic search vs AI-referred.
+  const totals = new Map<string, { organic: number; ai: number }>();
+  for (const brand of data.brands) {
+    const aiSeries = brand.ai_data ?? brand.data;
+    const organicSeries = brand.organic_data ?? [];
+    for (const point of aiSeries) {
+      const e = totals.get(point.date) ?? { organic: 0, ai: 0 };
+      e.ai += point.sessions;
+      totals.set(point.date, e);
+    }
+    for (const point of organicSeries) {
+      const e = totals.get(point.date) ?? { organic: 0, ai: 0 };
+      e.organic += point.sessions;
+      totals.set(point.date, e);
     }
   }
 
-  const chartData = Array.from(dateMap.entries())
+  const chartData = Array.from(totals.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, values]) => ({ date, ...values }));
+    .map(([date, v]) => ({ date, organic: v.organic, ai: v.ai }));
 
   return (
     <div className="aeo-panel p-5">
-      <h3 className="aeo-title mb-4">AI-Referred Traffic Trend (90 days)</h3>
+      <h3 className="aeo-title mb-4">Search vs Generative Traffic (90 days)</h3>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -77,17 +78,22 @@ export function TrafficLineChart({ data }: Props) {
           <YAxis tick={{ fontSize: 11 }} />
           <Tooltip />
           <Legend />
-          {topBrands.map((brand, i) => (
-            <Line
-              key={brand.brand_id}
-              type="monotone"
-              dataKey={brand.brand_id}
-              name={brand.brand_name}
-              stroke={COLORS[i % COLORS.length]}
-              dot={false}
-              strokeWidth={2}
-            />
-          ))}
+          <Line
+            type="monotone"
+            dataKey="organic"
+            name="Organic Search"
+            stroke={COLORS[1]}
+            dot={false}
+            strokeWidth={2}
+          />
+          <Line
+            type="monotone"
+            dataKey="ai"
+            name="AI-Referred"
+            stroke={COLORS[0]}
+            dot={false}
+            strokeWidth={2}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

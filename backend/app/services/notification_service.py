@@ -4,9 +4,39 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models.approval import Notification
+from app.models.approval import Notification, WorkerError
 
 logger = logging.getLogger(__name__)
+
+
+async def record_worker_error(
+    db: AsyncSession,
+    worker_name: str,
+    error_message: str,
+    error_details: dict | None = None,
+    notify: bool = True,
+) -> None:
+    """Persist a WorkerError and surface it (in-app + Slack). Never raises.
+
+    notify=False for call sites that already emit their own notification,
+    so a single failure doesn't double-post to Slack.
+    """
+    try:
+        db.add(
+            WorkerError(
+                worker_name=worker_name,
+                error_message=error_message,
+                error_details=error_details,
+            )
+        )
+        if notify:
+            await NotificationService(db).create(
+                type="worker_error",
+                title=f"Worker failed: {worker_name}",
+                body=(error_message or "")[:500],
+            )
+    except Exception:
+        logger.warning("Failed to record worker error for %s", worker_name, exc_info=True)
 
 
 class NotificationService:
