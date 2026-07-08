@@ -7,6 +7,7 @@ import { ReportTrendChart } from "../components/ReportTrendChart";
 import { apiFetch } from "../lib/api";
 import { downloadCsv } from "../lib/exportCsv";
 import type {
+  CostSummary,
   MonthlyReportDetail,
   ReportListItem,
   ReportsListResponse,
@@ -110,6 +111,40 @@ function SummaryPanel({ id, enabled }: { id: number; enabled: boolean }) {
         <List title="Highlights" items={data.highlights} mark="✓" />
         <List title="Watch-outs" items={data.watch_outs} mark="!" />
         <List title="Next steps" items={data.next_steps} mark="→" />
+      </div>
+    </div>
+  );
+}
+
+function CostsPanel() {
+  const { data } = useQuery({
+    queryKey: ["report-costs"],
+    queryFn: () => apiFetch<CostSummary>("/api/reports/costs"),
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+  if (!data) return null;
+  const fmt = (n: number) => `$${n.toFixed(2)}`;
+  return (
+    <div className="aeo-panel p-5">
+      <div className="flex items-center justify-between gap-4 mb-1">
+        <h3 className="aeo-title text-ink">Estimated API costs — this month</h3>
+        <span className="aeo-kpi-value text-2xl">{fmt(data.total_usd)}</span>
+      </div>
+      <p className="text-xs text-muted mb-4">
+        Across the paid AI services — estimated from volume × configured unit rates (set your real
+        rates in the backend env). Not billing-grade.
+      </p>
+      <div className="grid sm:grid-cols-3 gap-3">
+        {data.items.map((it) => (
+          <div key={it.key} className="border border-border rounded p-3">
+            <p className="text-xs text-muted">{it.label}</p>
+            <p className="text-lg font-bold text-ink mt-0.5">{fmt(it.cost_usd)}</p>
+            <p className="text-[11px] text-muted/70 mt-1">
+              {it.units.toLocaleString()} {it.unit} × ${it.rate_usd}
+            </p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -371,6 +406,8 @@ export function ReportsPage() {
                 {effectiveId != null && (
                   <SummaryPanel id={effectiveId} enabled={tab === "report"} />
                 )}
+
+                <CostsPanel />
 
                 {(brandRows.length > 0 || (full.by_category?.length ?? 0) > 0) && (
                   <div className="grid lg:grid-cols-2 gap-6">

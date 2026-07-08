@@ -26,6 +26,17 @@ def _serialize_report(report: MonthlyReport) -> dict:
     }
 
 
+@router.get("/costs")
+async def get_report_costs(
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Estimated current-month API spend: content (Claude), images, tracking (Bright Data)."""
+    from app.services.cost_service import CostService
+
+    return await CostService(db).monthly_costs()
+
+
 @router.get("/latest")
 async def get_latest_report(
     db: AsyncSession = Depends(get_db),

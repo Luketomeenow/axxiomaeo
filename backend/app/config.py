@@ -153,6 +153,16 @@ class Settings(BaseSettings):
     ideogram_style_type: str = "REALISTIC"
     ideogram_magic_prompt: str = "OFF"
 
+    # Estimated API-spend rates shown on Reports (per-unit, USD). These are
+    # tracking/budgeting estimates — set them to your actual observed rates.
+    #  - content: per generated draft (article + its planning/correction Claude
+    #    calls); ~$0.10-0.15 for a full Sonnet article.
+    #  - image: per generated image (Ideogram QUALITY ~$0.08-0.10).
+    #  - citation record: per Bright Data AI-search result.
+    cost_per_content_generation_usd: float = 0.12
+    cost_per_image_usd: float = 0.09
+    cost_per_citation_record_usd: float = 0.002
+
     @field_validator("supabase_jwt_secret", mode="before")
     @classmethod
     def strip_jwt_secret(cls, value: object) -> object:
