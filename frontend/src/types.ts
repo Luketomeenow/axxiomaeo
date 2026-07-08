@@ -211,6 +211,29 @@ export interface ContentQueueItem {
   source_detail?: Record<string, unknown> | null;
 }
 
+export interface Recommendation {
+  key: string;
+  brand_id: string;
+  brand_name: string;
+  query: string;
+  title: string;
+  content_type: string;
+  priority: number;
+  score: number;
+  competitor_cited: boolean;
+  competitors: string[];
+  engines_missing: string[];
+  visibility_pct: number;
+  why: string;
+  source_detail?: Record<string, unknown> | null;
+  source_citation_id?: number | null;
+}
+
+export interface RecommendationsResponse {
+  recommendations: Recommendation[];
+  count: number;
+}
+
 export interface PublishedContent {
   id: number;
   brand_id: string;

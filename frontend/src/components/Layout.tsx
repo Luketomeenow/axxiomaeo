@@ -5,7 +5,10 @@ import { NotificationBell } from "./NotificationBell";
 const navSections = [
   {
     label: "Overview",
-    items: [{ path: "/", label: "Dashboard", icon: "◈" }],
+    items: [
+      { path: "/", label: "Dashboard", icon: "◈" },
+      { path: "/recommendations", label: "Recommendations", icon: "✦" },
+    ],
   },
   {
     label: "Content",
