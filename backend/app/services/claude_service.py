@@ -2,6 +2,7 @@ import re
 import anthropic
 from app.config import get_settings
 from app.prompts.content_prompts import CORRECTION_PROMPT, build_prompt
+from app.services.cost_service import create_and_record
 from app.utils.helpers import check_direct_answer, h2_question_ratio, strip_html
 
 
@@ -32,7 +33,9 @@ class ClaudeService:
             state=state,
             vertical=vertical,
         )
-        response = await self.client.messages.create(
+        response = await create_and_record(
+            self.client,
+            operation="content_generation",
             model=self.model,
             max_tokens=8192,
             messages=[{"role": "user", "content": prompt}],
@@ -52,7 +55,9 @@ class ClaudeService:
             target_query=target_query,
             brand_name=brand_name,
         )
-        response = await self.client.messages.create(
+        response = await create_and_record(
+            self.client,
+            operation="content_correction",
             model=self.model,
             max_tokens=8192,
             messages=[
@@ -77,7 +82,9 @@ class ClaudeService:
             target_query=target_query,
             content_type=content_type,
         )
-        response = await self.client.messages.create(
+        response = await create_and_record(
+            self.client,
+            operation="content_refresh",
             model=self.model,
             max_tokens=8192,
             messages=[

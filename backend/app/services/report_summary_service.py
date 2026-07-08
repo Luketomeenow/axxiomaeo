@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.models.report import MonthlyReport
 from app.services.claude_service import ClaudeService
+from app.services.cost_service import create_and_record
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,9 @@ class ReportSummaryService:
     async def _generate(self, data: dict) -> dict:
         prompt = SUMMARY_PROMPT.format(data=json.dumps(data, default=str)[:10000])
         try:
-            response = await self.claude.client.messages.create(
+            response = await create_and_record(
+                self.claude.client,
+                operation="report_summary",
                 model=self.claude.model,
                 max_tokens=1536,
                 messages=[{"role": "user", "content": prompt}],

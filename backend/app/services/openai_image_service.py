@@ -6,6 +6,7 @@ import logging
 from openai import AsyncOpenAI
 
 from app.config import get_settings
+from app.services.cost_service import record_cost_event
 from app.utils.helpers import retry_with_backoff
 
 logger = logging.getLogger(__name__)
@@ -47,4 +48,6 @@ class OpenAIImageService:
                     return img.content, "png"
             raise RuntimeError("OpenAI image response had no b64_json or url")
 
-        return await retry_with_backoff(do_request, max_retries=2)
+        result = await retry_with_backoff(do_request, max_retries=2)
+        await record_cost_event("openai", "image_generation", units=1, model=self.model)
+        return result

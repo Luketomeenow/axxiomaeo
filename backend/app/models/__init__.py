@@ -3,6 +3,7 @@ from app.models.content import ContentPiece, ContentDraft, ContentQueue
 from app.models.schema_job import SchemaDeployment, SchemaJob
 from app.models.citation import CitationRecord
 from app.models.report import MonthlyReport
+from app.models.cost import CostEvent
 from app.models.approval import (
     ApprovalEvent,
     Notification,
@@ -19,6 +20,7 @@ __all__ = [
     "SchemaJob",
     "CitationRecord",
     "MonthlyReport",
+    "CostEvent",
     "ApprovalEvent",
     "Notification",
     "RecommendationAction",

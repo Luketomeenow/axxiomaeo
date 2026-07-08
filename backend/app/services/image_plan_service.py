@@ -7,6 +7,7 @@ import re
 from app.config import get_settings
 from app.models.brand import Brand
 from app.services.claude_service import ClaudeService
+from app.services.cost_service import create_and_record
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,9 @@ class ImagePlanService:
             target_query=target_query,
             content_type=content_type,
         )
-        response = await self.claude.client.messages.create(
+        response = await create_and_record(
+            self.claude.client,
+            operation="image_plan",
             model=self.claude.model,
             max_tokens=2048,
             messages=[

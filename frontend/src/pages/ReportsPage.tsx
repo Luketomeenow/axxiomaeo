@@ -125,24 +125,31 @@ function CostsPanel() {
   });
   if (!data) return null;
   const fmt = (n: number) => `$${n.toFixed(2)}`;
+  const precise = data.source === "ledger";
+  const sub = (it: CostSummary["items"][number]) => {
+    if (it.input_tokens != null || it.output_tokens != null) {
+      const toks = (it.input_tokens ?? 0) + (it.output_tokens ?? 0);
+      return `${(it.calls ?? 0).toLocaleString()} calls · ${toks.toLocaleString()} tokens`;
+    }
+    return `${(it.units ?? 0).toLocaleString()} ${it.unit ?? ""}`.trim();
+  };
   return (
     <div className="aeo-panel p-5">
       <div className="flex items-center justify-between gap-4 mb-1">
-        <h3 className="aeo-title text-ink">Estimated API costs — this month</h3>
+        <h3 className="aeo-title text-ink">API costs — this month</h3>
         <span className="aeo-kpi-value text-2xl">{fmt(data.total_usd)}</span>
       </div>
       <p className="text-xs text-muted mb-4">
-        Across the paid AI services — estimated from volume × configured unit rates (set your real
-        rates in the backend env). Not billing-grade.
+        {precise
+          ? "Metered from actual API usage this month — Claude tokens, images generated, and Bright Data records."
+          : "Estimated from volume × configured rates (no metered data for this month yet)."}
       </p>
       <div className="grid sm:grid-cols-3 gap-3">
         {data.items.map((it) => (
           <div key={it.key} className="border border-border rounded p-3">
             <p className="text-xs text-muted">{it.label}</p>
             <p className="text-lg font-bold text-ink mt-0.5">{fmt(it.cost_usd)}</p>
-            <p className="text-[11px] text-muted/70 mt-1">
-              {it.units.toLocaleString()} {it.unit} × ${it.rate_usd}
-            </p>
+            <p className="text-[11px] text-muted/70 mt-1">{sub(it)}</p>
           </div>
         ))}
       </div>

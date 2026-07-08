@@ -336,14 +336,17 @@ export interface ReportSummary {
 
 export interface CostSummary {
   period_month: string;
+  source?: "ledger" | "estimate";
   estimated: boolean;
   total_usd: number;
   items: {
     key: string;
     label: string;
-    units: number;
-    unit: string;
-    rate_usd: number;
     cost_usd: number;
+    unit?: string;
+    units?: number;
+    calls?: number;
+    input_tokens?: number;
+    output_tokens?: number;
   }[];
 }

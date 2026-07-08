@@ -153,15 +153,18 @@ class Settings(BaseSettings):
     ideogram_style_type: str = "REALISTIC"
     ideogram_magic_prompt: str = "OFF"
 
-    # Estimated API-spend rates shown on Reports (per-unit, USD). These are
-    # tracking/budgeting estimates — set them to your actual observed rates.
-    #  - content: per generated draft (article + its planning/correction Claude
-    #    calls); ~$0.10-0.15 for a full Sonnet article.
+    # Billing-grade API-cost rates (USD). The cost_events ledger records each
+    # call's real tokens/units and computes cost from these:
+    #  - Anthropic: per 1M tokens, input/output (Sonnet 4.6 list price by default).
     #  - image: per generated image (Ideogram QUALITY ~$0.08-0.10).
     #  - citation record: per Bright Data AI-search result.
-    cost_per_content_generation_usd: float = 0.12
+    # Set these to your actual observed/negotiated rates. cost_per_content_
+    # generation_usd is only the FALLBACK estimate for months with no ledger data.
+    anthropic_input_cost_per_mtok: float = 3.0
+    anthropic_output_cost_per_mtok: float = 15.0
     cost_per_image_usd: float = 0.09
     cost_per_citation_record_usd: float = 0.002
+    cost_per_content_generation_usd: float = 0.12
 
     @field_validator("supabase_jwt_secret", mode="before")
     @classmethod
