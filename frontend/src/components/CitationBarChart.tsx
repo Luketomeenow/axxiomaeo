@@ -1,14 +1,23 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface Props {
-  data: { brand_id?: string; category?: string; citation_share: number }[];
-  dataKey: "brand_id" | "category";
+  data: {
+    brand_id?: string;
+    category?: string;
+    platform?: string;
+    funnel_stage?: string;
+    citation_share: number;
+  }[];
+  dataKey: string;
   title: string;
 }
 
 export function CitationBarChart({ data, dataKey, title }: Props) {
   const chartData = data.map((d) => ({
-    name: (d[dataKey] || "Unknown").replace(/_/g, " "),
+    name: String((d as Record<string, string | number | undefined>)[dataKey] ?? "Unknown").replace(
+      /_/g,
+      " "
+    ),
     share: d.citation_share,
   }));
 
