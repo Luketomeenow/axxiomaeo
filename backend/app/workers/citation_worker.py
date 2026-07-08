@@ -73,18 +73,18 @@ def _build_brand_queries(brand: Brand) -> tuple[list[str], dict[str, dict]]:
     return query_strings, meta_by_query
 
 
-async def _notify_tracker_unavailable(brand_id: str | None = None):
+async def _notify_provider_unavailable(reason: str, brand_id: str | None = None):
     async with AsyncSessionLocal() as session:
         notifications = NotificationService(session)
         await notifications.create(
             type="citation_manual",
-            title="Citation audit skipped — tracker unavailable",
-            body="Start GEO/AEO Tracker on :3000 with Bright Data keys, or set CITATION_PROVIDER=none",
+            title="Citation audit skipped — provider unavailable",
+            body=reason,
         )
         await record_worker_error(
             session,
             "citation_audit",
-            "Citation provider unavailable",
+            reason,
             error_details={"brand_id": brand_id} if brand_id else None,
             notify=False,  # the citation_manual notification above already alerts
         )
@@ -96,8 +96,9 @@ async def run_citation_audit():
     citation_service = CitationService()
 
     if not await citation_service.provider_available():
-        logger.warning("Citation audit skipped — provider unavailable")
-        await _notify_tracker_unavailable()
+        reason = citation_service.unavailable_reason()
+        logger.warning("Citation audit skipped — %s", reason)
+        await _notify_provider_unavailable(reason)
         return
 
     async with AsyncSessionLocal() as session:
@@ -126,15 +127,16 @@ async def run_citation_audit():
         async with AsyncSessionLocal() as session:
             notifications = NotificationService(session)
             if status == "manual_required":
+                reason = citation_service.unavailable_reason()
                 await notifications.create(
                     type="citation_manual",
                     title=f"Citation audit requires manual review: {brand.name}",
-                    body="Citation provider unavailable — check GEO_AEO_TRACKER_URL or CITATION_PROVIDER",
+                    body=reason,
                 )
                 await record_worker_error(
                     session,
                     "citation_audit",
-                    "Citation provider unavailable",
+                    reason,
                     error_details={"brand_id": brand.id},
                     notify=False,  # the citation_manual notification above already alerts
                 )

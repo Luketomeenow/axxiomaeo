@@ -50,7 +50,7 @@ export function CitationsPage() {
           type: "err",
           text:
             data.message ||
-            "Citation provider unavailable. Start GEO/AEO Tracker on port 3000 or set CITATION_PROVIDER=none in backend/.env.",
+            "Citation provider unavailable — check CITATION_PROVIDER and its API key in your backend environment.",
         });
       }
     },
@@ -105,8 +105,8 @@ export function CitationsPage() {
           <h2 className="text-xl font-bold text-ink">Citation Monitoring</h2>
           <p className="text-sm text-muted mt-1">
             {total > 0
-              ? `${cited}/${total} checks cited · probabilistic visibility across Perplexity, ChatGPT & Google AI`
-              : "No audit data yet — run audit after GEO/AEO Tracker is up"}
+              ? `${cited}/${total} checks cited · probabilistic visibility across ChatGPT, Gemini & Perplexity`
+              : "No audit data yet — click Run Citation Audit to collect it"}
           </p>
         </div>
         <button
@@ -191,7 +191,8 @@ export function CitationsPage() {
                 {!citations?.length ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-muted/80">
-                      No citation results yet. Run an audit once GEO/AEO Tracker is running on port 3000.
+                      No citation results yet — click Run Citation Audit above. If it reports the
+                      provider is unavailable, set CITATION_PROVIDER and its API key, then retry.
                     </td>
                   </tr>
                 ) : (

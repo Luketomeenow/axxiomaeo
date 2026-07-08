@@ -17,7 +17,10 @@ class Settings(BaseSettings):
 
     peec_api_key: str = ""
 
-    citation_provider: str = "geo_aeo"  # brightdata | geo_aeo | peec | none | auto
+    # Default is brightdata — the platform's live provider. The retired geo_aeo
+    # default silently health-checked a self-hosted tracker on localhost:3000
+    # that no deploy runs, so audits were skipped with a misleading message.
+    citation_provider: str = "brightdata"  # brightdata | geo_aeo | peec | none | auto
     geo_aeo_tracker_url: str = "http://localhost:3000"
     geo_aeo_providers: str = "perplexity,chatgpt,google_ai"
     geo_aeo_concurrency: int = 2

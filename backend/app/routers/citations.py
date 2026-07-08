@@ -54,10 +54,7 @@ async def trigger_citation_audit(
     if not await service.provider_available():
         return {
             "status": "unavailable",
-            "message": (
-                "Citation provider unavailable — start GEO/AEO Tracker on :3000 "
-                "with Bright Data keys, or set CITATION_PROVIDER=none in backend/.env"
-            ),
+            "message": service.unavailable_reason(),
         }
 
     background_tasks.add_task(run_citation_audit)
