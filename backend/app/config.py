@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     bright_data_api_key: str = ""
     bright_data_providers: str = "chatgpt,gemini,perplexity"
     bright_data_concurrency: int = 2
+    # Async snapshot polling: ChatGPT (and batched scrapes) return 202 + a
+    # snapshot_id that must be polled to "ready" then downloaded. Defaults give
+    # a batch up to poll_interval*max_polls = 10 min to finish before giving up.
+    bright_data_poll_interval_seconds: int = 10
+    bright_data_max_polls: int = 60
     # Dataset ids from the Bright Data Scrapers Library (override if reassigned).
     bright_data_dataset_chatgpt: str = "gd_m7aof0k82r803d5bjm"
     bright_data_dataset_gemini: str = "gd_mbz66arm2mf9cu856y"
