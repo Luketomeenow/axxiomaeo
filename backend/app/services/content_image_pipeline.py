@@ -8,11 +8,27 @@ from slugify import slugify
 from app.config import get_settings
 from app.models.brand import Brand
 from app.services.image_plan_service import ImagePlanService
+from app.services.fal_image_service import FalImageService
 from app.services.openai_image_service import OpenAIImageService
 from app.services.content_enrichment import inject_content_images
 from app.services.wordpress_service import WordPressService
 
 logger = logging.getLogger(__name__)
+
+
+def _make_image_provider(settings):
+    """Pick the configured image provider; fall back to any other configured
+    one (logged) so a misconfig never silently stops image generation."""
+    want = (settings.image_provider or "fal").lower()
+    providers = {"fal": FalImageService(), "openai": OpenAIImageService()}
+    chosen = providers.get(want) or providers["fal"]
+    if chosen.is_configured():
+        return chosen
+    for name, provider in providers.items():
+        if name != want and provider.is_configured():
+            logger.warning("Image provider %r not configured — falling back to %r", want, name)
+            return provider
+    return chosen  # none configured; the is_configured() gate will skip
 
 
 @dataclass
@@ -27,11 +43,11 @@ class ContentImagePipeline:
     def __init__(self):
         self.settings = get_settings()
         self.planner = ImagePlanService()
-        self.openai = OpenAIImageService()
+        self.image = _make_image_provider(self.settings)
         self.wp = WordPressService()
 
     def should_run(self) -> bool:
-        return bool(self.settings.image_generation_enabled and self.openai.is_configured())
+        return bool(self.settings.image_generation_enabled and self.image.is_configured())
 
     async def enrich_with_images(
         self,
@@ -43,8 +59,8 @@ class ContentImagePipeline:
     ) -> ImagePipelineResult:
         if not self.settings.image_generation_enabled:
             return ImagePipelineResult(html, [], None, "skipped")
-        if not self.openai.is_configured():
-            logger.info("Image generation skipped — OPENAI_API_KEY not set")
+        if not self.image.is_configured():
+            logger.info("Image generation skipped — no image-provider key set (image_provider=%s)", self.settings.image_provider)
             return ImagePipelineResult(html, [], None, "skipped")
         if not self.settings.wp_publish_configured(brand.id):
             logger.info("Image generation skipped — no WP creds for brand %s", brand.id)
@@ -65,9 +81,9 @@ class ContentImagePipeline:
             for i, plan in enumerate(plans):
                 slot = plan.get("slot", f"inline_{i}")
                 try:
-                    image_bytes = await self.openai.generate_image(plan["prompt"])
+                    image_bytes, ext = await self.image.generate_image(plan["prompt"])
                     base_name = slugify(f"{draft_title}-{slot}", max_length=60) or "aeo-image"
-                    filename = f"{base_name}.png"
+                    filename = f"{base_name}.{ext}"
                     alt_text = (plan.get("alt") or plan["prompt"])[:200]
                     caption = (plan.get("caption") or alt_text)[:500]
                     title = (plan.get("title") or alt_text)[:200]

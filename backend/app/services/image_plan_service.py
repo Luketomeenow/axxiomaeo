@@ -10,17 +10,16 @@ from app.services.claude_service import ClaudeService
 
 logger = logging.getLogger(__name__)
 
-IMAGE_PLAN_PROMPT = """You are an AEO content strategist for {brand_name}, an elevator service company.
+IMAGE_PLAN_PROMPT = """You are a photo art director for {brand_name}, an elevator service company serving {markets}.
 
-Given the article HTML and target query, plan {max_images} images to insert.
-Return ONLY valid JSON (no markdown fences):
+Plan {max_images} distinct, photorealistic images for this specific article. Return ONLY valid JSON (no markdown fences):
 
 {{
   "images": [
     {{
       "slot": "hero",
       "placement": "after_h1",
-      "prompt": "Professional photo description for DALL-E — elevator industry, no logos, no text overlays",
+      "prompt": "Rich, specific photo brief: subject + setting + composition + lighting/mood",
       "alt": "125-200 char factual alt text aligned to target query",
       "title": "Short image title",
       "caption": "1-2 sentence figcaption for AI crawlers and readers"
@@ -29,11 +28,17 @@ Return ONLY valid JSON (no markdown fences):
 }}
 
 RULES:
-- slot: hero | inline_1 | inline_2
-- placement: after_h1 | after_h2_index (use h2_index 0-based for inline images)
-- prompt: photorealistic, professional elevator maintenance/repair/inspection scene, no brand logos
-- alt and caption must be factual, include target-query terms where natural
-- Plan exactly {max_images} images (hero first, then inline after key H2 sections)
+- slot: hero | inline_1 | inline_2 ; placement: after_h1 | after_h2_index (0-based h2_index for inline)
+- Plan exactly {max_images} images (hero first, then inline after key H2 sections).
+
+VARIETY IS REQUIRED — the biggest failure is every article getting the same generic "technician next to an elevator" photo. Instead:
+- Derive each image's SUBJECT from what THIS article/section is actually about. Examples by theme: modernization → a sleek, newly-renovated cab interior with modern fixtures; inspection/code/compliance → an inspector reviewing documentation or a certificate on the wall; cost/contracts → a building manager reviewing plans at a desk; emergency/repair → a service van or a technician responding on-site; vertical (hospital/hotel/office/multifamily) → that specific building type's lobby and elevators; maintenance → hands servicing machine-room equipment. Choose subjects that fit the real headings.
+- Each of the {max_images} images must be visually DIFFERENT from the others: vary subject, setting, angle, and distance. Hero = a wide establishing shot; inline images = closer detail/context shots. Never repeat the same scene.
+- Reflect the brand's locale where natural ({markets}) — realistic North American commercial/residential settings, not generic stock.
+- Vary lighting/time-of-day/composition between images for a non-templated feel.
+
+Every prompt must include: no on-image text, no watermarks, no brand logos or signage (text and logos render unreliably).
+- alt and caption must be factual and include target-query terms where natural.
 
 Target query: "{target_query}"
 Content type: {content_type}
@@ -65,8 +70,10 @@ class ImagePlanService:
         content_type: str,
     ) -> list[dict]:
         max_images = max(1, self.settings.content_max_images)
+        markets = ", ".join(brand.markets) if brand.markets else "the United States"
         prompt = IMAGE_PLAN_PROMPT.format(
             brand_name=brand.name,
+            markets=markets,
             max_images=max_images,
             target_query=target_query,
             content_type=content_type,
