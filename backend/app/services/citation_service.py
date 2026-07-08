@@ -71,6 +71,33 @@ class CitationService:
             return bool(get_settings().peec_api_key)
         return provider == "none"
 
+    def unavailable_reason(self) -> str:
+        """Human, provider-specific explanation for why an audit can't run.
+
+        Keeps skip messages honest — telling a Bright Data deploy to 'start the
+        tracker on :3000' (the old hardcoded copy) sent people down a dead end.
+        """
+        settings = get_settings()
+        provider = self.provider
+        if provider in ("brightdata", "auto") and not self.bright_data._configured():
+            return (
+                "BRIGHT_DATA_API_KEY is not set — add it in your deployment "
+                "environment (Railway) and redeploy, then run the audit again."
+            )
+        if provider == "geo_aeo":
+            return (
+                f"GEO/AEO Tracker is not reachable at {settings.geo_aeo_tracker_url} — "
+                "start it, or set CITATION_PROVIDER=brightdata with BRIGHT_DATA_API_KEY."
+            )
+        if provider == "peec" and not settings.peec_api_key:
+            return "PEEC_API_KEY is not set."
+        if provider == "none":
+            return "CITATION_PROVIDER=none — citation auditing is disabled."
+        return (
+            "Citation provider is unavailable — check CITATION_PROVIDER and its "
+            "API key/credentials in your deployment environment."
+        )
+
     async def run_audit(
         self,
         brand: Brand,
