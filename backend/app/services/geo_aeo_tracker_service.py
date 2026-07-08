@@ -31,6 +31,92 @@ ELEVATOR_COMPETITORS = [
     "Mitsubishi Electric",
 ]
 
+# Known OEM domains → canonical name. Lets us credit an OEM competitor even when
+# the answer text never names it (the engine cited otis.com but wrote "the
+# manufacturer"). Matched against the registrable host and its subdomains.
+_OEM_DOMAINS = {
+    "otis.com": "Otis",
+    "kone.com": "KONE",
+    "kone.us": "KONE",
+    "schindler.com": "Schindler",
+    "tkelevator.com": "TK Elevator",
+    "thyssenkrupp-elevator.com": "TK Elevator",
+    "mitsubishielectric.com": "Mitsubishi Electric",
+    "mitsubishielevator.com": "Mitsubishi Electric",
+    "fujitec.com": "Fujitec",
+    "hyundaielevator.com": "Hyundai Elevator",
+}
+
+# Hosts that are never a competitor even if cited: search, reference, social,
+# review/lead-gen directories, marketplaces. Anything here is skipped before the
+# local-competitor keyword test so a cited Wikipedia/Yelp page can't be mistaken
+# for a rival elevator company.
+_NON_COMPETITOR_DOMAINS = frozenset(
+    {
+        "google.com", "bing.com", "duckduckgo.com", "yahoo.com", "search.brave.com",
+        "wikipedia.org", "wikihow.com", "quora.com", "reddit.com", "medium.com",
+        "youtube.com", "facebook.com", "instagram.com", "linkedin.com",
+        "x.com", "twitter.com", "tiktok.com", "pinterest.com",
+        "yelp.com", "angi.com", "angieslist.com", "thumbtack.com", "homeadvisor.com",
+        "houzz.com", "bbb.org", "buildzoom.com", "porch.com", "nextdoor.com",
+        "yellowpages.com", "mapquest.com", "manta.com", "indeed.com", "glassdoor.com",
+        "amazon.com", "homedepot.com", "lowes.com", "ebay.com", "alibaba.com",
+    }
+)
+
+# Government / education / military TLDs are regulatory or reference, not rivals.
+_NON_COMPETITOR_SUFFIXES = (".gov", ".edu", ".mil")
+
+# An elevator-industry keyword anywhere in a cited URL marks an otherwise-unknown
+# domain as a local competitor (aaelevator.com, clarkelevator.com, …). "lift"
+# and "hoist" are deliberately excluded — they collide with forklift, ski lift,
+# uplift, etc. — while local elevator firms almost always carry one of these.
+_ELEVATOR_DOMAIN_HINTS = (
+    "elevator", "escalator", "stairlift", "chairlift", "dumbwaiter",
+    "wheelchairlift", "platformlift", "verticaltransport", "vertical-transport",
+)
+
+
+def _registrable_host(url: str) -> str:
+    host = urlparse(url).netloc.lower()
+    if not host and "//" not in url:
+        # Bare "example.com/path" — urlparse puts it in path, so recover it.
+        host = urlparse(f"//{url}").netloc.lower()
+    return host.replace("www.", "").split(":")[0]
+
+
+def _host_matches(host: str, domains) -> bool:
+    """True if host equals a listed domain or is a subdomain of one.
+
+    So en.wikipedia.org matches wikipedia.org — exact membership alone would
+    let every subdomain slip through the denylist.
+    """
+    return any(host == d or host.endswith("." + d) for d in domains)
+
+
+def find_competitor_domain(sources: list[str], brand_domain: str) -> str | None:
+    """Competitor implied by a cited *source domain* (vs. named in the text).
+
+    Catches both known OEMs cited by domain and local rivals whose domain carries
+    an elevator keyword, while skipping the brand's own site, reference sites, and
+    directories. Returns an OEM name or the bare competitor host.
+    """
+    for src in sources:
+        host = _registrable_host(src)
+        if not host or host.endswith(_NON_COMPETITOR_SUFFIXES):
+            continue
+        if brand_domain and (host == brand_domain or host.endswith("." + brand_domain)):
+            continue
+        for oem_host, name in _OEM_DOMAINS.items():
+            if host == oem_host or host.endswith("." + oem_host):
+                return name
+        if _host_matches(host, _NON_COMPETITOR_DOMAINS):
+            continue
+        low = src.lower()
+        if any(hint in low for hint in _ELEVATOR_DOMAIN_HINTS):
+            return host
+    return None
+
 
 @dataclass
 class ScrapeResponse:
@@ -100,7 +186,13 @@ def analyze_scrape(
     if not citation_url and sources and domain_cited:
         citation_url = sources[0]
 
-    competitor = None if is_cited else find_competitor(answer)
+    # Named OEM in the answer text first (most recognizable), then fall back to a
+    # competitor implied by a cited source domain — the latter is what surfaces
+    # the LOCAL rivals (A&A, Clark, FIJI, …) that dominate location queries and
+    # that a fixed OEM name list can never cover.
+    competitor = None
+    if not is_cited:
+        competitor = find_competitor(answer) or find_competitor_domain(sources, domain)
 
     return CitationResult(
         query=scrape.prompt,
