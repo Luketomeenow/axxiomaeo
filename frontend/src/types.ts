@@ -221,6 +221,7 @@ export interface Recommendation {
   priority: number;
   score: number;
   competitor_cited: boolean;
+  competitors: string[];
   engines_missing: string[];
   visibility_pct: number;
   why: string;

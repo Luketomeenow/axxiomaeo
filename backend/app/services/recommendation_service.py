@@ -102,7 +102,7 @@ class RecommendationService:
                     "brand_id": brand_id,
                     "query": query,
                     "platforms": set(),
-                    "competitor_cited": False,
+                    "competitors": set(),
                     "visibility_pcts": [],
                     "content_type": gap.get("recommended_content_type"),
                     "source_citation_id": gap.get("id"),
@@ -110,8 +110,9 @@ class RecommendationService:
                 grouped[gkey] = entry
             if gap.get("platform"):
                 entry["platforms"].add(gap["platform"])
-            if gap.get("competitor_cited"):
-                entry["competitor_cited"] = True
+            comp = gap.get("competitor_cited")
+            if comp and isinstance(comp, str):
+                entry["competitors"].add(comp)
             if gap.get("visibility_pct") is not None:
                 entry["visibility_pcts"].append(gap["visibility_pct"])
 
@@ -127,7 +128,8 @@ class RecommendationService:
                 continue
 
             brand = brands[brand_id]
-            competitor = entry["competitor_cited"]
+            competitors = sorted(entry["competitors"])
+            competitor = bool(competitors)
             engines_missing = len(entry["platforms"]) or 1
             visibility = min(entry["visibility_pcts"]) if entry["visibility_pcts"] else 0.0
             # Explainable score: a cited competitor is the strongest "we're
@@ -149,12 +151,14 @@ class RecommendationService:
                     "priority": 1 if competitor else 3,
                     "score": score,
                     "competitor_cited": competitor,
+                    "competitors": competitors,
                     "engines_missing": sorted(PLATFORM_LABELS.get(p, p) for p in entry["platforms"]),
                     "visibility_pct": round(visibility, 1),
-                    "why": self._build_why(brand.name, entry["platforms"], competitor, visibility),
+                    "why": self._build_why(brand.name, entry["platforms"], competitors, visibility),
                     "source_detail": {
                         "platforms": sorted(entry["platforms"]),
                         "competitor_cited": competitor,
+                        "competitors": competitors,
                         "visibility_pct": round(visibility, 1),
                         "engines_missing": engines_missing,
                     },
@@ -165,12 +169,16 @@ class RecommendationService:
         recs.sort(key=lambda r: (-r["score"], r["priority"], r["brand_id"]))
         return recs[:limit]
 
-    def _build_why(self, brand_name: str, platforms: set[str], competitor: bool, visibility: float) -> str:
+    def _build_why(
+        self, brand_name: str, platforms: set[str], competitors: list[str], visibility: float
+    ) -> str:
         engines = sorted(PLATFORM_LABELS.get(p, p) for p in platforms)
         engines_str = ", ".join(engines) if engines else "AI answer engines"
         parts = [f"{brand_name} isn't cited on {engines_str} for this query"]
-        if competitor:
-            parts.append("a competitor is cited there instead")
+        if competitors:
+            shown = competitors[:2]
+            verb = "is" if len(shown) == 1 else "are"
+            parts.append(f"{', '.join(shown)} {verb} cited there instead")
         if visibility:
             parts.append(f"current visibility ~{round(visibility)}%")
         return "; ".join(parts) + "."

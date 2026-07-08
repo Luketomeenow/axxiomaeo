@@ -121,14 +121,22 @@ export function RecommendationsPage() {
                         {engine}
                       </span>
                     ))}
-                    {rec.competitor_cited && (
-                      <span
-                        className="text-[11px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700"
-                        title="A competitor is cited for this query"
-                      >
-                        competitor cited
-                      </span>
-                    )}
+                    {(rec.competitors?.length
+                      ? rec.competitors
+                      : rec.competitor_cited
+                        ? ["competitor cited"]
+                        : []
+                    )
+                      .slice(0, 2)
+                      .map((name) => (
+                        <span
+                          key={name}
+                          className="text-[11px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700"
+                          title="Cited for this query instead of the brand"
+                        >
+                          vs {name}
+                        </span>
+                      ))}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
