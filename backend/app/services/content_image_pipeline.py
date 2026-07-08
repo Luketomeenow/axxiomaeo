@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.models.brand import Brand
 from app.services.image_plan_service import ImagePlanService
 from app.services.fal_image_service import FalImageService
+from app.services.ideogram_image_service import IdeogramImageService
 from app.services.openai_image_service import OpenAIImageService
 from app.services.content_enrichment import inject_content_images
 from app.services.wordpress_service import WordPressService
@@ -19,9 +20,13 @@ logger = logging.getLogger(__name__)
 def _make_image_provider(settings):
     """Pick the configured image provider; fall back to any other configured
     one (logged) so a misconfig never silently stops image generation."""
-    want = (settings.image_provider or "fal").lower()
-    providers = {"fal": FalImageService(), "openai": OpenAIImageService()}
-    chosen = providers.get(want) or providers["fal"]
+    want = (settings.image_provider or "ideogram").lower()
+    providers = {
+        "ideogram": IdeogramImageService(),
+        "fal": FalImageService(),
+        "openai": OpenAIImageService(),
+    }
+    chosen = providers.get(want) or providers["ideogram"]
     if chosen.is_configured():
         return chosen
     for name, provider in providers.items():
