@@ -8,7 +8,16 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import brands, citations, content, health, notifications, reports, schema
+from app.routers import (
+    brands,
+    citations,
+    content,
+    health,
+    notifications,
+    recommendations,
+    reports,
+    schema,
+)
 from app.workers.scheduler import start_scheduler, stop_scheduler
 
 logger = logging.getLogger(__name__)
@@ -64,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(citations.router)
     app.include_router(reports.router)
     app.include_router(notifications.router)
+    app.include_router(recommendations.router)
 
     return app
 

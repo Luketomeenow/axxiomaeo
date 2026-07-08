@@ -11,6 +11,7 @@ import { PublishedContentPage } from "./pages/PublishedContentPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { RecommendationsPage } from "./pages/RecommendationsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SchemaHealthPage } from "./pages/SchemaHealthPage";
 import { PublishedSchemaPage } from "./pages/PublishedSchemaPage";
@@ -52,6 +53,7 @@ function AppRoutes() {
         }
       >
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/recommendations" element={<RecommendationsPage />} />
         <Route path="/content/review" element={<ContentReviewPage />} />
         <Route path="/content/review/:id" element={<ContentReviewDetailPage />} />
         <Route path="/content/published" element={<PublishedContentPage />} />

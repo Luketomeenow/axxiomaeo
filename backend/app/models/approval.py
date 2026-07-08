@@ -17,6 +17,26 @@ class ApprovalEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class RecommendationAction(Base):
+    """Audit + dismiss log for the Recommendations Inbox.
+
+    Recommendations themselves are live-computed from un-actioned citation
+    gaps (never stored), so approving one makes it fall off the list on its
+    own. Only dismissals need persistence — a dismissed key stays suppressed
+    for a cooldown window. Approvals are logged here too, purely for audit.
+    """
+
+    __tablename__ = "recommendation_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(300))
+    brand_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    query: Mapped[str | None] = mapped_column(Text, nullable=True)
+    action: Mapped[str] = mapped_column(String(30))  # approved | dismissed
+    user_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class Notification(Base):
     __tablename__ = "notifications"
 
