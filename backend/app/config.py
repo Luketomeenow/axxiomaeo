@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # a batch up to poll_interval*max_polls = 10 min to finish before giving up.
     bright_data_poll_interval_seconds: int = 10
     bright_data_max_polls: int = 60
+    # Use Bright Data's real accrued spend (/customer/balance pending_balance) as
+    # the tracking cost on Reports, instead of the per-record estimate. Assumes
+    # this Bright Data account is dedicated to citation tracking (its accrued
+    # spend = citation cost). Applies to the current month only.
+    bright_data_use_balance_cost: bool = True
     # Dataset ids from the Bright Data Scrapers Library (override if reassigned).
     bright_data_dataset_chatgpt: str = "gd_m7aof0k82r803d5bjm"
     bright_data_dataset_gemini: str = "gd_mbz66arm2mf9cu856y"
