@@ -113,9 +113,21 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     openai_image_model: str = "gpt-image-1"
+    openai_image_size: str = "1536x1024"
+    openai_image_quality: str = "medium"
     content_max_images: int = 3
     image_generation_enabled: bool = True
     content_generation_concurrency: int = 3
+
+    # Image provider: "fal" (fal.ai — Flux 2 Pro / Imagen 4, best quality) or
+    # "openai" (gpt-image). If the chosen provider has no key, the pipeline
+    # falls back to any other configured provider (logged) so images never
+    # silently stop on a misconfig.
+    image_provider: str = "fal"
+    fal_api_key: str = ""
+    fal_image_model: str = "fal-ai/flux-2-pro"   # or e.g. fal-ai/imagen4
+    fal_image_size: str = "landscape_4_3"
+    fal_output_format: str = "jpeg"
 
     @field_validator("supabase_jwt_secret", mode="before")
     @classmethod
