@@ -348,5 +348,6 @@ export interface CostSummary {
     calls?: number;
     input_tokens?: number;
     output_tokens?: number;
+    actual?: boolean;
   }[];
 }

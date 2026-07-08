@@ -15,6 +15,7 @@ still shows something.
 import logging
 from datetime import datetime
 
+import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -87,6 +88,32 @@ async def record_cost_event(
         logger.debug("cost event not recorded (%s/%s)", provider, operation, exc_info=True)
 
 
+async def _brightdata_accrued_usd() -> float | None:
+    """Actual Bright Data spend accrued this billing cycle, from the account API.
+
+    /customer/balance's pending_balance is what you'll be billed for this cycle.
+    For a Bright Data account dedicated to citation tracking, that IS the tracking
+    cost. Best-effort: returns None (→ ledger/estimate fallback) if disabled, no
+    key, or the call fails. Uses the same Bearer API key as the scrapers.
+    """
+    s = get_settings()
+    if not s.bright_data_use_balance_cost or not s.bright_data_api_key:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                "https://api.brightdata.com/customer/balance",
+                headers={"Authorization": f"Bearer {s.bright_data_api_key}"},
+            )
+            if r.status_code >= 400:
+                return None
+            pending = r.json().get("pending_balance")
+            return float(pending) if pending is not None else None
+    except Exception:
+        logger.debug("Bright Data balance fetch failed", exc_info=True)
+        return None
+
+
 async def create_and_record(client, *, operation: str, model: str, brand_id: str | None = None, **create_kwargs):
     """Call Claude's messages.create and log its real token usage as a cost event.
 
@@ -124,7 +151,9 @@ class CostService:
         if not rows:
             # No ledger data for this month (e.g. before this shipped) — show the
             # volume estimate so the panel isn't empty.
-            return await self._estimate(month_start)
+            result = await self._estimate(month_start)
+            await self._apply_actual_brightdata(result, month_start)
+            return result
 
         cats: dict[str, dict] = {
             k: {"cost_usd": 0.0, "calls": 0, "input_tokens": 0, "output_tokens": 0, "units": 0}
@@ -157,13 +186,32 @@ class CostService:
                 item["unit"] = "images" if key == "images" else "records"
             items.append(item)
 
-        return {
+        result = {
             "period_month": month_start.date().isoformat(),
             "source": "ledger",
             "estimated": False,
             "items": items,
             "total_usd": round(sum(i["cost_usd"] for i in items), 2),
         }
+        await self._apply_actual_brightdata(result, month_start)
+        return result
+
+    async def _apply_actual_brightdata(self, result: dict, month_start: datetime) -> None:
+        """Replace the tracking bucket's cost with Bright Data's real accrued
+        spend for the CURRENT month (balance API). Past months keep their ledger/
+        estimate figure — the balance API only reflects the current cycle."""
+        now = datetime.utcnow()
+        if not (month_start.year == now.year and month_start.month == now.month):
+            return
+        accrued = await _brightdata_accrued_usd()
+        if accrued is None:
+            return
+        for item in result["items"]:
+            if item["key"] == "tracking":
+                item["cost_usd"] = round(accrued, 2)
+                item["actual"] = True
+                break
+        result["total_usd"] = round(sum(i["cost_usd"] for i in result["items"]), 2)
 
     async def _estimate(self, month_start: datetime) -> dict:
         """Volume-based fallback for months with no ledger rows."""
