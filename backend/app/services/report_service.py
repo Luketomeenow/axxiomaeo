@@ -48,13 +48,24 @@ class ReportService:
             select(func.count(SchemaJob.id)).where(SchemaJob.validation_status == "valid")
         )
 
-        citations = await self.db.execute(
-            select(CitationRecord).where(CitationRecord.checked_at >= month_start)
-        )
-        citation_rows = citations.scalars().all()
+        # Citation KPIs are keyed to the LATEST audit run, not the calendar
+        # month. Filtering by checked_at >= month_start (as this used to) makes
+        # citation_share read 0 whenever the latest audit ran outside the current
+        # month (month rollover, a late-month run, or UTC-vs-Central skew) — even
+        # though the by-brand/category/platform charts, which filter by run only,
+        # still show data. Basing these KPIs on the run keeps them consistent
+        # with those charts. Fall back to the month window only when no run id
+        # exists (legacy/seed rows).
         latest_run = await _latest_audit_run_id(self.db)
         if latest_run:
-            citation_rows = [c for c in citation_rows if c.audit_run_id == latest_run]
+            citations = await self.db.execute(
+                select(CitationRecord).where(CitationRecord.audit_run_id == latest_run)
+            )
+        else:
+            citations = await self.db.execute(
+                select(CitationRecord).where(CitationRecord.checked_at >= month_start)
+            )
+        citation_rows = list(citations.scalars().all())
         cited = sum(1 for c in citation_rows if c.is_cited)
         total_citations = len(citation_rows)
         citation_share = round(cited / total_citations * 100, 1) if total_citations else 0
