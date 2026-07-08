@@ -38,6 +38,15 @@ PROVIDER_URLS = {
     "perplexity": "https://www.perplexity.ai",
 }
 
+# Per-provider extra input fields. web_search triggers ChatGPT's browsing so it
+# cites live sources; Gemini and Perplexity REJECT the field (400 "should not
+# contain a web_search field") because they browse by default. `country` is
+# rejected by all three ("Selected country is not available"), so it is never
+# sent — every input is just {url, prompt} plus whatever is listed here.
+PROVIDER_EXTRA_INPUT = {
+    "chatgpt": {"web_search": True},
+}
+
 
 def _extract_answer(rec: dict) -> str:
     for key in ("answer_text", "answer_text_markdown", "answer", "text", "response"):
@@ -102,8 +111,7 @@ class BrightDataService:
                 {
                     "url": PROVIDER_URLS[provider],
                     "prompt": prompt[:4096],  # documented max
-                    "country": "us",
-                    "web_search": True,      # else no live citations are produced
+                    **PROVIDER_EXTRA_INPUT.get(provider, {}),
                 }
             ]
         }
