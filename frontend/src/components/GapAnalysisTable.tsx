@@ -2,6 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { DashboardData } from "../types";
 import { apiFetch } from "../lib/api";
+import { Pagination, usePaged } from "./Pagination";
+
+const PAGE_SIZE = 8;
 
 const PRIORITY_ORDER: Record<string, number> = {
   emergency: 1,
@@ -22,7 +25,7 @@ const CONTENT_TYPE_BY_CATEGORY: Record<string, string> = {
 
 export function GapAnalysisTable({ gaps }: { gaps: DashboardData["gap_queries"] }) {
   const queryClient = useQueryClient();
-  const [queued, setQueued] = useState<number | null>(null);
+  const [queued, setQueued] = useState<string | null>(null);
 
   const addToQueue = useMutation({
     mutationFn: (gap: DashboardData["gap_queries"][0]) =>
@@ -48,6 +51,8 @@ export function GapAnalysisTable({ gaps }: { gaps: DashboardData["gap_queries"] 
   const sorted = [...gaps].sort(
     (a, b) => (PRIORITY_ORDER[a.category] ?? 99) - (PRIORITY_ORDER[b.category] ?? 99)
   );
+  const { page, setPage, slice, total } = usePaged(sorted, PAGE_SIZE);
+  const gapKey = (g: DashboardData["gap_queries"][0]) => `${g.brand_id}:${g.query}`;
 
   return (
     <div className="aeo-panel overflow-hidden">
@@ -72,43 +77,47 @@ export function GapAnalysisTable({ gaps }: { gaps: DashboardData["gap_queries"] 
             {sorted.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-muted/80">
-                  No gaps detected — run a citation audit when the tracker is configured
+                  No gaps detected — run a citation audit to populate this
                 </td>
               </tr>
             ) : (
-              sorted.map((g, i) => (
-                <tr key={i} className="border-t border-border hover:bg-panel-hover">
-                  <td className="px-4 py-3">{g.query}</td>
-                  <td className="px-4 py-3 text-muted">{g.brand_id}</td>
-                  <td className="px-4 py-3">
-                    <span className="aeo-badge-warning">
-                      {g.category?.replace(/_/g, " ")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-muted">
-                    {g.competitor_cited || (g.invisible ? "Not cited (invisible)" : "—")}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      disabled={addToQueue.isPending}
-                      onClick={() => {
-                        setQueued(i);
-                        addToQueue.mutate(g, {
-                          onSettled: () => setTimeout(() => setQueued(null), 2000),
-                        });
-                      }}
-                      className="text-xs text-ink hover:text-cyan font-medium disabled:opacity-50"
-                    >
-                      {queued === i && addToQueue.isPending ? "Adding…" : "Add to queue"}
-                    </button>
-                  </td>
-                </tr>
-              ))
+              slice.map((g) => {
+                const key = gapKey(g);
+                return (
+                  <tr key={key} className="border-t border-border hover:bg-panel-hover">
+                    <td className="px-4 py-3">{g.query}</td>
+                    <td className="px-4 py-3 text-muted">{g.brand_id}</td>
+                    <td className="px-4 py-3">
+                      <span className="aeo-badge-warning">
+                        {g.category?.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {g.competitor_cited || (g.invisible ? "Not cited (invisible)" : "—")}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        disabled={addToQueue.isPending}
+                        onClick={() => {
+                          setQueued(key);
+                          addToQueue.mutate(g, {
+                            onSettled: () => setTimeout(() => setQueued(null), 2000),
+                          });
+                        }}
+                        className="text-xs text-ink hover:text-cyan font-medium disabled:opacity-50"
+                      >
+                        {queued === key && addToQueue.isPending ? "Adding…" : "Add to queue"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+      <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} label="gaps" />
     </div>
   );
 }

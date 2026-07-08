@@ -68,3 +68,15 @@ async def get_gap_analysis(
 ):
     service = ReportService(db)
     return await service.get_gap_queries()
+
+
+@router.get("/insights")
+async def get_citation_insights(
+    refresh: bool = False,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """AI analysis of the latest audit (cached per audit run; refresh=1 forces)."""
+    from app.services.citation_insights_service import CitationInsightsService
+
+    return await CitationInsightsService(db).get_insights(refresh=refresh)

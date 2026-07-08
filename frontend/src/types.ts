@@ -234,6 +234,31 @@ export interface RecommendationsResponse {
   count: number;
 }
 
+export interface CitationInsights {
+  status: "ok" | "no_data";
+  message?: string;
+  cached?: boolean;
+  audit_run_id?: string;
+  data_summary?: {
+    total_checks: number;
+    cited: number;
+    citation_share_pct: number;
+    avg_visibility_pct: number;
+    top_competitors: { name: string; wins: number }[];
+  };
+  summary?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  platform_insights?: { platform: string; insight: string }[];
+  competitor_threats?: { competitor: string; detail: string }[];
+  recommendations?: {
+    title: string;
+    detail: string;
+    priority: string;
+    category: string;
+  }[];
+}
+
 export interface PublishedContent {
   id: number;
   brand_id: string;
