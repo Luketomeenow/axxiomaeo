@@ -431,18 +431,37 @@ class ReportService:
         brand_breakdown = await self.get_citation_by_brand()
         gap_queries = await self.get_gap_queries()
         top_queries = await self.get_top_performing_queries()
+        by_category = await self.get_citation_by_category()
+        by_platform = await self.get_visibility_by_platform()
+        by_funnel = await self.get_citation_by_funnel()
 
-        report = MonthlyReport(
-            report_month=month_start.date(),
-            overall_citation_share=kpis["citation_share"],
-            ai_referred_sessions=kpis["ai_referred_sessions"],
-            content_pieces_published=kpis["content_published_mtd"],
-            schema_coverage_pct=kpis["schema_coverage_pct"],
-            gap_queries=gap_queries[:10],
-            top_performing_queries=top_queries,
-            brand_breakdown={b["brand_id"]: b for b in brand_breakdown},
-            full_report_json=kpis,
-        )
-        self.db.add(report)
+        # Store a self-contained snapshot so a stored report renders full charts
+        # later without depending on current live data.
+        full_report = {
+            **kpis,
+            "by_category": by_category,
+            "by_platform": by_platform,
+            "by_funnel": by_funnel,
+        }
+
+        # Upsert by month: regenerating the same month updates its row instead of
+        # piling up duplicates (report_month has no unique constraint).
+        existing = (
+            await self.db.execute(
+                select(MonthlyReport).where(MonthlyReport.report_month == month_start.date())
+            )
+        ).scalar_one_or_none()
+        report = existing or MonthlyReport(report_month=month_start.date())
+
+        report.overall_citation_share = kpis["citation_share"]
+        report.ai_referred_sessions = kpis["ai_referred_sessions"]
+        report.content_pieces_published = kpis["content_published_mtd"]
+        report.schema_coverage_pct = kpis["schema_coverage_pct"]
+        report.gap_queries = gap_queries[:10]
+        report.top_performing_queries = top_queries
+        report.brand_breakdown = {b["brand_id"]: b for b in brand_breakdown}
+        report.full_report_json = full_report
+        if existing is None:
+            self.db.add(report)
         await self.db.flush()
         return report

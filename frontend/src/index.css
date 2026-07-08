@@ -134,3 +134,28 @@ body {
 .recharts-legend-item-text {
   color: #8b9cb3 !important;
 }
+
+/* Print — drop the dark app chrome and render the #report region on white */
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+  }
+  aside,
+  header {
+    display: none !important;
+  }
+  #report,
+  #report * {
+    color: #111827 !important;
+  }
+  #report,
+  #report .aeo-panel {
+    background: white !important;
+    border-color: #e5e7eb !important;
+    box-shadow: none !important;
+  }
+  #report .recharts-text {
+    fill: #374151 !important;
+  }
+}

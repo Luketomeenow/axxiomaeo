@@ -273,3 +273,63 @@ export interface PublishedContent {
   published_at: string | null;
   last_refreshed_at: string | null;
 }
+
+export interface ReportListItem {
+  id: number;
+  report_month: string | null;
+  overall_citation_share: number;
+  ai_referred_sessions: number | null;
+  content_pieces_published: number | null;
+  schema_coverage_pct: number;
+  created_at: string | null;
+}
+
+export interface ReportsListResponse {
+  total: number;
+  reports: ReportListItem[];
+}
+
+export interface MonthlyReportDetail {
+  id?: number;
+  message?: string;
+  report_month?: string | null;
+  overall_citation_share?: number;
+  ai_referred_sessions?: number | null;
+  content_pieces_published?: number | null;
+  schema_coverage_pct?: number;
+  created_at?: string | null;
+  top_performing_queries?: {
+    query: string;
+    brand_id?: string;
+    platform?: string;
+    citation_url?: string;
+  }[];
+  gap_queries?: {
+    query: string;
+    brand_id?: string;
+    competitor_cited?: string;
+    platform?: string;
+  }[];
+  brand_breakdown?: Record<string, { brand_id?: string; citation_share?: number }>;
+  full_report_json?: {
+    citation_share?: number;
+    avg_visibility_pct?: number;
+    share_of_voice?: number;
+    topic_coverage_pct?: number;
+    content_published_mtd?: number;
+    by_category?: { category?: string; citation_share: number }[];
+    by_platform?: { platform?: string; citation_share: number }[];
+    by_funnel?: { funnel_stage?: string; citation_share: number }[];
+    [key: string]: unknown;
+  };
+}
+
+export interface ReportSummary {
+  status: "ok" | "no_data";
+  message?: string;
+  cached?: boolean;
+  summary?: string;
+  highlights?: string[];
+  watch_outs?: string[];
+  next_steps?: string[];
+}
