@@ -127,15 +127,27 @@ class Settings(BaseSettings):
     image_generation_enabled: bool = True
     content_generation_concurrency: int = 3
 
-    # Image provider: "fal" (fal.ai — Flux 2 Pro / Imagen 4, best quality) or
-    # "openai" (gpt-image). If the chosen provider has no key, the pipeline
-    # falls back to any other configured provider (logged) so images never
-    # silently stop on a misconfig.
-    image_provider: str = "fal"
+    # Image provider: "ideogram" (Ideogram 3.0), "fal" (fal.ai Flux 2 Pro /
+    # Imagen 4), or "openai" (gpt-image). If the chosen provider has no key, the
+    # pipeline falls back to any other configured provider (logged) so images
+    # never silently stop on a misconfig.
+    image_provider: str = "ideogram"
     fal_api_key: str = ""
     fal_image_model: str = "fal-ai/flux-2-pro"   # or e.g. fal-ai/imagen4
     fal_image_size: str = "landscape_4_3"
     fal_output_format: str = "jpeg"
+
+    # Ideogram 3.0 — multipart POST to /v1/ideogram-v3/generate, Api-Key header,
+    # returns an ephemeral data[0].url we download. rendering_speed: FLASH |
+    # TURBO | DEFAULT | QUALITY (bump to QUALITY for best fidelity, slower/pricier).
+    # style_type REALISTIC suits photographic elevator scenes. aspect_ratio is
+    # a "WxH" ratio string (e.g. 16x10, 16x9, 1x1).
+    ideogram_api_key: str = ""
+    ideogram_endpoint: str = "https://api.ideogram.ai/v1/ideogram-v3/generate"
+    ideogram_aspect_ratio: str = "16x10"
+    ideogram_rendering_speed: str = "DEFAULT"
+    ideogram_style_type: str = "REALISTIC"
+    ideogram_magic_prompt: str = "AUTO"
 
     @field_validator("supabase_jwt_secret", mode="before")
     @classmethod
