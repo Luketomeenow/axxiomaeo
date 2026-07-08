@@ -127,6 +127,7 @@ function CostsPanel() {
   const fmt = (n: number) => `$${n.toFixed(2)}`;
   const precise = data.source === "ledger";
   const sub = (it: CostSummary["items"][number]) => {
+    if (it.actual) return "actual — Bright Data account balance";
     if (it.input_tokens != null || it.output_tokens != null) {
       const toks = (it.input_tokens ?? 0) + (it.output_tokens ?? 0);
       return `${(it.calls ?? 0).toLocaleString()} calls · ${toks.toLocaleString()} tokens`;
