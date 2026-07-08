@@ -138,16 +138,20 @@ class Settings(BaseSettings):
     fal_output_format: str = "jpeg"
 
     # Ideogram 3.0 — multipart POST to /v1/ideogram-v3/generate, Api-Key header,
-    # returns an ephemeral data[0].url we download. rendering_speed: FLASH |
-    # TURBO | DEFAULT | QUALITY (bump to QUALITY for best fidelity, slower/pricier).
-    # style_type REALISTIC suits photographic elevator scenes. aspect_ratio is
-    # a "WxH" ratio string (e.g. 16x10, 16x9, 1x1).
+    # returns an ephemeral data[0].url we download. Tuned for quality/realism:
+    #  - rendering_speed QUALITY = best fidelity (FLASH/TURBO/DEFAULT are faster
+    #    but softer; QUALITY is the point of switching providers). Drop to
+    #    DEFAULT to cut cost/latency if volume grows.
+    #  - style_type REALISTIC = photographic look, not illustration.
+    #  - magic_prompt OFF = honor our detailed, realism-tuned briefs verbatim
+    #    (MagicPrompt rewrites prompts, which helps short prompts but reduces
+    #    accuracy for the rich briefs the planner already writes).
     ideogram_api_key: str = ""
     ideogram_endpoint: str = "https://api.ideogram.ai/v1/ideogram-v3/generate"
     ideogram_aspect_ratio: str = "16x10"
-    ideogram_rendering_speed: str = "DEFAULT"
+    ideogram_rendering_speed: str = "QUALITY"
     ideogram_style_type: str = "REALISTIC"
-    ideogram_magic_prompt: str = "AUTO"
+    ideogram_magic_prompt: str = "OFF"
 
     @field_validator("supabase_jwt_secret", mode="before")
     @classmethod
