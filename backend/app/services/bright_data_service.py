@@ -35,6 +35,7 @@ from app.services.geo_aeo_tracker_service import (
     analyze_scrape,
     brand_search_terms,
 )
+from app.services.cost_service import record_cost_event
 from app.utils.helpers import retry_with_backoff
 
 logger = logging.getLogger(__name__)
@@ -262,6 +263,10 @@ class BrightDataService:
         async def run_provider(provider: str) -> list[CitationResult]:
             async with semaphore:
                 by_query = await self._scrape_batch(provider, queries)
+                await record_cost_event(
+                    "brightdata", "citation_scrape", units=len(by_query),
+                    brand_id=brand.id, model=provider,
+                )
                 out: list[CitationResult] = []
                 for q in queries:
                     rec = by_query.get(q)

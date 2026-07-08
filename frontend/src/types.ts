@@ -333,3 +333,20 @@ export interface ReportSummary {
   watch_outs?: string[];
   next_steps?: string[];
 }
+
+export interface CostSummary {
+  period_month: string;
+  source?: "ledger" | "estimate";
+  estimated: boolean;
+  total_usd: number;
+  items: {
+    key: string;
+    label: string;
+    cost_usd: number;
+    unit?: string;
+    units?: number;
+    calls?: number;
+    input_tokens?: number;
+    output_tokens?: number;
+  }[];
+}

@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 from app.models.citation import CitationRecord
 from app.services.claude_service import ClaudeService
+from app.services.cost_service import create_and_record
 from app.services.report_service import ReportService, _latest_audit_run_id
 
 logger = logging.getLogger(__name__)
@@ -146,7 +147,9 @@ class CitationInsightsService:
     async def _generate(self, data: dict) -> dict:
         prompt = INSIGHTS_PROMPT.format(data=json.dumps(data, default=str)[:12000])
         try:
-            response = await self.claude.client.messages.create(
+            response = await create_and_record(
+                self.claude.client,
+                operation="citation_insights",
                 model=self.claude.model,
                 max_tokens=2048,
                 messages=[{"role": "user", "content": prompt}],

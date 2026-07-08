@@ -446,13 +446,18 @@ class ReportService:
         by_platform = await self.get_visibility_by_platform()
         by_funnel = await self.get_citation_by_funnel()
 
+        from app.services.cost_service import CostService
+
+        costs = await CostService(self.db).monthly_costs(month_start)
+
         # Store a self-contained snapshot so a stored report renders full charts
-        # later without depending on current live data.
+        # (and its estimated API spend) later without depending on live data.
         full_report = {
             **kpis,
             "by_category": by_category,
             "by_platform": by_platform,
             "by_funnel": by_funnel,
+            "costs": costs,
         }
 
         # Upsert by month: regenerating the same month updates its row instead of

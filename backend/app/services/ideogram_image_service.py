@@ -14,6 +14,7 @@ import logging
 import httpx
 
 from app.config import get_settings
+from app.services.cost_service import record_cost_event
 from app.utils.helpers import retry_with_backoff
 
 logger = logging.getLogger(__name__)
@@ -82,4 +83,8 @@ class IdeogramImageService:
                 ext = _ext_from_content_type(dl.headers.get("content-type"), "png")
                 return dl.content, ext
 
-        return await retry_with_backoff(do_request, max_retries=2)
+        result = await retry_with_backoff(do_request, max_retries=2)
+        await record_cost_event(
+            "ideogram", "image_generation", units=1, model=f"v3/{self.rendering_speed}"
+        )
+        return result
