@@ -37,12 +37,26 @@ VARIETY IS REQUIRED — the biggest failure is every article getting the same ge
 - Reflect the brand's locale where natural ({markets}) — realistic North American commercial/residential settings, not generic stock.
 - Vary lighting/time-of-day/composition between images for a non-templated feel.
 
+PHOTO QUALITY & REALISM — required for every image (this is a real photograph, not artwork):
+- Write each "prompt" as a brief for a professional PHOTOGRAPH: name the camera viewpoint and framing, the natural or realistic artificial lighting, the real materials/finishes in view, and the depth of field. Aim for editorial / commercial-photography quality.
+- Be technically accurate: real, plausible elevator equipment — cabs, hoistways, machine-room controllers, fixtures, door operators — and real building settings, with correct proportions and details a working technician would recognize. No fantastical or impossible elements.
+- Photorealistic ONLY. Explicitly avoid cartoon, illustration, 3D-render, CGI, or over-saturated "AI" aesthetics, and avoid distorted hands/faces, warped straight lines, extra fingers, or impossible geometry.
+
 Every prompt must include: no on-image text, no watermarks, no brand logos or signage (text and logos render unreliably).
 - alt and caption must be factual and include target-query terms where natural.
 
 Target query: "{target_query}"
 Content type: {content_type}
 """
+
+# Appended to every generated prompt so the realism/quality cues land even if a
+# given brief is thin — keeps rendering consistent across all images while the
+# per-image SUBJECT (above) stays varied.
+REALISM_SUFFIX = (
+    "Photorealistic editorial photograph, natural realistic lighting, true-to-life "
+    "materials and accurate real-world proportions, sharp professional detail, shallow "
+    "depth of field — not an illustration, 3D render, CGI, or cartoon."
+)
 
 
 def _parse_plan_json(raw: str) -> list[dict]:
@@ -90,7 +104,14 @@ class ImagePlanService:
         )
         raw = response.content[0].text
         try:
-            return _parse_plan_json(raw)[:max_images]
+            plans = _parse_plan_json(raw)[:max_images]
         except json.JSONDecodeError as exc:
             logger.warning("Failed to parse image plan JSON: %s", exc)
             return []
+        # Guarantee the realism/quality cues on every brief, even if Claude's
+        # prompt was thin. Skip if it already ends with the suffix.
+        for img in plans:
+            prompt = (img.get("prompt") or "").strip()
+            if REALISM_SUFFIX not in prompt:
+                img["prompt"] = f"{prompt.rstrip('.')}. {REALISM_SUFFIX}"
+        return plans
