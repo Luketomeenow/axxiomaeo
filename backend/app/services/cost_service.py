@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # Which spend bucket each provider rolls up into on the report.
 PROVIDER_CATEGORY = {
     "anthropic": "content",
+    "azure": "images",
     "ideogram": "images",
     "fal": "images",
     "openai": "images",

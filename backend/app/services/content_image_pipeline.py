@@ -8,6 +8,7 @@ from slugify import slugify
 from app.config import get_settings
 from app.models.brand import Brand
 from app.services.image_plan_service import ImagePlanService
+from app.services.azure_image_service import AzureImageService
 from app.services.fal_image_service import FalImageService
 from app.services.ideogram_image_service import IdeogramImageService
 from app.services.openai_image_service import OpenAIImageService
@@ -20,13 +21,14 @@ logger = logging.getLogger(__name__)
 def _make_image_provider(settings):
     """Pick the configured image provider; fall back to any other configured
     one (logged) so a misconfig never silently stops image generation."""
-    want = (settings.image_provider or "ideogram").lower()
+    want = (settings.image_provider or "azure").lower()
     providers = {
+        "azure": AzureImageService(),
         "ideogram": IdeogramImageService(),
         "fal": FalImageService(),
         "openai": OpenAIImageService(),
     }
-    chosen = providers.get(want) or providers["ideogram"]
+    chosen = providers.get(want) or providers["azure"]
     if chosen.is_configured():
         return chosen
     for name, provider in providers.items():
