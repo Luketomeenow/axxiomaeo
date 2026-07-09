@@ -1,0 +1,98 @@
+DAILY SUMMARY — Axxiom AEO Platform
+Date: 2026-06-29
+==================================================
+
+Plain-English recap of what we worked on in the last 24 hours.
+
+
+1. PROJECT MEMORY SET UP
+------------------------
+- Created a memory/notes file for the project so future work starts with
+  context (what the platform is, how it deploys, known gotchas).
+
+
+2. TRIED TO RUN THE BACKEND LOCALLY
+-----------------------------------
+- Set up the Python environment and installed dependencies.
+- Hit a database problem: the connection string pointed at the company's
+  Supabase "marketing data warehouse" (CallRail/GA4/Google Ads/etc.), which
+  already had a conflicting "brands" table. Running the app there would have
+  dumped app tables into the warehouse, so we stopped.
+- Conclusion: the app really runs on Railway in production (with a dedicated
+  Supabase "aeo" schema). Local running was secondary and we set it aside.
+
+
+3. WORDPRESS PUBLISHING DIAGNOSIS (all 8 brand sites)
+-----------------------------------------------------
+- Found all 8 brand websites sit behind Cloudflare and on WP Engine.
+- Cloudflare blocks requests that don't look like a real browser, which is
+  why publishing failed for most brands. (The app already sends a browser-like
+  identifier now.)
+- Per-brand login (Application Password) status:
+    * Quality      = working (valid password).
+    * Axxiom, AmeriTex, Arizona, Liftech = login rejected (passwords are
+      stale/invalid; need new Application Passwords generated in WordPress).
+    * Motion       = the username doesn't exist on that site.
+    * Evolution    = its WordPress REST API isn't reachable (likely permalink
+      or REST setting).
+    * IronHawk     = the domain isn't serving a live WordPress site yet.
+- Showed where to create Application Passwords (WordPress > Users > Profile),
+  and noted Wordfence can disable that feature.
+
+
+4. FEATURE WORK: AUTHORS, PHONE NUMBERS, AND "RETURN TO REVIEW"
+--------------------------------------------------------------
+- Important discovery partway through: our local copy of the code was 8
+  commits BEHIND what's actually running in production. Production had already
+  added image generation, phone-number insertion, and author bylines. So we
+  re-did the work cleanly on top of the current production code.
+- What we actually added (in a new branch + Pull Request #2, NOT yet merged,
+  so nothing live changed):
+    * Per-brand AUTHORS for article bylines:
+        - Quality  -> Eric Amundson
+        - AmeriTex -> Trey Rast
+        - All others (Axxiom, Arizona, Liftech, Motion, Evolution, IronHawk)
+          -> "Axxiom Elevator"
+    * Per-brand PHONE NUMBERS (so content/CTAs show the real number):
+        - Quality   301-307-5363
+        - AmeriTex  866-679-4313
+        - Liftech   562-609-3478
+        - Motion    954-833-5503
+        - Arizona   480-319-7157
+        - (Axxiom, Evolution, IronHawk numbers were not provided yet.)
+    * "RETURN TO REVIEW" button on the Published Content page: lets you pull a
+      published post back — it sets the live WordPress post to Draft and moves
+      the item back into Content Review. Useful while testing.
+- Pull Request opened: https://github.com/Luketomeenow/axxiomaeo/pull/2
+  Main branch was untouched, so no production deploy was triggered.
+- Note: image generation requires an OpenAI API key set in Railway; without
+  it, images are simply skipped (everything else still works).
+
+
+5. INVESTIGATED "REGENERATE IS NOT WORKING"
+-------------------------------------------
+- Found the cause: the system only allows 3 content generations at once.
+  Two old drafts (both for the Axxiom brand) had been STUCK in the
+  "generating" state for about 9 hours (most likely a server restart caught
+  them mid-generation). Those two zombies were holding the slots, so new
+  regenerate/generate attempts get blocked with a "too many generating" error.
+- Also found a deeper reason these get stuck: if anything fails AFTER the
+  writing step (WordPress calls, image step, etc.), the draft can be left
+  "generating" forever instead of being marked as needing review.
+- The Claude model setting is fine (not the problem).
+- PROPOSED FIX (awaiting your go-ahead):
+    a) Immediately clear the 2 stuck drafts so slots free up (this needs your
+       approval because it changes production data; the exact SQL was shared).
+    b) Code fix so stuck drafts can't happen again (mark failed generations as
+       "needs review", and auto-clear stale ones before each new run).
+
+
+OPEN ITEMS / WAITING ON YOU
+---------------------------
+- Approve clearing the 2 stuck "generating" drafts (#32, #34) to unblock
+  Regenerate now.
+- Decide whether to add the regenerate code-fix to PR #2 or a new PR.
+- Generate valid WordPress Application Passwords for the non-working brands
+  (and fix Evolution's REST API / launch IronHawk's site) to publish to all.
+- Provide phone numbers for Axxiom, Evolution, and IronHawk if you want them.
+- Set OPENAI_API_KEY in Railway if you want article images generated.
