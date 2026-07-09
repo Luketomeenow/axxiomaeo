@@ -20,6 +20,7 @@ export function ContentReviewDetailPage() {
   const [editedHtml, setEditedHtml] = useState("");
   const [htmlDirty, setHtmlDirty] = useState(false);
   const [saveHtmlMsg, setSaveHtmlMsg] = useState("");
+  const [regenMsg, setRegenMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const { data: brands } = useQuery({
     queryKey: ["brands"],
@@ -85,10 +86,21 @@ export function ContentReviewDetailPage() {
     mutationFn: () =>
       apiFetch(`/api/content/drafts/${id}/regenerate`, { method: "POST" }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["draft", id] });
       setHtmlDirty(false);
       setEditedHtml("");
+      setRegenMsg({
+        type: "ok",
+        text: "Regeneration started — this page updates automatically (usually 2–4 minutes).",
+      });
+      // Optimistically flip to "generating" so the progress view + 5s polling
+      // start immediately instead of racing the background task's status update
+      // (which is why it could look like nothing happened).
+      queryClient.setQueryData<ContentDraftDetail>(["draft", id], (old) =>
+        old ? { ...old, status: "generating" } : old,
+      );
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
     },
+    onError: (e: Error) => setRegenMsg({ type: "err", text: e.message || "Regenerate failed." }),
   });
 
   const saveHtml = useMutation({
@@ -143,11 +155,12 @@ export function ContentReviewDetailPage() {
         </div>
         <div className="flex gap-2 shrink-0">
           <button
+            type="button"
             onClick={() => regenerate.mutate()}
             disabled={regenerate.isPending}
-            className="px-4 py-2 border border-navy text-ink rounded text-sm hover:bg-navy/5"
+            className="aeo-btn-secondary"
           >
-            Regenerate
+            {regenerate.isPending ? "Regenerating…" : "Regenerate"}
           </button>
           <button
             onClick={() => setShowReject(true)}
@@ -156,6 +169,7 @@ export function ContentReviewDetailPage() {
             Reject
           </button>
           <button
+            type="button"
             onClick={() => approve.mutate()}
             disabled={approve.isPending || !canPublish}
             className="px-4 py-2 bg-cyan text-void rounded text-sm hover:bg-cyan/90 disabled:opacity-50"
@@ -164,6 +178,18 @@ export function ContentReviewDetailPage() {
           </button>
         </div>
       </div>
+
+      {regenMsg && (
+        <div
+          className={`text-sm px-4 py-3 rounded border ${
+            regenMsg.type === "ok"
+              ? "bg-success/10 border-success/25 text-success"
+              : "bg-warning/10 border-warning/30 text-warning"
+          }`}
+        >
+          {regenMsg.text}
+        </div>
+      )}
 
       <div className="bg-panel-elevated border border-black/10 rounded p-4 space-y-3">
         <p className="text-sm font-medium text-ink">Publish destination</p>
