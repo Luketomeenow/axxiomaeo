@@ -9,7 +9,14 @@ from app.utils.helpers import check_direct_answer, h2_question_ratio, strip_html
 class ClaudeService:
     def __init__(self):
         settings = get_settings()
-        self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key or "sk-placeholder")
+        # base_url override lets us route through Microsoft Foundry's Anthropic
+        # endpoint (https://<resource>.services.ai.azure.com/anthropic) with the
+        # Azure key — same Messages API, so nothing else changes. Empty = call
+        # Anthropic directly.
+        self.client = anthropic.AsyncAnthropic(
+            api_key=settings.anthropic_api_key or "sk-placeholder",
+            base_url=settings.anthropic_base_url or None,
+        )
         self.model = settings.claude_model
 
     async def generate_content(

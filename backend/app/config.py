@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     anthropic_api_key: str = ""
+    # Optional: route Claude through Microsoft Foundry's Anthropic endpoint
+    # instead of api.anthropic.com. Set to https://<resource>.services.ai.azure.com/anthropic
+    # and put the Azure key in ANTHROPIC_API_KEY. Empty = call Anthropic directly.
+    anthropic_base_url: str = ""
     database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/axxiom_aeo"
     db_schema: str = "aeo"
     supabase_project_ref: str = "cdlssoeqqfrgckpxewhn"
