@@ -136,11 +136,22 @@ class Settings(BaseSettings):
     image_generation_enabled: bool = True
     content_generation_concurrency: int = 3
 
-    # Image provider: "ideogram" (Ideogram 3.0), "fal" (fal.ai Flux 2 Pro /
-    # Imagen 4), or "openai" (gpt-image). If the chosen provider has no key, the
-    # pipeline falls back to any other configured provider (logged) so images
-    # never silently stop on a misconfig.
-    image_provider: str = "ideogram"
+    # Image provider: "azure" (Azure OpenAI gpt-image-2), "ideogram" (Ideogram
+    # 3.0), "fal" (fal.ai Flux 2 Pro / Imagen 4), or "openai" (gpt-image direct).
+    # If the chosen provider has no key, the pipeline falls back to any other
+    # configured provider (logged) so images never silently stop on a misconfig.
+    image_provider: str = "azure"
+
+    # Azure OpenAI gpt-image-2 (Foundry). endpoint is the full images/generations
+    # URL, e.g. https://<resource>.openai.azure.com/openai/v1/images/generations?api-version=preview
+    # deployment is the Foundry deployment name (sent as the body `model`).
+    # size 1536x1024 = landscape article images; quality low|medium|high.
+    azure_image_api_key: str = ""
+    azure_image_endpoint: str = ""
+    azure_image_deployment: str = "gpt-image-2"
+    azure_image_size: str = "1536x1024"
+    azure_image_quality: str = "medium"
+
     fal_api_key: str = ""
     fal_image_model: str = "fal-ai/flux-2-pro"   # or e.g. fal-ai/imagen4
     fal_image_size: str = "landscape_4_3"
