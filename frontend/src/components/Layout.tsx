@@ -38,6 +38,7 @@ const navSections = [
     items: [
       { path: "/settings/brands", label: "Brand Settings", icon: "⚙" },
       { path: "/notifications", label: "Notifications", icon: "◉" },
+      { path: "/docs", label: "Documentation", icon: "§" },
     ],
   },
 ];

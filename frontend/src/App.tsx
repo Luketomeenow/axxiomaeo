@@ -9,6 +9,7 @@ import { ContentReviewDetailPage } from "./pages/ContentReviewDetailPage";
 import { ContentReviewPage } from "./pages/ContentReviewPage";
 import { PublishedContentPage } from "./pages/PublishedContentPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { DocumentationPage } from "./pages/DocumentationPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { RecommendationsPage } from "./pages/RecommendationsPage";
@@ -66,6 +67,7 @@ function AppRoutes() {
         <Route path="/settings/brands" element={<BrandSettingsPage />} />
         <Route path="/settings/brands/:brandId" element={<BrandSettingsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/docs" element={<DocumentationPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
