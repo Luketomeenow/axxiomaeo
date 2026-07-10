@@ -6,6 +6,7 @@ const SECTIONS = [
   { id: "how", label: "How it works" },
   { id: "dashboard", label: "The dashboard" },
   { id: "content", label: "Content engine" },
+  { id: "schema", label: "Schema (structured data)" },
   { id: "tracking", label: "Citation tracking" },
   { id: "recommendations", label: "Recommendations" },
   { id: "reports", label: "Reports & costs" },
@@ -322,6 +323,70 @@ export function DocumentationPage() {
             Only 3 drafts generate at once. Drafts stuck in "generating" hold those slots — the Content
             Review page flags stale ones to clear, which also frees regenerate/generate if they start
             returning "too many generating."
+          </Callout>
+        </Section>
+
+        {/* Schema */}
+        <Section id="schema" eyebrow="Schema (structured data)" title="Structured data, human-approved">
+          <P>
+            Schema is the machine-readable layer — <Em>schema.org JSON-LD</Em> that tells search engines and
+            AI crawlers exactly what each page is: the business, its services, its FAQs. It's generated per
+            brand but, unlike content, <Em>never publishes on its own</Em> — every change clears a human
+            approval gate first.
+          </P>
+
+          <H3>What gets generated</H3>
+          <List>
+            <li>
+              <Em>Organization</Em> — the brand entity: name, URL, logo, contact, and parent company (Axxiom
+              Elevator) for the sub-brands.
+            </li>
+            <li>
+              <Em>LocalBusiness</Em> — address, service area, hours, and phone, for local/near-me search.
+            </li>
+            <li>
+              <Em>Service</Em> — one per elevator service line: maintenance, repair, modernization, new
+              installation, and inspection.
+            </li>
+            <li>
+              <Em>FAQPage</Em> &amp; <Em>Article</Em> — carried on published articles (FAQ blocks and article
+              markup), so content pages are self-describing too.
+            </li>
+          </List>
+
+          <H3>The approval flow</H3>
+          <ol className="text-sm text-muted leading-7 max-w-[68ch] mb-3.5 list-decimal pl-5 marker:text-cyan marker:font-mono space-y-1.5">
+            <li>
+              <Em>Deploy</Em> — generate a brand's schema set. Items land as <em>pending review</em> and a
+              notification announces "N schema deployments ready." Nothing is live yet.
+            </li>
+            <li>
+              <Em>Schema Review</Em> (the <em>Schema Approval Inbox</em>) — inspect the raw JSON-LD, edit it
+              if needed, then <Em>Approve</Em> or <Em>Reject</Em> with notes.
+            </li>
+            <li>
+              <Em>Approve → WordPress</Em> — publishes the JSON-LD as a dedicated <Code>noindex</Code>{" "}
+              "carrier" page (or updates the existing one) and logs an approval event.
+            </li>
+            <li>
+              <Em>Published Schema</Em> — the running list of everything live, both brand-level and from
+              content.
+            </li>
+            <li>
+              <Em>Schema Health</Em> — per brand: total pages, how many validate, error count, and
+              last-checked; <Em>Run validation</Em> re-checks on demand.
+            </li>
+          </ol>
+
+          <Callout tone="info" tag="Why a gate here?">
+            Content is monitor-after (it auto-publishes), but schema is structural and applies site-wide, so
+            it always waits for an explicit human OK. The Schema Approval Inbox is that checkpoint — separate
+            from the content kill switch.
+          </Callout>
+          <Callout tone="warn" tag="Needs the WordPress helper">
+            Schema Health validates by reading JSON-LD from live page source, so it only lights up once the
+            brand's WordPress schema helper is installed (see <Code>wordpress/README</Code>). Carrier pages
+            are <Code>noindex</Code>, so the markup reaches crawlers without ranking as thin pages themselves.
           </Callout>
         </Section>
 
