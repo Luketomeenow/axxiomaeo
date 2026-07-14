@@ -404,3 +404,45 @@ def build_combined_schema(html: str, brand: Brand, title: str, content_type: str
 
 def wrap_schema_script(json_ld: str) -> str:
     return f'<script type="application/ld+json">{json_ld}</script>'
+
+
+# The five elevator service lines each brand gets a Service schema for.
+SERVICE_TYPES = [
+    "Elevator Maintenance",
+    "Elevator Repair",
+    "Elevator Modernization",
+    "New Elevator Installation",
+    "Elevator Inspection",
+]
+
+
+def build_brand_schema_set(brand: Brand) -> list[dict]:
+    """The canonical brand-level JSON-LD set for a brand: Organization,
+    LocalBusiness, and one Service per line (7 total).
+
+    Titles are deterministic so a deployment can be matched back to its slot on
+    redeploy — the daily publish worker uses the title to tell "already live"
+    from "changed" from "missing". Shared by the manual deploy endpoint and the
+    auto-publish worker so both produce identical schema.
+    """
+    items = [
+        {
+            "schema_type": "Organization",
+            "title": f"{brand.name} - Organization Schema",
+            "schema_json": build_organization_schema(brand),
+        },
+        {
+            "schema_type": "LocalBusiness",
+            "title": f"{brand.name} - LocalBusiness Schema",
+            "schema_json": build_local_business_schema(brand),
+        },
+    ]
+    for svc in SERVICE_TYPES:
+        items.append(
+            {
+                "schema_type": "Service",
+                "title": f"{brand.name} - {svc}",
+                "schema_json": build_service_schema(brand, svc),
+            }
+        )
+    return items

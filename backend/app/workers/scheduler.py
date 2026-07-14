@@ -8,6 +8,7 @@ from app.workers.citation_worker import run_citation_audit
 from app.workers.content_refresh_worker import run_content_refresh
 from app.workers.content_worker import run_daily_content
 from app.workers.report_worker import run_monthly_report
+from app.workers.schema_publish_worker import run_daily_schema_publish
 from app.workers.schema_worker import run_schema_validation
 from app.workers.topic_worker import run_topic_discovery
 
@@ -42,6 +43,14 @@ def setup_scheduler():
         id="schema_validation",
         replace_existing=True,
     )
+    # One brand-schema per brand per day (self-healing). No-op unless
+    # SCHEMA_AUTO_PUBLISH_ENABLED=true. Runs after daily content (9am).
+    scheduler.add_job(
+        run_daily_schema_publish,
+        CronTrigger(hour=10, minute=0),
+        id="daily_schema_publish",
+        replace_existing=True,
+    )
     scheduler.add_job(
         run_monthly_report,
         CronTrigger(day="last", hour=23, minute=0),
@@ -54,7 +63,7 @@ def setup_scheduler():
         id="content_refresh",
         replace_existing=True,
     )
-    logger.info("APScheduler configured with 6 cron jobs (America/Chicago)")
+    logger.info("APScheduler configured with 7 cron jobs (America/Chicago)")
 
 
 def start_scheduler():
