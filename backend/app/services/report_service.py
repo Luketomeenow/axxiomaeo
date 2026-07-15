@@ -435,6 +435,107 @@ class ReportService:
 
         return {"configured": True, "brands": out}
 
+    async def get_search_demand(self, per_brand_limit: int = 25) -> dict:
+        """What people are actually searching, per brand.
+
+        Two signals: real Google-search query demand (GSC — impressions, clicks,
+        position, and rising/falling trend vs the prior period) and an AI-prompt
+        proxy (the queries we test on ChatGPT/Perplexity/Gemini and whether we're
+        cited or beaten). AI engines don't expose real user prompts, so the AI
+        side is a proxy, not literal prompt data.
+        """
+        import asyncio
+
+        from app.config import get_settings
+
+        gsc_configured = bool(get_settings().google_service_account_json)
+        brands = list((await self.db.execute(select(Brand).order_by(Brand.id))).scalars().all())
+
+        # AI-prompt proxy from the latest citation audit (empty until audits run).
+        try:
+            gaps = await self.get_gap_queries(limit=500)
+        except Exception:
+            gaps = []
+        try:
+            top = await self.get_top_performing_queries(limit=200)
+        except Exception:
+            top = []
+
+        ai_by_brand: dict[str, list[dict]] = {}
+        seen: set[tuple[str, str, str]] = set()
+
+        def _add_ai(brand_id, query, platform, is_cited, competitor=None, visibility=None):
+            if not brand_id or not query:
+                return
+            key = (brand_id, (query or "").lower(), platform or "")
+            if key in seen:
+                return
+            seen.add(key)
+            ai_by_brand.setdefault(brand_id, []).append(
+                {
+                    "query": query,
+                    "platform": platform,
+                    "is_cited": is_cited,
+                    "competitor_cited": competitor,
+                    "visibility_pct": visibility,
+                }
+            )
+
+        for q in top:
+            _add_ai(q.get("brand_id"), q.get("query"), q.get("platform"), True, None, q.get("visibility_pct"))
+        for g in gaps:
+            _add_ai(g.get("brand_id"), g.get("query"), g.get("platform"), False, g.get("competitor_cited"), g.get("visibility_pct"))
+
+        async def _brand_gsc(brand: Brand) -> list[dict]:
+            if not (gsc_configured and brand.gsc_site_url):
+                return []
+            try:
+                current, previous = await self.gsc.get_query_rows_compare(brand.gsc_site_url)
+            except Exception as e:  # never let one brand's GSC error sink the report
+                logger.warning("Search-demand GSC fetch failed for %s: %s", brand.id, e)
+                return []
+            prev_by = {(r.get("query") or "").lower(): r for r in previous}
+            rows = []
+            for r in current:
+                q = (r.get("query") or "").strip()
+                if not q:
+                    continue
+                impr = int(r.get("impressions") or 0)
+                prev_impr = int((prev_by.get(q.lower()) or {}).get("impressions") or 0)
+                if impr > prev_impr * 1.2:
+                    trend = "up"
+                elif prev_impr and impr < prev_impr * 0.8:
+                    trend = "down"
+                else:
+                    trend = "flat"
+                rows.append(
+                    {
+                        "query": q,
+                        "impressions": impr,
+                        "clicks": int(r.get("clicks") or 0),
+                        "position": round(float(r.get("position") or 0), 1),
+                        "prev_impressions": prev_impr,
+                        "trend": trend,
+                    }
+                )
+            rows.sort(key=lambda x: -x["impressions"])
+            return rows[:per_brand_limit]
+
+        gsc_results = await asyncio.gather(*[_brand_gsc(b) for b in brands])
+
+        out = []
+        for brand, search_queries in zip(brands, gsc_results):
+            out.append(
+                {
+                    "brand_id": brand.id,
+                    "brand_name": brand.name,
+                    "gsc_site_url": brand.gsc_site_url,
+                    "search_queries": search_queries,
+                    "ai_queries": ai_by_brand.get(brand.id, [])[:per_brand_limit],
+                }
+            )
+        return {"gsc_configured": gsc_configured, "brands": out}
+
     async def generate_monthly_report(self) -> MonthlyReport:
         now = datetime.utcnow()
         month_start = now.replace(day=1)
