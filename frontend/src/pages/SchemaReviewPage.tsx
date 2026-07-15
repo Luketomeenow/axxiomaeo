@@ -225,8 +225,9 @@ export function SchemaReviewPage() {
                 <strong>Daily auto-posting</strong> — when{" "}
                 <code className="text-xs">SCHEMA_AUTO_PUBLISH_ENABLED</code> is on, a worker publishes{" "}
                 <strong>one missing or outdated schema per brand each day</strong>, announces it in
-                the <strong>Discord</strong> channel, and self-heals (re-publishes only if a
-                brand&apos;s settings change). It idles once every brand&apos;s set is live.
+                the dedicated <strong>#aeo-schema-posts</strong> Discord channel, and self-heals
+                (re-publishes only if a brand&apos;s settings change). It idles once every
+                brand&apos;s set is live.
               </li>
             </ol>
           </div>

@@ -66,20 +66,30 @@ class NotificationService:
         if send_slack and self.settings.slack_webhook_url:
             await self._send_slack(title, body, entity_type, entity_id)
 
-        # Published posts also go to Discord (with live links) so the team
-        # can monitor what went out from the channel.
-        if type == "published" and self.settings.discord_webhook_url:
-            await self._send_discord(title, body)
+        # Route to Discord: AEO-schema notifications (every one carries
+        # entity_type="schema_deployment") go to the dedicated #aeo-schema-posts
+        # channel; other published posts go to the general channel.
+        discord_url = self._discord_url_for(type, entity_type)
+        if discord_url:
+            await self._send_discord(discord_url, title, body)
 
         return notification
 
-    async def _send_discord(self, title: str, body: str) -> None:
+    def _discord_url_for(self, type: str, entity_type: str | None) -> str | None:
+        if entity_type == "schema_deployment":
+            # Dedicated schema channel; fall back to the general one if unset.
+            return self.settings.discord_schema_webhook_url or self.settings.discord_webhook_url or None
+        if type == "published":
+            return self.settings.discord_webhook_url or None
+        return None
+
+    async def _send_discord(self, url: str, title: str, body: str) -> None:
         # approve_and_publish joins URLs with "; " — one per line keeps
         # Discord's auto-linking clean (a trailing ";" breaks the link).
         content = f"**{title}**\n{body.replace('; ', chr(10))}"[:1900]
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                await client.post(self.settings.discord_webhook_url, json={"content": content})
+                await client.post(url, json={"content": content})
         except Exception as e:
             logger.warning("Discord notification failed: %s", e)
 
