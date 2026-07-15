@@ -158,9 +158,205 @@ function CostsPanel() {
   );
 }
 
+interface SearchQueryRow {
+  query: string;
+  impressions: number;
+  clicks: number;
+  position: number;
+  prev_impressions: number;
+  trend: "up" | "down" | "flat";
+}
+interface AiQueryRow {
+  query: string;
+  platform: string | null;
+  is_cited: boolean;
+  competitor_cited: string | null;
+  visibility_pct: number | null;
+}
+interface SearchDemandBrand {
+  brand_id: string;
+  brand_name: string;
+  gsc_site_url: string | null;
+  search_queries: SearchQueryRow[];
+  ai_queries: AiQueryRow[];
+}
+interface SearchDemandResponse {
+  gsc_configured: boolean;
+  brands: SearchDemandBrand[];
+}
+
+function TrendPill({ trend }: { trend: string }) {
+  if (trend === "up") return <span className="text-success text-xs">↑ rising</span>;
+  if (trend === "down") return <span className="text-warning text-xs">↓ falling</span>;
+  return <span className="text-muted text-xs">→ flat</span>;
+}
+
+function SearchDemandTab() {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["search-demand"],
+    queryFn: () => apiFetch<SearchDemandResponse>("/api/reports/search-demand"),
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
+  });
+  const [brandId, setBrandId] = useState<string | null>(null);
+
+  const brands = data?.brands ?? [];
+  const active = brands.find((b) => b.brand_id === brandId) ?? brands[0];
+
+  return (
+    <QueryStatus
+      isLoading={isLoading}
+      isError={isError}
+      error={error as Error | null}
+      loadingText="Loading search demand — querying Google Search Console…"
+    >
+      <div className="space-y-5">
+        <div className="aeo-panel p-4 text-sm text-muted">
+          What people are actually searching for, per brand.{" "}
+          <span className="text-ink font-medium">Google searches</span> come from Search Console (real
+          query demand, last 28 days). <span className="text-ink font-medium">AI prompts</span> are a
+          proxy — the queries we test on ChatGPT, Perplexity, and Gemini and whether we're cited (the
+          engines don't expose real user prompts).
+        </div>
+
+        {data && !data.gsc_configured && (
+          <div className="rounded-lg border border-warning/30 bg-warning/[0.06] px-4 py-3 text-sm">
+            <p className="text-ink font-medium">Connect Google Search Console for real search data</p>
+            <p className="text-muted mt-1">
+              Set <code className="text-cyan">GOOGLE_SERVICE_ACCOUNT_JSON</code> in the backend, add the
+              service-account email to each brand&apos;s GSC property, and fill each brand&apos;s GSC URL
+              in Brand Settings. Until then, the AI-prompt proxy below still works from citation audits.
+            </p>
+          </div>
+        )}
+
+        {brands.length > 0 && (
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-muted uppercase tracking-widest">Brand</label>
+            <select
+              value={active?.brand_id ?? ""}
+              onChange={(e) => setBrandId(e.target.value)}
+              className="aeo-input w-auto"
+              aria-label="Select brand"
+            >
+              {brands.map((b) => (
+                <option key={b.brand_id} value={b.brand_id}>
+                  {b.brand_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {active && (
+          <div className="grid lg:grid-cols-2 gap-6">
+            <div className="aeo-panel overflow-hidden">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="aeo-title text-ink">Google searches</h3>
+                <p className="text-xs text-muted mt-0.5">Top query demand by impressions.</p>
+              </div>
+              <div className="overflow-auto max-h-[28rem]">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-panel-elevated">
+                    <tr className="border-b border-border text-left text-muted">
+                      <th className="px-4 py-2.5">Query</th>
+                      <th className="px-4 py-2.5 text-right">Impr.</th>
+                      <th className="px-4 py-2.5 text-right">Clicks</th>
+                      <th className="px-4 py-2.5 text-right">Pos.</th>
+                      <th className="px-4 py-2.5">Trend</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {active.search_queries.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-6 text-center text-muted/80">
+                          {active.gsc_site_url
+                            ? "No GSC data for this brand yet."
+                            : "No GSC URL set for this brand (Brand Settings)."}
+                        </td>
+                      </tr>
+                    ) : (
+                      active.search_queries.map((q, i) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="px-4 py-2.5">{q.query}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-muted">
+                            {q.impressions.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-muted">
+                            {q.clicks.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-muted">
+                            {q.position || "—"}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <TrendPill trend={q.trend} />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="aeo-panel overflow-hidden">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="aeo-title text-ink">
+                  AI prompts <span className="text-xs font-normal text-muted">(proxy)</span>
+                </h3>
+                <p className="text-xs text-muted mt-0.5">Queries tested on AI engines — cited vs beaten.</p>
+              </div>
+              <div className="overflow-auto max-h-[28rem]">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-panel-elevated">
+                    <tr className="border-b border-border text-left text-muted">
+                      <th className="px-4 py-2.5">Query</th>
+                      <th className="px-4 py-2.5">Engine</th>
+                      <th className="px-4 py-2.5">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {active.ai_queries.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-6 text-center text-muted/80">
+                          No citation audit data yet — run a Citation Audit.
+                        </td>
+                      </tr>
+                    ) : (
+                      active.ai_queries.map((q, i) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="px-4 py-2.5">{q.query}</td>
+                          <td className="px-4 py-2.5 text-muted">{q.platform ?? "—"}</td>
+                          <td className="px-4 py-2.5">
+                            {q.is_cited ? (
+                              <span className="text-success text-xs">✓ cited</span>
+                            ) : q.competitor_cited ? (
+                              <span className="text-warning text-xs">{q.competitor_cited} wins</span>
+                            ) : (
+                              <span className="text-muted text-xs">not cited</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {data && brands.length === 0 && (
+          <div className="aeo-panel p-8 text-center text-muted">No brands configured.</div>
+        )}
+      </div>
+    </QueryStatus>
+  );
+}
+
 export function ReportsPage() {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"report" | "trends">("report");
+  const [tab, setTab] = useState<"report" | "trends" | "search">("report");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const {
@@ -240,7 +436,7 @@ export function ReportsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {reports.length > 0 && (
+          {reports.length > 0 && tab !== "search" && (
             <select
               value={effectiveId ?? ""}
               onChange={(e) => setSelectedId(Number(e.target.value))}
@@ -281,6 +477,21 @@ export function ReportsPage() {
         </div>
       )}
 
+      <div className="flex gap-1 border-b border-border print:hidden">
+        <TabButton active={tab === "report"} onClick={() => setTab("report")}>
+          Report
+        </TabButton>
+        <TabButton active={tab === "trends"} onClick={() => setTab("trends")}>
+          Trends
+        </TabButton>
+        <TabButton active={tab === "search"} onClick={() => setTab("search")}>
+          Search demand
+        </TabButton>
+      </div>
+
+      {tab === "search" ? (
+        <SearchDemandTab />
+      ) : (
       <QueryStatus
         isLoading={loadingList}
         isError={listIsError}
@@ -298,15 +509,6 @@ export function ReportsPage() {
           </div>
         ) : (
           <>
-            <div className="flex gap-1 border-b border-border print:hidden">
-              <TabButton active={tab === "report"} onClick={() => setTab("report")}>
-                Report
-              </TabButton>
-              <TabButton active={tab === "trends"} onClick={() => setTab("trends")}>
-                Trends
-              </TabButton>
-            </div>
-
             {tab === "trends" ? (
               <div className="space-y-5">
                 <ReportTrendChart reports={reports} />
@@ -531,6 +733,7 @@ export function ReportsPage() {
           </>
         )}
       </QueryStatus>
+      )}
     </div>
   );
 }
