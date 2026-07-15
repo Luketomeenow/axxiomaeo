@@ -52,16 +52,16 @@ export function SchemaHealthPage() {
         <div>
           <h2 className="text-xl font-bold text-ink">Schema Health</h2>
           <p className="text-sm text-muted mt-1">
-            Requires JSON-LD in page source — install the{" "}
+            Crawls live pages and shows the latest JSON-LD check per page. The{" "}
             <a
               href="https://github.com/Luketomeenow/axxiomaeo/blob/main/wordpress/README.md"
               className="aeo-link"
               target="_blank"
               rel="noreferrer"
             >
-              WordPress mu-plugin
+              AEO Schema mu-plugin
             </a>{" "}
-            on each site.
+            is installed on all 5 brand sites.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
@@ -75,7 +75,7 @@ export function SchemaHealthPage() {
       </div>
 
       {msg && (
-        <div className="bg-void border border-black/10 text-sm px-4 py-3 rounded text-ink">
+        <div className="bg-void border border-border text-sm px-4 py-3 rounded text-ink">
           {msg}
         </div>
       )}
@@ -91,7 +91,7 @@ export function SchemaHealthPage() {
           <label className="block text-xs font-medium text-muted mb-1">Brand actions</label>
           <select
             id="schema-brand-pick"
-            className="border border-border rounded px-3 py-2 text-sm min-w-[200px]"
+            className="bg-panel border border-border rounded-md px-3 py-2 text-sm text-ink min-w-[200px] focus:outline-none focus:border-cyan/50"
             defaultValue=""
           >
             <option value="" disabled>
@@ -106,7 +106,7 @@ export function SchemaHealthPage() {
         </div>
         <button
           type="button"
-          className="px-3 py-2 bg-cyan text-void rounded text-sm disabled:opacity-50"
+          className="aeo-btn-primary text-sm"
           disabled={validate.isPending || deploySchema.isPending}
           onClick={() => {
             const el = document.getElementById("schema-brand-pick") as HTMLSelectElement;
@@ -117,7 +117,7 @@ export function SchemaHealthPage() {
         </button>
         <button
           type="button"
-          className="px-3 py-2 border border-navy text-ink rounded text-sm disabled:opacity-50"
+          className="aeo-btn-secondary text-sm"
           disabled={validate.isPending || deploySchema.isPending}
           onClick={() => {
             const el = document.getElementById("schema-brand-pick") as HTMLSelectElement;
@@ -153,21 +153,29 @@ export function SchemaHealthPage() {
                   row.total_pages > 0
                     ? Math.round((row.valid_schema / row.total_pages) * 100)
                     : 0;
+                const barColor =
+                  row.errors > 0
+                    ? "bg-warning"
+                    : coverage === 100 && row.total_pages > 0
+                      ? "bg-success"
+                      : "bg-cyan";
                 return (
                   <tr key={row.brand_id} className="border-t border-border">
                     <td className="px-4 py-3 font-medium">{row.brand_name}</td>
                     <td className="px-4 py-3">{row.total_pages}</td>
                     <td className="px-4 py-3 text-success">{row.valid_schema}</td>
-                    <td className="px-4 py-3 text-warning">{row.errors}</td>
+                    <td className={`px-4 py-3 ${row.errors > 0 ? "text-danger" : "text-muted"}`}>
+                      {row.errors}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-100 rounded-full h-2 max-w-[100px]">
+                        <div className="flex-1 bg-white/10 rounded-full h-2 max-w-[100px]">
                           <div
-                            className="bg-navy h-2 rounded-full"
+                            className={`${barColor} h-2 rounded-full transition-all`}
                             style={{ width: `${coverage}%` }}
                           />
                         </div>
-                        <span className="text-xs">{coverage}%</span>
+                        <span className="text-xs tabular-nums text-muted">{coverage}%</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted text-xs">

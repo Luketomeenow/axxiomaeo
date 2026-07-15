@@ -120,6 +120,13 @@ class Settings(BaseSettings):
     # then wait in Content Review as before.
     auto_publish_enabled: bool = True
 
+    # Daily schema auto-publish: when true, a worker publishes one missing or
+    # outdated brand-level schema per brand per day straight to WordPress and
+    # announces it on Discord (self-healing rollout of Organization +
+    # LocalBusiness + 5 Service schemas). Default false — the Schema Approval
+    # Inbox (human-approved) is the only path until you turn this on.
+    schema_auto_publish_enabled: bool = False
+
     # Daily automated topic discovery (GSC demand + citation gaps + coverage).
     # max_per_brand=1 -> alternate trend/AEO-gap picks day-to-day (recommended
     # starting cadence). max_per_brand>=2 -> pick one of each, same day.

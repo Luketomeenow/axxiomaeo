@@ -13,24 +13,14 @@ from app.models.content import ContentPiece
 from app.models.schema_job import SchemaDeployment, SchemaJob
 from app.services.notification_service import NotificationService
 from app.services.schema_service import (
+    build_brand_schema_set,
     build_faqpage_from_text,
-    build_local_business_schema,
-    build_organization_schema,
-    build_service_schema,
     wrap_schema_script,
 )
 from app.services.wordpress_service import WordPressService, schema_carrier_meta
 from slugify import slugify
 
 router = APIRouter(prefix="/api/schema", tags=["schema"])
-
-SERVICE_TYPES = [
-    "Elevator Maintenance",
-    "Elevator Repair",
-    "Elevator Modernization",
-    "New Elevator Installation",
-    "Elevator Inspection",
-]
 
 
 def _deployment_slug(dep: SchemaDeployment, brand_id: str) -> str:
@@ -260,37 +250,16 @@ async def deploy_schema_for_brand(
     if not brand:
         raise HTTPException(status_code=404, detail="Brand not found")
 
-    deployments = []
-    org_schema = build_organization_schema(brand)
-    deployments.append(
+    deployments = [
         SchemaDeployment(
             brand_id=brand_id,
-            schema_type="Organization",
-            schema_json=org_schema,
-            title=f"{brand.name} - Organization Schema",
+            schema_type=item["schema_type"],
+            schema_json=item["schema_json"],
+            title=item["title"],
             status="pending_review",
         )
-    )
-    local_schema = build_local_business_schema(brand)
-    deployments.append(
-        SchemaDeployment(
-            brand_id=brand_id,
-            schema_type="LocalBusiness",
-            schema_json=local_schema,
-            title=f"{brand.name} - LocalBusiness Schema",
-            status="pending_review",
-        )
-    )
-    for svc in SERVICE_TYPES:
-        deployments.append(
-            SchemaDeployment(
-                brand_id=brand_id,
-                schema_type="Service",
-                schema_json=build_service_schema(brand, svc),
-                title=f"{brand.name} - {svc}",
-                status="pending_review",
-            )
-        )
+        for item in build_brand_schema_set(brand)
+    ]
 
     for d in deployments:
         db.add(d)
@@ -520,16 +489,33 @@ async def schema_health(
     brands = await db.execute(select(Brand))
     result = []
     for brand in brands.scalars().all():
-        jobs = await db.execute(select(SchemaJob).where(SchemaJob.brand_id == brand.id))
+        jobs = await db.execute(
+            select(SchemaJob)
+            .where(SchemaJob.brand_id == brand.id)
+            .order_by(SchemaJob.created_at.desc())
+        )
         job_list = jobs.scalars().all()
-        valid = sum(1 for j in job_list if j.validation_status == "valid")
-        errors = sum(1 for j in job_list if j.validation_status == "error")
+
+        # Collapse to the most-recent job per distinct page. Both approve and
+        # every validation run INSERT a fresh SchemaJob, so counting raw rows
+        # multiplies each page by how many times it's been checked — which made
+        # Pages Tracked / Valid / Errors climb on every validation. Rows are
+        # newest-first, so the first one seen per page key is the current state.
+        latest_by_page: dict[str, SchemaJob] = {}
+        for j in job_list:
+            key = j.wp_post_url or (f"post:{j.wp_post_id}" if j.wp_post_id else f"job:{j.id}")
+            if key not in latest_by_page:
+                latest_by_page[key] = j
+        pages = list(latest_by_page.values())
+
+        valid = sum(1 for j in pages if j.validation_status == "valid")
+        errors = sum(1 for j in pages if j.validation_status == "error")
         last_validated = max((j.validated_at for j in job_list if j.validated_at), default=None)
         result.append(
             {
                 "brand_id": brand.id,
                 "brand_name": brand.name,
-                "total_pages": len(job_list),
+                "total_pages": len(pages),
                 "valid_schema": valid,
                 "errors": errors,
                 "last_validation": last_validated.isoformat() if last_validated else None,

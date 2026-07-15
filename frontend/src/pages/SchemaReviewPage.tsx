@@ -40,7 +40,7 @@ export function SchemaReviewPage() {
 
   const deployBrand = useMutation({
     mutationFn: (brandId: string) =>
-      apiFetch(`/api/schema/deploy/${brandId}`, { method: "POST" }),
+      apiFetch<{ count?: number }>(`/api/schema/deploy/${brandId}`, { method: "POST" }),
     onSuccess: (res: { count?: number }) => {
       setDeployMsg(`Queued ${res.count ?? ""} schema deployments for review.`);
       queryClient.invalidateQueries({ queryKey: ["schema-deployments"] });
@@ -122,7 +122,7 @@ export function SchemaReviewPage() {
           </Link>
           <select
             id="schema-deploy-brand"
-            className="border border-border rounded px-3 py-2 text-sm"
+            className="bg-panel border border-border rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-cyan/50"
             defaultValue=""
           >
             <option value="" disabled>
@@ -141,10 +141,26 @@ export function SchemaReviewPage() {
               const el = document.getElementById("schema-deploy-brand") as HTMLSelectElement;
               if (el?.value) deployBrand.mutate(el.value);
             }}
-            className="px-3 py-2 bg-cyan text-void rounded text-sm disabled:opacity-50"
+            className="aeo-btn-primary text-sm"
           >
             {deployBrand.isPending ? "Queuing…" : "Queue brand schema"}
           </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-success/25 bg-success/[0.06] px-4 py-3 flex items-start gap-3">
+        <span className="text-success text-sm mt-0.5" aria-hidden>
+          ✓
+        </span>
+        <div>
+          <p className="text-sm text-ink font-medium">
+            AEO Schema plugin installed on all 5 brand sites
+          </p>
+          <p className="text-xs text-muted mt-0.5">
+            The <code className="text-xs text-cyan">axxiom-aeo-schema</code> mu-plugin renders approved
+            JSON-LD in each page&apos;s <code className="text-xs text-cyan">&lt;head&gt;</code> — no
+            per-publish setup needed. Approving here (or daily auto-posting) makes it live immediately.
+          </p>
         </div>
       </div>
 
@@ -164,13 +180,13 @@ export function SchemaReviewPage() {
             <Link to="/content/review" className="text-ink hover:text-cyan font-medium">
               Content Review
             </Link>
-            . Content drafts ship FAQ/article schema on blog posts. Here you approve{" "}
+            . Content drafts ship FAQ/article schema on blog posts. Here you manage{" "}
             <strong className="text-ink">brand-level structured data</strong> built from each
             brand&apos;s settings (name, URL, markets, phone).
           </p>
 
           <div>
-            <p className="font-medium text-ink mb-2">What gets queued per brand</p>
+            <p className="font-medium text-ink mb-2">What each brand gets (7 schemas)</p>
             <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
               <li>
                 <strong>Organization</strong> — company entity for the brand
@@ -183,44 +199,45 @@ export function SchemaReviewPage() {
                 Inspection
               </li>
             </ul>
-            <p className="text-xs text-muted mt-2">
-              Click <strong>Queue brand schema</strong> above, or use{" "}
-              <Link to="/schema/health" className="text-ink hover:text-cyan">
-                Schema Health
-              </Link>{" "}
-              — 7 deployments per brand land here as <code className="text-xs">pending_review</code>
-              .
+          </div>
+
+          <div>
+            <p className="font-medium text-ink mb-2">How publishing works</p>
+            <p className="text-xs sm:text-sm">
+              Each schema is stored on a hidden (<code className="text-xs">noindex</code>) WordPress{" "}
+              <em>carrier page</em> in post meta (<code className="text-xs">aeo_schema_json</code>).
+              The installed mu-plugin prints it in that page&apos;s{" "}
+              <code className="text-xs">&lt;head&gt;</code> — not in your blog posts or site header
+              globally.
             </p>
           </div>
 
           <div>
-            <p className="font-medium text-ink mb-2">Approval workflow</p>
-            <ol className="list-decimal list-inside space-y-1 text-xs sm:text-sm">
-              <li>Select a row → preview the JSON-LD on the right</li>
+            <p className="font-medium text-ink mb-2">Two ways schema goes live</p>
+            <ol className="list-decimal list-inside space-y-1.5 text-xs sm:text-sm">
               <li>
-                Edit the JSON-LD on the right if needed, then <strong>Save</strong> or go straight
-                to <strong>Approve &amp; Deploy</strong>
+                <strong>Manual review (this page)</strong> — <strong>Queue brand schema</strong>{" "}
+                lands 7 <code className="text-xs">pending_review</code> items; select a row, edit the
+                JSON-LD, then <strong>Save</strong> or <strong>Approve &amp; Deploy</strong>.{" "}
+                <strong>Reject</strong> skips it. Nothing here deploys without your click.
               </li>
               <li>
-                <strong>Approve &amp; Deploy</strong> — creates or updates a hidden WordPress{" "}
-                <em>page</em> (schema carrier) and stores JSON-LD in post meta (
-                <code className="text-xs">aeo_schema_json</code>). The MU plugin prints it in that
-                page&apos;s <code className="text-xs">&lt;head&gt;</code> — not in your blog posts
-                or site header globally.
-              </li>
-              <li>
-                Install <code className="text-xs">wordpress/axxiom-aeo-schema.php</code> as a
-                must-use plugin on each brand site (one-time SFTP step)
-              </li>
-              <li>
-                <strong>Reject</strong> — skips deploy; nothing changes on the live site
+                <strong>Daily auto-posting</strong> — when{" "}
+                <code className="text-xs">SCHEMA_AUTO_PUBLISH_ENABLED</code> is on, a worker publishes{" "}
+                <strong>one missing or outdated schema per brand each day</strong>, announces it in
+                the <strong>Discord</strong> channel, and self-heals (re-publishes only if a
+                brand&apos;s settings change). It idles once every brand&apos;s set is live.
               </li>
             </ol>
           </div>
 
           <p className="text-xs text-muted border-t border-border pt-3">
-            Nothing deploys without your approval. After publish, use Schema Health to crawl live URLs
-            and confirm <code className="text-xs">application/ld+json</code> is present.
+            After publish, use{" "}
+            <Link to="/schema/health" className="text-ink hover:text-cyan">
+              Schema Health
+            </Link>{" "}
+            to crawl live URLs and confirm <code className="text-xs">application/ld+json</code> is
+            present.
           </p>
         </div>
       </div>
@@ -297,7 +314,7 @@ export function SchemaReviewPage() {
                   saveSchema.mutate({ id: selected.id, schema_json: editedSchema.trim() })
                 }
                 disabled={saveSchema.isPending || !detail || !!parseError || !isDirty}
-                className="px-4 py-2 border border-navy text-ink rounded text-sm disabled:opacity-50"
+                className="aeo-btn-secondary text-sm"
               >
                 {saveSchema.isPending ? "Saving…" : "Save changes"}
               </button>
@@ -307,7 +324,7 @@ export function SchemaReviewPage() {
                   approve.mutate({ id: selected.id, schema_json: editedSchema.trim() })
                 }
                 disabled={approve.isPending || !detail || !!parseError}
-                className="px-4 py-2 bg-cyan text-void rounded text-sm disabled:opacity-50"
+                className="aeo-btn-primary text-sm"
               >
                 Approve & Deploy
               </button>
@@ -315,7 +332,7 @@ export function SchemaReviewPage() {
                 type="button"
                 onClick={() => reject.mutate({ id: selected.id, notes: "" })}
                 disabled={reject.isPending}
-                className="px-4 py-2 border border-warning/40 text-warning rounded text-sm"
+                className="px-4 py-2 rounded-md text-sm border border-warning/40 text-warning hover:bg-warning/10 transition-colors disabled:opacity-50"
               >
                 Reject
               </button>
