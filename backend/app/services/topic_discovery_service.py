@@ -92,6 +92,20 @@ def todays_primary_bucket(today: date | None = None) -> str:
     return "search_demand" if day.toordinal() % 2 == 0 else "citation_gap"
 
 
+# The five content types, rotated across each brand's SECOND daily pick so a
+# brand doesn't publish the same shape every day. The topic still comes from
+# real demand — only the format rotates, for even coverage.
+ROTATION_CONTENT_TYPES = ["faq_hub", "local_page", "vertical_page", "data_stats", "comparison"]
+
+
+def rotated_content_type(seed: int, today: date | None = None) -> str:
+    """Deterministic day-by-day rotation through the content types, staggered
+    by ``seed`` (brand index) so brands aren't all on the same type the same day.
+    """
+    day = (today or date.today()).toordinal()
+    return ROTATION_CONTENT_TYPES[(day + seed) % len(ROTATION_CONTENT_TYPES)]
+
+
 def pick_from_pool(pool: list[dict], known: list[str], limit: int) -> list[dict]:
     """Walk ``pool`` in order, skip anything similar to ``known``, take up to ``limit``.
 
@@ -245,7 +259,7 @@ class TopicDiscoveryService:
         sources_active = {"citation_gap": bool(gaps_by_brand), "search_demand": False, "coverage": True}
         today_primary = todays_primary_bucket()
 
-        for brand in brands:
+        for brand_index, brand in enumerate(brands):
             if len(queued) >= max_total:
                 break
 
@@ -285,6 +299,19 @@ class TopicDiscoveryService:
                     picked += pick_from_pool(pool, known, min(1, _budget()))
                 if _budget() > 0:
                     picked += pick_from_pool(coverage_pool, known, _budget())
+
+            # The second (and any later) daily pick rotates its content type for
+            # variety/coverage — the query still comes from real demand. The
+            # first pick keeps its demand-optimal (inferred/recommended) type;
+            # the rotation skips a slot if it would duplicate that, so the two
+            # daily posts never share a content type on the same day.
+            first_type = picked[0]["content_type"] if picked else None
+            for i, cand in enumerate(picked):
+                if i >= 1:
+                    rt = rotated_content_type(brand_index + i)
+                    if rt == first_type:
+                        rt = rotated_content_type(brand_index + i + 1)
+                    cand["content_type"] = rt
 
             for cand in picked:
                 item = ContentQueue(

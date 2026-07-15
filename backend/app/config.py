@@ -118,7 +118,9 @@ class Settings(BaseSettings):
 
     claude_model: str = "claude-sonnet-4-6"
     # Max pending queue items generated per brand, each daily content run.
-    content_generation_max_per_brand: int = 1
+    # 2 = two posts per brand per day (the first from the day's primary demand
+    # signal, the second a rotated content type on another demand query).
+    content_generation_max_per_brand: int = 2
     # Publish drafts automatically when they pass validation (monitor-after
     # model). Set false to restore the approve-before-publish gate — drafts
     # then wait in Content Review as before.
@@ -132,10 +134,12 @@ class Settings(BaseSettings):
     schema_auto_publish_enabled: bool = False
 
     # Daily automated topic discovery (GSC demand + citation gaps + coverage).
-    # max_per_brand=1 -> alternate trend/AEO-gap picks day-to-day (recommended
-    # starting cadence). max_per_brand>=2 -> pick one of each, same day.
+    # max_per_brand=1 -> alternate trend/AEO-gap picks day-to-day. max_per_brand=2
+    # -> one demand pick of each philosophy per brand, same day, feeding the two
+    # daily posts (the second gets a rotated content type). Keep this equal to
+    # content_generation_max_per_brand so the queue can supply every post.
     topic_discovery_enabled: bool = True
-    topic_discovery_max_per_brand: int = 1
+    topic_discovery_max_per_brand: int = 2
     topic_discovery_max_total: int = 10
     topic_discovery_min_impressions: int = 20
 
