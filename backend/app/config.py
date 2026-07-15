@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     slack_webhook_url: str = ""
     # Discord channel webhook — receives published-post notifications with links.
     discord_webhook_url: str = ""
+    # Dedicated Discord channel for all AEO-schema notifications (publishes +
+    # validation/ready reports) — the #aeo-schema-posts channel. Falls back to
+    # discord_webhook_url when unset so schema posts still land somewhere.
+    discord_schema_webhook_url: str = ""
     frontend_url: str = "http://localhost:5173"
 
     environment: str = "development"
