@@ -13,6 +13,7 @@ from app.services.content_enrichment import (
     ensure_author_byline,
     ensure_tldr_block,
     inject_internal_links,
+    normalize_article_headings,
     strip_phone_placeholder,
 )
 from app.services.content_image_pipeline import ContentImagePipeline
@@ -122,6 +123,7 @@ class ContentGenerationService:
             raise ValueError(f"WordPress credentials not configured for {brand_id}")
 
         html_content = _inject_brand_phone(draft.html_content or "", brand.phone)
+        html_content = normalize_article_headings(html_content, draft.title or "")
         schema_json, schema_types = build_combined_schema(
             html_content,
             brand,
@@ -314,6 +316,7 @@ class ContentGenerationService:
         featured_media_id = image_result.featured_media_id
         images_status = image_result.status
 
+        html_content = normalize_article_headings(html_content, draft_title)
         schema_json, schema_types = build_combined_schema(
             html_content, brand, draft_title, content_type
         )
@@ -540,6 +543,7 @@ class ContentGenerationService:
             raise ValueError("Brand not found")
 
         html_content = _inject_brand_phone(html_content, brand.phone)
+        html_content = normalize_article_headings(html_content, draft.title or "")
         is_valid, failure_reason = await validate_answer_first(
             html_content, draft.target_query or "", draft.content_type or "faq_hub"
         )

@@ -370,6 +370,32 @@ def extract_steps_from_html(html: str) -> list[str]:
     return []
 
 
+_HOWTO_HEADING_HINTS = (
+    "step", "protocol", "procedure", "process", "checklist", "how to",
+    "what to do", "what should", "immediately", "do if", "respond", "guide to",
+)
+
+
+def extract_howto(html: str) -> tuple[str, list[str]]:
+    """Find a step-by-step ordered list and the heading it sits under.
+
+    Returns (name, steps). Only matches an ordered list that sits under an
+    action/procedure heading (so a generic "top 5 reasons" <ol> isn't
+    mislabeled as HowTo), with at least two steps. Empty steps => no HowTo.
+    The heading becomes the HowTo name (more accurate than the article title).
+    """
+    soup = BeautifulSoup(html, "lxml")
+    for ol in soup.find_all("ol"):
+        items = [li.get_text(strip=True) for li in ol.find_all("li") if li.get_text(strip=True)]
+        if len(items) < 2:
+            continue
+        prev = ol.find_previous(["h2", "h3", "h1"])
+        heading = prev.get_text(strip=True) if prev else ""
+        if any(hint in heading.lower() for hint in _HOWTO_HEADING_HINTS):
+            return heading, items
+    return "", []
+
+
 def build_combined_schema(html: str, brand: Brand, title: str, content_type: str) -> tuple[str, list[str]]:
     """Build combined JSON-LD for content. Returns (json_string, schema_types)."""
     schemas = []
@@ -391,9 +417,9 @@ def build_combined_schema(html: str, brand: Brand, title: str, content_type: str
     schemas.append(article_data)
     types.append("Article")
 
-    steps = extract_steps_from_html(html)
+    howto_name, steps = extract_howto(html)
     if steps:
-        howto_data = json.loads(build_howto_schema(title, steps))
+        howto_data = json.loads(build_howto_schema(howto_name or title, steps))
         schemas.append(howto_data)
         types.append("HowTo")
 
