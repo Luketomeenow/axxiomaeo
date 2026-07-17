@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -19,6 +20,8 @@ from app.services.schema_service import (
 )
 from app.services.wordpress_service import WordPressService, schema_carrier_meta
 from slugify import slugify
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/schema", tags=["schema"])
 
@@ -330,33 +333,51 @@ async def approve_deployment(
         raise HTTPException(status_code=404, detail="Brand not found")
 
     wp = WordPressService()
-    if dep.wp_post_id:
-        result = await wp.update_post(
-            brand,
-            dep.wp_post_id,
-            schema_json=dep.schema_json or "",
-            post_type="pages",
+    if not wp.settings.wp_publish_configured(brand.id):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"WordPress credentials not configured for {brand.id} — set "
+                f"WP_APP_PASSWORD_{brand.id.upper()} in Railway, then retry."
+            ),
         )
-        # Ensure noindex on existing carrier pages
-        await wp._request(
-            brand,
-            "POST",
-            f"pages/{dep.wp_post_id}",
-            json={"meta": schema_carrier_meta()},
-        )
-    else:
-        slug = _deployment_slug(dep, brand.id)
-        result = await wp.create_post(
-            brand=brand,
-            title=dep.title or f"{brand.name} Schema",
-            content="",
-            slug=slug,
-            schema_json=dep.schema_json or "",
-            post_type="pages",
-            noindex=True,
-        )
-        dep.wp_post_id = result.get("post_id")
-        dep.wp_post_url = result.get("post_url")
+    try:
+        if dep.wp_post_id:
+            result = await wp.update_post(
+                brand,
+                dep.wp_post_id,
+                schema_json=dep.schema_json or "",
+                post_type="pages",
+            )
+            # Ensure noindex on existing carrier pages
+            await wp._request(
+                brand,
+                "POST",
+                f"pages/{dep.wp_post_id}",
+                json={"meta": schema_carrier_meta()},
+            )
+        else:
+            slug = _deployment_slug(dep, brand.id)
+            result = await wp.create_post(
+                brand=brand,
+                title=dep.title or f"{brand.name} Schema",
+                content="",
+                slug=slug,
+                schema_json=dep.schema_json or "",
+                post_type="pages",
+                noindex=True,
+            )
+            dep.wp_post_id = result.get("post_id")
+            dep.wp_post_url = result.get("post_url")
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Surface the real WordPress reason (login/permission/timeout) instead
+        # of a raw 500 that the browser would report as an opaque CORS error.
+        raise HTTPException(
+            status_code=502,
+            detail=f"WordPress publish failed for {brand.id}: {e}",
+        ) from e
 
     dep.status = "approved"
     dep.reviewer_id = user.get("sub", "unknown")
@@ -382,13 +403,19 @@ async def approve_deployment(
 
     # Announce on Discord (routes to #aeo-schema-posts via entity_type) so
     # manually-approved schema is visible there too — not just auto-published.
-    await NotificationService(db).create(
-        type="published",
-        title=f"Schema published: {brand.name} — {dep.schema_type}",
-        body=dep.wp_post_url or "",
-        entity_type="schema_deployment",
-        entity_id=deployment_id,
-    )
+    # Best-effort: the page is already live on WordPress, so a notification
+    # failure must not roll back / error the approve.
+    try:
+        await NotificationService(db).create(
+            type="published",
+            title=f"Schema published: {brand.name} — {dep.schema_type}",
+            body=dep.wp_post_url or "",
+            entity_type="schema_deployment",
+            entity_id=deployment_id,
+        )
+    except Exception as e:
+        logger.warning("Schema-publish notification failed (deployment %s): %s", deployment_id, e)
+
     return {"status": "deployed", "post_url": dep.wp_post_url}
 
 
