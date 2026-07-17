@@ -1,7 +1,7 @@
 """Post-generation enrichment: internal links, author byline."""
 import html as html_module
 import re
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -104,6 +104,94 @@ def normalize_article_headings(html: str, title: str = "") -> str:
         else:
             h1.name = "h2"  # keep the content, fix the level
     return str(soup)
+
+
+# Leftover markdown links the model emits despite "HTML only" — [text](url),
+# where url is an http(s) link or a site-relative /path. Bare fragments (#ref)
+# and scheme-less parens are ignored so footnotes/prose aren't touched.
+_MD_LINK_RE = re.compile(r"\[([^\]\n]+)\]\((https?://[^\s)]+|/[^\s)]*)\)")
+# Trailing characters that break an href when the model runs a URL into prose
+# or a markdown bracket (the "…/]" 404s came from exactly this).
+_HREF_TRAILING_JUNK = "]).,;:'\"“”’"
+
+
+def _brand_host(brand: Brand) -> str:
+    return urlparse(getattr(brand, "wp_url", "") or "").netloc.lower().replace("www.", "")
+
+
+def _clean_href(href: str) -> str:
+    href = (href or "").strip()
+    while href and href[-1] in _HREF_TRAILING_JUNK:
+        href = href[:-1]
+    return href.strip()
+
+
+def _internal_path(url: str, brand_host: str) -> str | None:
+    """Site-relative path if the URL is internal (relative or same host), else None."""
+    parsed = urlparse(url)
+    if not parsed.scheme and not parsed.netloc:
+        return (parsed.path or "/").rstrip("/") or "/"
+    if parsed.scheme in ("http", "https") and parsed.netloc.lower().replace("www.", "") == brand_host:
+        return (parsed.path or "/").rstrip("/") or "/"
+    return None
+
+
+def sanitize_links(html: str, brand: Brand, known_paths: set[str] | None = None) -> str:
+    """Strip broken / invented links from generated content before publish.
+
+    - Converts stray markdown links ``[text](url)`` to real anchors.
+    - Trims malformed hrefs (trailing ``] ) . ,`` etc.) — the cause of the
+      ``…/]`` 404s.
+    - Drops empty / ``javascript:`` links (keeps the text).
+    - Keeps external links and ``#`` / ``mailto:`` / ``tel:`` as-is.
+    - Internal links: when ``known_paths`` is given (generation / backfill),
+      an internal link whose path isn't a real published page is unwrapped —
+      the anchor text stays, the dead link goes. When ``known_paths`` is None
+      (a lightweight publish-time pass) internal links are only cleaned, not
+      existence-checked, so verified links added earlier aren't stripped.
+    """
+    if not html:
+        return html
+
+    converted = _MD_LINK_RE.sub(r'<a href="\2">\1</a>', html)
+    changed = converted != html
+    soup = BeautifulSoup(converted, "lxml")
+    host = _brand_host(brand)
+    validate_internal = known_paths is not None
+    known = known_paths or set()
+
+    for a in soup.find_all("a"):
+        raw = a.get("href", "")
+        href = _clean_href(raw)
+
+        if href.startswith(("#", "mailto:", "tel:")):
+            if href != raw:
+                a["href"] = href
+                changed = True
+            continue
+        if not href or href.lower().startswith("javascript:"):
+            a.unwrap()
+            changed = True
+            continue
+
+        path = _internal_path(href, host)
+        if path is None:  # external link — trust (prompt limits these to authoritative sources)
+            if href != raw:
+                a["href"] = href
+                changed = True
+            continue
+
+        if not validate_internal or path == "/" or path in known:
+            if href != raw:
+                a["href"] = href
+                changed = True
+        else:
+            a.unwrap()  # invented/broken internal link → keep the words, drop the 404
+            changed = True
+
+    # Return the original string untouched when nothing changed, so a valid
+    # post isn't needlessly re-serialized (and the backfill won't re-publish it).
+    return str(soup) if changed else html
 
 
 def inject_internal_links(

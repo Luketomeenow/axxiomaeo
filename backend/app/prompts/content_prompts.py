@@ -10,6 +10,7 @@ ALSO REQUIRED:
 - FRESHNESS: Include current-year references (2026) where citing stats, codes, or industry data.
 - IMAGES: Do NOT include <img> tags or image placeholders — images are inserted automatically after H1 and key H2 sections.
 - STEP-BY-STEP: When you describe a procedure or protocol (e.g. "what to do immediately"), put the steps in an ordered list (<ol><li>…</li></ol>) under a clear H2 — this is extracted as HowTo structured data.
+- INTERNAL LINKS: Do NOT invent links to other pages on this site (e.g. href="/some-guide/" or a full URL to this domain) — those pages may not exist and will 404. Refer to other topics in plain text; internal links are added automatically. Only use real <a href> links for the authoritative EXTERNAL sources named above (ASME, ADA, .gov).
 """
 
 FAQ_HUB_PROMPT = """

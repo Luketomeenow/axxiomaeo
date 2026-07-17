@@ -14,6 +14,7 @@ from app.services.content_enrichment import (
     ensure_tldr_block,
     inject_internal_links,
     normalize_article_headings,
+    sanitize_links,
     strip_phone_placeholder,
 )
 from app.services.content_image_pipeline import ContentImagePipeline
@@ -84,6 +85,23 @@ def _inject_brand_phone(html: str, phone: str | None) -> str:
     return strip_phone_placeholder(html)
 
 
+def _known_paths(pages: list[dict]) -> set[str]:
+    """Site-relative paths of a brand's existing WP posts/pages, normalized
+    (no trailing slash) to match sanitize_links' internal-link check."""
+    from urllib.parse import urlparse
+
+    paths: set[str] = set()
+    for page in pages or []:
+        url = page.get("url") or ""
+        path = urlparse(url).path.rstrip("/")
+        if path:
+            paths.add(path)
+        slug = (page.get("slug") or "").strip("/")
+        if slug:
+            paths.add("/" + slug)
+    return paths
+
+
 class ContentGenerationService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -124,6 +142,9 @@ class ContentGenerationService:
 
         html_content = _inject_brand_phone(draft.html_content or "", brand.phone)
         html_content = normalize_article_headings(html_content, draft.title or "")
+        # Last-gate cleanup of markdown/malformed links (existence-checked at
+        # generation; here we just clean, so verified links survive).
+        html_content = sanitize_links(html_content, brand)
         schema_json, schema_types = build_combined_schema(
             html_content,
             brand,
@@ -302,6 +323,9 @@ class ContentGenerationService:
         html_content = ensure_tldr_block(html_content, target_query)
         html_content = ensure_author_byline(html_content, brand, brand.author_name)
         html_content = inject_internal_links(html_content, brand, related)
+        # Drop any invented/broken links the model wrote before they can 404 —
+        # validated against the brand's real published pages/posts.
+        html_content = sanitize_links(html_content, brand, _known_paths(related_posts + related_pages))
 
         image_pipeline = ContentImagePipeline()
         image_result = await image_pipeline.enrich_with_images(
@@ -544,6 +568,7 @@ class ContentGenerationService:
 
         html_content = _inject_brand_phone(html_content, brand.phone)
         html_content = normalize_article_headings(html_content, draft.title or "")
+        html_content = sanitize_links(html_content, brand)
         is_valid, failure_reason = await validate_answer_first(
             html_content, draft.target_query or "", draft.content_type or "faq_hub"
         )
