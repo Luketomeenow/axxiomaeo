@@ -80,6 +80,32 @@ def ensure_tldr_block(html: str, target_query: str, max_words: int = 60) -> str:
     return str(soup)
 
 
+def normalize_article_headings(html: str, title: str = "") -> str:
+    """Keep the article body free of <h1> so the page has exactly one H1.
+
+    The generator emits an <h1> (used as the anchor for the TL;DR box), but
+    WordPress/the theme already renders the post title as the page H1 — so a
+    body H1 that repeats the title is a duplicate-H1 structural error. We drop a
+    body H1 that matches the title, and demote any other stray H1 to H2 so the
+    heading hierarchy stays valid (one H1 = the CMS title, the rest H2+).
+    """
+    if "<h1" not in html.lower():
+        return html
+
+    def _norm(text: str) -> str:
+        return re.sub(r"\s+", " ", (text or "").strip()).lower().rstrip("?").strip()
+
+    norm_title = _norm(title)
+    soup = BeautifulSoup(html, "lxml")
+    body = soup.find("body") or soup
+    for h1 in body.find_all("h1"):
+        if norm_title and _norm(h1.get_text()) == norm_title:
+            h1.decompose()  # duplicate of the CMS-rendered title
+        else:
+            h1.name = "h2"  # keep the content, fix the level
+    return str(soup)
+
+
 def inject_internal_links(
     html: str,
     brand: Brand,

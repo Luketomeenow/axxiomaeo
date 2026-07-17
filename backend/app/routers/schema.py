@@ -379,6 +379,16 @@ async def approve_deployment(
         )
     )
     await db.flush()
+
+    # Announce on Discord (routes to #aeo-schema-posts via entity_type) so
+    # manually-approved schema is visible there too — not just auto-published.
+    await NotificationService(db).create(
+        type="published",
+        title=f"Schema published: {brand.name} — {dep.schema_type}",
+        body=dep.wp_post_url or "",
+        entity_type="schema_deployment",
+        entity_id=deployment_id,
+    )
     return {"status": "deployed", "post_url": dep.wp_post_url}
 
 

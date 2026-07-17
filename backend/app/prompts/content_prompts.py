@@ -9,6 +9,7 @@ ALSO REQUIRED:
   AI will cite a competitor who covers the gaps.
 - FRESHNESS: Include current-year references (2026) where citing stats, codes, or industry data.
 - IMAGES: Do NOT include <img> tags or image placeholders — images are inserted automatically after H1 and key H2 sections.
+- STEP-BY-STEP: When you describe a procedure or protocol (e.g. "what to do immediately"), put the steps in an ordered list (<ol><li>…</li></ol>) under a clear H2 — this is extracted as HowTo structured data.
 """
 
 FAQ_HUB_PROMPT = """
