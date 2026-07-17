@@ -341,34 +341,48 @@ async def approve_deployment(
                 f"WP_APP_PASSWORD_{brand.id.upper()} in Railway, then retry."
             ),
         )
+    async def _update_carrier(post_id: int) -> dict:
+        res = await wp.update_post(
+            brand, post_id, schema_json=dep.schema_json or "", post_type="pages"
+        )
+        # Ensure noindex on existing carrier pages
+        await wp._request(brand, "POST", f"pages/{post_id}", json={"meta": schema_carrier_meta()})
+        return res
+
+    def _page_missing(err: Exception) -> bool:
+        msg = str(err).lower()
+        return "invalid post id" in msg or "404" in msg
+
     try:
+        result = None
+        # Try the recorded carrier page first; if it was deleted in WordPress
+        # (404 / "Invalid post ID"), self-heal by finding it by slug or making
+        # a fresh one — a stale wp_post_id shouldn't block re-publishing.
         if dep.wp_post_id:
-            result = await wp.update_post(
-                brand,
-                dep.wp_post_id,
-                schema_json=dep.schema_json or "",
-                post_type="pages",
-            )
-            # Ensure noindex on existing carrier pages
-            await wp._request(
-                brand,
-                "POST",
-                f"pages/{dep.wp_post_id}",
-                json={"meta": schema_carrier_meta()},
-            )
-        else:
+            try:
+                result = await _update_carrier(dep.wp_post_id)
+            except ValueError as e:
+                if not _page_missing(e):
+                    raise
+                dep.wp_post_id = None
+        if result is None:
             slug = _deployment_slug(dep, brand.id)
-            result = await wp.create_post(
-                brand=brand,
-                title=dep.title or f"{brand.name} Schema",
-                content="",
-                slug=slug,
-                schema_json=dep.schema_json or "",
-                post_type="pages",
-                noindex=True,
-            )
-            dep.wp_post_id = result.get("post_id")
-            dep.wp_post_url = result.get("post_url")
+            existing = await wp.find_by_slug(brand, slug, post_type="pages")
+            if existing:
+                dep.wp_post_id = existing["id"]
+                result = await _update_carrier(existing["id"])
+            else:
+                result = await wp.create_post(
+                    brand=brand,
+                    title=dep.title or f"{brand.name} Schema",
+                    content="",
+                    slug=slug,
+                    schema_json=dep.schema_json or "",
+                    post_type="pages",
+                    noindex=True,
+                )
+                dep.wp_post_id = result.get("post_id")
+        dep.wp_post_url = result.get("post_url") or dep.wp_post_url
     except HTTPException:
         raise
     except Exception as e:

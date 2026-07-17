@@ -56,29 +56,46 @@ def _pick_target(desired: list[dict], existing: dict[str, SchemaDeployment]):
     return None, None
 
 
+def _page_missing(err: Exception) -> bool:
+    msg = str(err).lower()
+    return "invalid post id" in msg or "404" in msg
+
+
 async def _publish_one(wp: WordPressService, brand: Brand, item: dict, dep: SchemaDeployment | None) -> dict:
-    """Create or update the brand's carrier page for this schema slot."""
+    """Create or update the brand's carrier page for this schema slot.
+
+    Self-heals a stale/deleted page id (404 / "Invalid post ID") by finding the
+    page by slug or recreating it, so a carrier page deleted in WordPress
+    doesn't wedge the slot on every run. Returns the WP result; the caller
+    updates the deployment's wp_post_id/url from it.
+    """
     schema_json = item["schema_json"]
-    post_id = dep.wp_post_id if dep else None
+    slug = _slug_for(brand.id, item)
 
-    # Reuse an existing carrier page (recorded or found by slug) so re-runs
-    # update in place instead of creating duplicate WordPress pages.
-    if not post_id:
-        found = await wp.find_by_slug(brand, _slug_for(brand.id, item), post_type="pages")
-        if found:
-            post_id = found["id"]
-
-    if post_id:
-        result = await wp.update_post(brand, post_id, schema_json=schema_json, post_type="pages")
+    async def _update(post_id: int) -> dict:
+        res = await wp.update_post(brand, post_id, schema_json=schema_json, post_type="pages")
         # update_post doesn't carry the noindex meta — re-assert it (matches approve).
         await wp._request(brand, "POST", f"pages/{post_id}", json={"meta": schema_carrier_meta()})
-        return result
+        return res
+
+    # Update the recorded page if we have one; a stale id falls through.
+    if dep and dep.wp_post_id:
+        try:
+            return await _update(dep.wp_post_id)
+        except ValueError as e:
+            if not _page_missing(e):
+                raise
+
+    # No (valid) recorded page — reuse one found by slug, else create fresh.
+    found = await wp.find_by_slug(brand, slug, post_type="pages")
+    if found:
+        return await _update(found["id"])
 
     return await wp.create_post(
         brand=brand,
         title=item["title"],
         content="",
-        slug=_slug_for(brand.id, item),
+        slug=slug,
         schema_json=schema_json,
         post_type="pages",
         noindex=True,
