@@ -39,7 +39,7 @@ export function KpiStrip({ data }: Props) {
 
   return (
     <div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-2">
         <KpiCard
           label="AI Visibility"
           value={`${data.avg_visibility_pct ?? data.citation_share}%`}
@@ -60,6 +60,15 @@ export function KpiStrip({ data }: Props) {
           label="AI-Referred Sessions"
           value={data.ai_referred_sessions}
           sub={`Schema ${data.schema_coverage_pct}% · ${data.content_published_mtd} posts MTD`}
+        />
+        <KpiCard
+          label="AI Conversions"
+          value={data.ai_referred_conversions ?? 0}
+          sub={
+            (data.ai_referred_conversions ?? 0) > 0
+              ? `${data.ai_conversion_rate ?? 0}% of AI sessions convert (30d)`
+              : "GA4 key events from AI visitors (30d)"
+          }
         />
       </div>
       <p className="text-xs text-muted text-right font-mono">Last updated {lastUpdated}</p>
