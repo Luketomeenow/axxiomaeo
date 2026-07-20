@@ -36,6 +36,10 @@ export function SearchVsGenerativePanel({ data }: Props) {
             <Metric label="Avg. position" value={search.visibility.avg_position || "—"} />
             <p className="text-xs uppercase tracking-wide text-muted/70 mt-4 mb-1">Traffic</p>
             <Metric label="Organic search sessions" value={fmt(search.traffic.organic_search_sessions)} />
+            <Metric
+              label="Conversions (30d)"
+              value={`${fmt(search.traffic.conversions ?? 0)} (${search.traffic.conversion_rate ?? 0}%)`}
+            />
           </>
         ) : (
           <p className="text-sm text-muted">
@@ -58,6 +62,10 @@ export function SearchVsGenerativePanel({ data }: Props) {
         <Metric label="Share of voice" value={generative.visibility.share_of_voice} suffix="%" />
         <p className="text-xs uppercase tracking-wide text-muted/70 mt-4 mb-1">Traffic</p>
         <Metric label="AI-referred sessions" value={fmt(generative.traffic.ai_referred_sessions)} />
+        <Metric
+          label="Conversions (30d)"
+          value={`${fmt(generative.traffic.conversions ?? 0)} (${generative.traffic.conversion_rate ?? 0}%)`}
+        />
       </div>
     </div>
   );

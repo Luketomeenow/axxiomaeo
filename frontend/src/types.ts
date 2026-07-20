@@ -7,6 +7,8 @@ export interface DashboardData {
   topic_coverage_pct?: number;
   platform_consensus_pct?: number;
   ai_referred_sessions: number;
+  ai_referred_conversions?: number;
+  ai_conversion_rate?: number;
   content_published_mtd: number;
   schema_coverage_pct: number;
   last_updated: string;
@@ -72,7 +74,11 @@ export interface SearchVsGenerative {
   search: {
     configured: boolean;
     visibility: { impressions: number; clicks: number; avg_position: number };
-    traffic: { organic_search_sessions: number };
+    traffic: {
+      organic_search_sessions: number;
+      conversions?: number;
+      conversion_rate?: number;
+    };
   };
   generative: {
     configured: boolean;
@@ -81,7 +87,11 @@ export interface SearchVsGenerative {
       avg_visibility_pct: number;
       share_of_voice: number;
     };
-    traffic: { ai_referred_sessions: number };
+    traffic: {
+      ai_referred_sessions: number;
+      conversions?: number;
+      conversion_rate?: number;
+    };
   };
   last_updated: string;
 }
@@ -279,6 +289,7 @@ export interface ReportListItem {
   report_month: string | null;
   overall_citation_share: number;
   ai_referred_sessions: number | null;
+  ai_referred_conversions?: number | null;
   content_pieces_published: number | null;
   schema_coverage_pct: number;
   created_at: string | null;
@@ -295,6 +306,7 @@ export interface MonthlyReportDetail {
   report_month?: string | null;
   overall_citation_share?: number;
   ai_referred_sessions?: number | null;
+  ai_referred_conversions?: number | null;
   content_pieces_published?: number | null;
   schema_coverage_pct?: number;
   created_at?: string | null;

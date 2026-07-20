@@ -98,10 +98,12 @@ class ReportService:
 
         brands = await self.db.execute(select(Brand))
         ai_sessions = 0
+        ai_conversions = 0
         for brand in brands.scalars().all():
             if brand.ga4_property_id:
                 data = await self.ga4.get_ai_referred_sessions(brand.ga4_property_id)
                 ai_sessions += data.get("sessions", 0)
+                ai_conversions += data.get("conversions", 0)
 
         schema_coverage = round(schema_valid / schema_total * 100, 1) if schema_total else 0
 
@@ -114,6 +116,10 @@ class ReportService:
             "topic_coverage_pct": topic_coverage.get("coverage_pct", 0),
             "platform_consensus_pct": await self._platform_consensus_pct(citation_rows),
             "ai_referred_sessions": ai_sessions,
+            # GA4 key events (calls/forms) from AI-referred visitors — the
+            # closest thing to "AEO converted someone" the platform can show.
+            "ai_referred_conversions": ai_conversions,
+            "ai_conversion_rate": round(ai_conversions / ai_sessions * 100, 2) if ai_sessions else 0,
             "content_published_mtd": content_count or 0,
             "schema_coverage_pct": schema_coverage,
             "last_updated": now.isoformat(),
@@ -378,9 +384,11 @@ class ReportService:
 
         # --- Traditional search traffic (GA4 Organic Search sessions) ---
         organic_sessions = 0
+        organic_conversions = 0
         for brand in ga4_brands:
             data = await self.ga4.get_organic_search_sessions(brand.ga4_property_id)
             organic_sessions += data.get("sessions", 0)
+            organic_conversions += data.get("conversions", 0)
 
         return {
             "search": {
@@ -390,7 +398,13 @@ class ReportService:
                     "clicks": gsc_clicks,
                     "avg_position": avg_position,
                 },
-                "traffic": {"organic_search_sessions": organic_sessions},
+                "traffic": {
+                    "organic_search_sessions": organic_sessions,
+                    "conversions": organic_conversions,
+                    "conversion_rate": round(organic_conversions / organic_sessions * 100, 2)
+                    if organic_sessions
+                    else 0,
+                },
             },
             "generative": {
                 "configured": True,
@@ -399,7 +413,11 @@ class ReportService:
                     "avg_visibility_pct": kpis["avg_visibility_pct"],
                     "share_of_voice": kpis["share_of_voice"],
                 },
-                "traffic": {"ai_referred_sessions": kpis["ai_referred_sessions"]},
+                "traffic": {
+                    "ai_referred_sessions": kpis["ai_referred_sessions"],
+                    "conversions": kpis["ai_referred_conversions"],
+                    "conversion_rate": kpis["ai_conversion_rate"],
+                },
             },
             "last_updated": datetime.utcnow().isoformat(),
         }
@@ -572,6 +590,7 @@ class ReportService:
 
         report.overall_citation_share = kpis["citation_share"]
         report.ai_referred_sessions = kpis["ai_referred_sessions"]
+        report.ai_referred_conversions = kpis["ai_referred_conversions"]
         report.content_pieces_published = kpis["content_published_mtd"]
         report.schema_coverage_pct = kpis["schema_coverage_pct"]
         report.gap_queries = gap_queries[:10]
