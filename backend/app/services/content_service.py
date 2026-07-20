@@ -167,13 +167,39 @@ class ContentGenerationService:
         piece = existing.scalar_one_or_none()
 
         if piece and piece.wp_post_id:
-            result = await self.wp.update_post(
-                brand,
-                piece.wp_post_id,
-                html_content,
-                schema_json,
-                featured_media=draft.featured_media_id,
-            )
+            try:
+                result = await self.wp.update_post(
+                    brand,
+                    piece.wp_post_id,
+                    html_content,
+                    schema_json,
+                    featured_media=draft.featured_media_id,
+                )
+            except ValueError as exc:
+                if "invalid post id" not in str(exc).lower():
+                    raise
+                # Stored id is stale (post deleted/recreated on the WP side) —
+                # self-heal by slug like the schema carrier does; if the slug
+                # is gone from WP too, publish fresh instead of failing.
+                live = await self.wp.find_by_slug(brand, slug)
+                if live:
+                    piece.wp_post_id = live["id"]
+                    result = await self.wp.update_post(
+                        brand,
+                        live["id"],
+                        html_content,
+                        schema_json,
+                        featured_media=draft.featured_media_id,
+                    )
+                else:
+                    result = await self.wp.create_post(
+                        brand=brand,
+                        title=draft.title or "",
+                        content=html_content,
+                        slug=slug,
+                        schema_json=schema_json,
+                        featured_media=draft.featured_media_id,
+                    )
         else:
             result = await self.wp.create_post(
                 brand=brand,
