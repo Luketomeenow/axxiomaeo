@@ -6,6 +6,7 @@ interface Props {
     category?: string;
     platform?: string;
     funnel_stage?: string;
+    label?: string;
     citation_share: number;
   }[];
   dataKey: string;
