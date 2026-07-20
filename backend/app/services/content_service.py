@@ -10,6 +10,7 @@ from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece, ContentQueue
 from app.services.claude_service import ClaudeService, validate_answer_first
 from app.services.content_enrichment import (
+    _brand_host,
     ensure_author_byline,
     ensure_tldr_block,
     inject_internal_links,
@@ -17,6 +18,7 @@ from app.services.content_enrichment import (
     sanitize_links,
     strip_phone_placeholder,
 )
+from app.services.link_verification import verify_external_links
 from app.services.content_image_pipeline import ContentImagePipeline
 from app.services.notification_service import NotificationService
 from app.services.schema_service import build_combined_schema
@@ -145,6 +147,9 @@ class ContentGenerationService:
         # Last-gate cleanup of markdown/malformed links (existence-checked at
         # generation; here we just clean, so verified links survive).
         html_content = sanitize_links(html_content, brand)
+        # External links are re-probed at publish time — a URL can die between
+        # generation and approval, and this is the last gate before the web.
+        html_content = await verify_external_links(html_content, skip_hosts={_brand_host(brand)})
         schema_json, schema_types = build_combined_schema(
             html_content,
             brand,
@@ -324,8 +329,10 @@ class ContentGenerationService:
         html_content = ensure_author_byline(html_content, brand, brand.author_name)
         html_content = inject_internal_links(html_content, brand, related)
         # Drop any invented/broken links the model wrote before they can 404 —
-        # validated against the brand's real published pages/posts.
+        # internal links validated against the brand's real published
+        # pages/posts, external links probed against the live web.
         html_content = sanitize_links(html_content, brand, _known_paths(related_posts + related_pages))
+        html_content = await verify_external_links(html_content, skip_hosts={_brand_host(brand)})
 
         image_pipeline = ContentImagePipeline()
         image_result = await image_pipeline.enrich_with_images(
@@ -569,6 +576,7 @@ class ContentGenerationService:
         html_content = _inject_brand_phone(html_content, brand.phone)
         html_content = normalize_article_headings(html_content, draft.title or "")
         html_content = sanitize_links(html_content, brand)
+        html_content = await verify_external_links(html_content, skip_hosts={_brand_host(brand)})
         is_valid, failure_reason = await validate_answer_first(
             html_content, draft.target_query or "", draft.content_type or "faq_hub"
         )

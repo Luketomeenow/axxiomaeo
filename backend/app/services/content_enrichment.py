@@ -143,7 +143,8 @@ def sanitize_links(html: str, brand: Brand, known_paths: set[str] | None = None)
     - Trims malformed hrefs (trailing ``] ) . ,`` etc.) — the cause of the
       ``…/]`` 404s.
     - Drops empty / ``javascript:`` links (keeps the text).
-    - Keeps external links and ``#`` / ``mailto:`` / ``tel:`` as-is.
+    - Keeps external links (probed live by ``link_verification`` afterwards)
+      and ``#`` / ``mailto:`` / ``tel:`` as-is.
     - Internal links: when ``known_paths`` is given (generation / backfill),
       an internal link whose path isn't a real published page is unwrapped —
       the anchor text stays, the dead link goes. When ``known_paths`` is None
@@ -175,7 +176,7 @@ def sanitize_links(html: str, brand: Brand, known_paths: set[str] | None = None)
             continue
 
         path = _internal_path(href, host)
-        if path is None:  # external link — trust (prompt limits these to authoritative sources)
+        if path is None:  # external link — existence-checked separately (link_verification)
             if href != raw:
                 a["href"] = href
                 changed = True

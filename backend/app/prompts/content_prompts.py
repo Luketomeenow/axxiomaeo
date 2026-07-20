@@ -2,15 +2,20 @@ SHARED_AEO_BLOCK = """
 ALSO REQUIRED:
 - Immediately after H1, include a <div class="aeo-tldr"> with a 1-sentence direct answer to the target query.
 - Include author byline: <p class="aeo-author-byline"><em>By [Technician Name], IUEC-Certified Elevator Technician at {brand_name}</em></p>
-- Link to authoritative sources where citing codes: ASME (https://www.asme.org), ADA (https://www.ada.gov)
-- Use real outbound links when referencing regulations (href to official .gov or asme.org URLs)
+- EXTERNAL LINKS: when citing codes/regulations, link ONLY to these exact verified URLs — never construct,
+  guess, or extend a URL into a deeper path (deep links rot and 404; any unverifiable href gets stripped):
+    ASME Codes & Standards: https://www.asme.org/codes-standards
+    ADA: https://www.ada.gov/
+    OSHA: https://www.osha.gov/
+  Name the code inline as anchor text (e.g. "ASME A17.1 Safety Code for Elevators and Escalators") but the
+  href MUST be one of the URLs above.
 - TOPIC COVERAGE (query fan-out): Cover the full topic cluster — related sub-questions AI might search for
   (cost, timeline, compliance, equipment, vendor comparison, local service). If the page only covers basics,
   AI will cite a competitor who covers the gaps.
 - FRESHNESS: Include current-year references (2026) where citing stats, codes, or industry data.
 - IMAGES: Do NOT include <img> tags or image placeholders — images are inserted automatically after H1 and key H2 sections.
 - STEP-BY-STEP: When you describe a procedure or protocol (e.g. "what to do immediately"), put the steps in an ordered list (<ol><li>…</li></ol>) under a clear H2 — this is extracted as HowTo structured data.
-- INTERNAL LINKS: Do NOT invent links to other pages on this site (e.g. href="/some-guide/" or a full URL to this domain) — those pages may not exist and will 404. Refer to other topics in plain text; internal links are added automatically. Only use real <a href> links for the authoritative EXTERNAL sources named above (ASME, ADA, .gov).
+- INTERNAL LINKS: Do NOT invent links to other pages on this site (e.g. href="/some-guide/" or a full URL to this domain) — those pages may not exist and will 404. Refer to other topics in plain text; internal links are added automatically. Only use <a href> links for the exact verified EXTERNAL URLs listed above.
 """
 
 FAQ_HUB_PROMPT = """

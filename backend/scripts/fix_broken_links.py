@@ -3,7 +3,9 @@
 
 Re-runs the link sanitizer over each published post's stored generated HTML —
 converting stray markdown links, trimming malformed hrefs (the "…/]" 404s), and
-unwrapping internal links to pages that don't exist — then re-publishes the
+unwrapping internal links to pages that don't exist — then probes every
+EXTERNAL link against the live web (dead ones are re-pointed to a curated
+fallback or unwrapped; e.g. invented asme.org deep links) and re-publishes the
 cleaned HTML to WordPress. Internal links are validated against each brand's
 real published posts/pages (fetched live from WP).
 
@@ -20,6 +22,7 @@ Dry-run by default (reports what would change, writes nothing). Pass --apply.
 """
 import argparse
 import asyncio
+import logging
 import sys
 from pathlib import Path
 
@@ -30,9 +33,14 @@ from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece
-from app.services.content_enrichment import sanitize_links
+from app.services.content_enrichment import _brand_host, sanitize_links
 from app.services.content_service import _inject_brand_phone, _known_paths
+from app.services.link_verification import verify_external_links
 from app.services.wordpress_service import WordPressService
+
+# Surface link_verification's INFO lines (which URL died, what replaced it).
+logging.basicConfig(level=logging.WARNING, format="        %(message)s")
+logging.getLogger("app.services.link_verification").setLevel(logging.INFO)
 
 
 async def _latest_draft_html(session, brand_id: str, slug: str | None) -> ContentDraft | None:
@@ -101,6 +109,7 @@ async def main() -> int:
 
                 original = _inject_brand_phone(draft.html_content, brand.phone)
                 cleaned = sanitize_links(original, brand, known)
+                cleaned = await verify_external_links(cleaned, skip_hosts={_brand_host(brand)})
                 if cleaned == original:
                     continue
 
