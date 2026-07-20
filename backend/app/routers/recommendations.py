@@ -1,14 +1,16 @@
 """Recommendations Inbox — approve a ranked citation-gap rec into action.
 
 GET  /api/recommendations            ranked, explained content recommendations
-POST /api/recommendations/{key}/approve   enqueue + generate (auto-publishes on
-                                           validation, same monitor-after path)
+POST /api/recommendations/{key}/approve   enqueue + generate a draft; the draft
+                                           lands in Content Review (pending_review)
+                                           for human approval before publish
 POST /api/recommendations/{key}/dismiss    suppress the rec for a cooldown window
 
 Approve reuses the daily topic-discovery enqueue shape (source/source_detail
-provenance) and the existing background generation trigger, so an approved
-recommendation is indistinguishable from an auto-discovered topic downstream —
-including the human-approve/auto-publish gate already in place.
+provenance) and the existing background generation trigger. Unlike the daily
+worker (which may auto-publish its own queue items), an approved recommendation
+always stops at Content Review — approving the rec approves generating the
+draft, not publishing it.
 """
 
 import logging
@@ -98,7 +100,7 @@ async def approve_recommendation(
     return {
         "status": "approved",
         "queue_id": queue.id,
-        "message": "Queued and generating — will auto-publish once it passes validation",
+        "message": "Generating draft — review and publish it from Content Review",
     }
 
 
