@@ -43,6 +43,26 @@ logging.basicConfig(level=logging.WARNING, format="        %(message)s")
 logging.getLogger("app.services.link_verification").setLevel(logging.INFO)
 
 
+async def _update_healing_stale_id(wp, brand, piece, cleaned: str) -> str:
+    """Update the WP post; when the stored wp_post_id is stale (WP answers
+    404 "Invalid post ID" because the post was deleted/recreated on the WP
+    side), re-resolve the live id by slug, persist it on the piece, and retry.
+    Returns "ok", "healed", or "missing" (slug gone from WP entirely)."""
+    try:
+        await wp.update_post(brand, piece.wp_post_id, content=cleaned, post_type="posts")
+        return "ok"
+    except ValueError as e:
+        if "invalid post id" not in str(e).lower():
+            raise
+    live = await wp.find_by_slug(brand, piece.slug, post_type="posts")
+    if not live:
+        return "missing"
+    piece.wp_post_id = live["id"]
+    piece.wp_post_url = live["url"]
+    await wp.update_post(brand, live["id"], content=cleaned, post_type="posts")
+    return "healed"
+
+
 async def _latest_draft_html(session, brand_id: str, slug: str | None) -> ContentDraft | None:
     if not slug:
         return None
@@ -66,7 +86,7 @@ async def main() -> int:
     args = parser.parse_args()
 
     wp = WordPressService()
-    scanned = changed = skipped = failed = 0
+    scanned = changed = skipped = failed = healed = missing = 0
 
     async with AsyncSessionLocal() as session:
         brands_q = select(Brand).order_by(Brand.id)
@@ -118,7 +138,14 @@ async def main() -> int:
                 print(f"  FIX   {piece.slug} — anchors {before}->{after}  {piece.wp_post_url or ''}")
                 if args.apply:
                     try:
-                        await wp.update_post(brand, piece.wp_post_id, content=cleaned, post_type="posts")
+                        outcome = await _update_healing_stale_id(wp, brand, piece, cleaned)
+                        if outcome == "missing":
+                            missing += 1
+                            print(f"        ! slug not on WordPress anymore — stored post id {piece.wp_post_id} is an orphan")
+                            continue
+                        if outcome == "healed":
+                            healed += 1
+                            print(f"        ~ stale post id healed by slug -> {piece.wp_post_id}")
                         draft.html_content = cleaned
                         await session.commit()
                     except Exception as e:  # keep going; one bad post shouldn't stop the sweep
@@ -127,7 +154,7 @@ async def main() -> int:
 
     mode = "APPLIED" if args.apply else "DRY-RUN (nothing written — pass --apply to execute)"
     print(f"\n{mode}: scanned {scanned}, {'fixed' if args.apply else 'would fix'} {changed}, "
-          f"skipped {skipped}, failed {failed}")
+          f"skipped {skipped}, failed {failed}, stale ids healed {healed}, missing on WP {missing}")
     return 1 if failed else 0
 
 
