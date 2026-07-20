@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Pagination, usePaged } from "../components/Pagination";
 import { SchemaPreview } from "../components/SchemaPreview";
 import { apiFetch } from "../lib/api";
 import type { Brand, PublishedSchema, PublishedSchemaDetail } from "../types";
+
+const PUBLISHED_PAGE_SIZE = 8;
 
 const SOURCE_LABELS: Record<PublishedSchema["source"], string> = {
   brand_schema: "Brand schema",
@@ -42,6 +45,7 @@ export function PublishedSchemaPage() {
   });
 
   const items = data ?? [];
+  const paged = usePaged(items, PUBLISHED_PAGE_SIZE);
 
   const loadDetail = async (item: PublishedSchema) => {
     setSelected(item);
@@ -149,7 +153,7 @@ export function PublishedSchemaPage() {
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
+                paged.slice.map((item) => (
                   <tr
                     key={`${item.source}-${item.id}`}
                     className={`border-t border-border cursor-pointer hover:bg-panel-hover ${
@@ -179,6 +183,13 @@ export function PublishedSchemaPage() {
               )}
             </tbody>
           </table>
+          <Pagination
+            page={paged.page}
+            pageSize={PUBLISHED_PAGE_SIZE}
+            total={paged.total}
+            onPage={paged.setPage}
+            label="published schemas"
+          />
         </div>
 
         {selected && (

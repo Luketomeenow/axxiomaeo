@@ -1,11 +1,10 @@
 import asyncio
-import base64
-import json
 import logging
 from datetime import date, timedelta
 
 from app.config import get_settings
 from app.schemas.brand import normalize_ga4_property_id
+from app.services.google_credentials import load_service_account_info
 
 logger = logging.getLogger(__name__)
 
@@ -61,13 +60,12 @@ class GA4Service:
     def _get_credentials(self):
         if self._credentials:
             return self._credentials
-        sa_json = get_settings().google_service_account_json
-        if not sa_json:
+        info = load_service_account_info(get_settings().google_service_account_json)
+        if not info:
             return None
         try:
             from google.oauth2 import service_account
 
-            info = json.loads(base64.b64decode(sa_json).decode())
             self._credentials = service_account.Credentials.from_service_account_info(info)
             return self._credentials
         except Exception as e:

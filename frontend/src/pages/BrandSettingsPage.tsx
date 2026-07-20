@@ -247,8 +247,14 @@ export function BrandSettingsPage() {
             value={values.gsc_site_url}
             onChange={(e) => setForm({ ...form, gsc_site_url: e.target.value })}
             className="w-full border border-border rounded px-3 py-2 text-sm"
-            placeholder="https://example.com/"
+            placeholder="sc-domain:example.com or https://example.com/"
           />
+          <p className="text-xs text-muted/80 mt-1">
+            Must match the Search Console property exactly: <code>sc-domain:example.com</code> for a
+            domain property, or the full URL prefix incl. trailing slash. The Google service account
+            must be added as a user on that property. Powers the Search demand tab and
+            search-vs-generative comparison.
+          </p>
         </div>
         <div>
           <label className="block text-xs font-medium text-muted mb-1">
