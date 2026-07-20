@@ -270,9 +270,16 @@ function SearchDemandTab() {
                     {active.search_queries.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-4 py-6 text-center text-muted/80">
-                          {active.gsc_site_url
-                            ? "No GSC data for this brand yet."
-                            : "No GSC URL set for this brand (Brand Settings)."}
+                          {active.gsc_site_url ? (
+                            "No GSC data for this brand yet."
+                          ) : (
+                            <>
+                              No GSC URL set for this brand — add it in Brand Settings as{" "}
+                              <code className="text-cyan">sc-domain:yourdomain.com</code> (domain
+                              property) or the exact <code className="text-cyan">https://…/</code>{" "}
+                              prefix, and grant the Google service account access in Search Console.
+                            </>
+                          )}
                         </td>
                       </tr>
                     ) : (

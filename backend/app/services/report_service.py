@@ -32,7 +32,14 @@ class ReportService:
         self.ga4 = GA4Service()
         self.gsc = GSCService()
 
-    async def get_dashboard_kpis(self) -> dict:
+    async def get_dashboard_kpis(
+        self,
+        ga4_start: str | None = None,
+        ga4_end: str | None = None,
+    ) -> dict:
+        """Live KPI snapshot. GA4 traffic/conversions default to the rolling
+        30-day window (dashboard); pass ga4_start/ga4_end (ISO dates) to pin
+        them to an exact period (the monthly report uses the calendar month)."""
         now = datetime.utcnow()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
@@ -101,7 +108,9 @@ class ReportService:
         ai_conversions = 0
         for brand in brands.scalars().all():
             if brand.ga4_property_id:
-                data = await self.ga4.get_ai_referred_sessions(brand.ga4_property_id)
+                data = await self.ga4.get_ai_referred_sessions(
+                    brand.ga4_property_id, start_date=ga4_start, end_date=ga4_end
+                )
                 ai_sessions += data.get("sessions", 0)
                 ai_conversions += data.get("conversions", 0)
 
@@ -311,6 +320,7 @@ class ReportService:
                     "brand_id": r.brand_id,
                     "platform": r.platform,
                     "citation_url": r.citation_url,
+                    "visibility_pct": r.visibility_pct,
                 }
             )
             if len(rows) >= limit:
@@ -435,9 +445,12 @@ class ReportService:
         if not brands:
             return {"configured": True, "brands": [], "message": "No GSC site URLs in Brand Settings"}
 
+        # One cross-brand fetch, un-capped enough that no brand's gaps are
+        # crowded out by another's (the default top-50 is cross-brand, so a
+        # brand whose rows sort later used to get an empty query list here).
+        gaps = await self.get_gap_queries(limit=500)
         out = []
         for brand in brands:
-            gaps = await self.get_gap_queries()
             brand_gaps = [g["query"] for g in gaps if g["brand_id"] == brand.id][:10]
             queries = brand_gaps or ["elevator maintenance", "elevator repair", "elevator inspection"]
             snippets = await self.gsc.get_featured_snippets(brand.gsc_site_url, queries[:10])
@@ -557,7 +570,13 @@ class ReportService:
     async def generate_monthly_report(self) -> MonthlyReport:
         now = datetime.utcnow()
         month_start = now.replace(day=1)
-        kpis = await self.get_dashboard_kpis()
+        # Pin GA4 traffic/conversions to the calendar month being reported —
+        # the rolling-30d default would bleed the tail of the previous month
+        # into this month's snapshot (and drift further on regeneration).
+        kpis = await self.get_dashboard_kpis(
+            ga4_start=month_start.date().isoformat(),
+            ga4_end=now.date().isoformat(),
+        )
         brand_breakdown = await self.get_citation_by_brand()
         gap_queries = await self.get_gap_queries()
         top_queries = await self.get_top_performing_queries()

@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Pagination, usePaged } from "../components/Pagination";
 import { SchemaPreview } from "../components/SchemaPreview";
 import { apiFetch } from "../lib/api";
 import type { SchemaDeployment } from "../types";
+
+const PENDING_PAGE_SIZE = 8;
 
 function validateSchemaJson(raw: string): string | null {
   const trimmed = raw.trim();
@@ -103,6 +106,7 @@ export function SchemaReviewPage() {
 
   const parseError = useMemo(() => validateSchemaJson(editedSchema), [editedSchema]);
   const isDirty = !!detail && editedSchema !== (detail.schema_json ?? "");
+  const pending = usePaged(data ?? [], PENDING_PAGE_SIZE);
 
   return (
     <div className="space-y-4">
@@ -275,7 +279,7 @@ export function SchemaReviewPage() {
                   </td>
                 </tr>
               ) : (
-                data.map((d) => (
+                pending.slice.map((d) => (
                   <tr
                     key={d.id}
                     className={`border-t border-border cursor-pointer hover:bg-panel-hover ${
@@ -292,6 +296,13 @@ export function SchemaReviewPage() {
               )}
             </tbody>
           </table>
+          <Pagination
+            page={pending.page}
+            pageSize={PENDING_PAGE_SIZE}
+            total={pending.total}
+            onPage={pending.setPage}
+            label="pending schemas"
+          />
         </div>
 
         {selected && (
