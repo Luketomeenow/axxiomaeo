@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 
-import httpx
 from sqlalchemy import select
 
 from app.database import AsyncSessionLocal
@@ -10,6 +9,7 @@ from app.models.content import ContentDraft, ContentPiece
 from app.models.schema_job import SchemaDeployment, SchemaJob
 from app.services.content_service import _inject_brand_phone
 from app.services.notification_service import NotificationService, record_worker_error
+from app.services.schema_crawl import check_page_jsonld, new_crawl_client
 from app.services.schema_service import build_combined_schema
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 async def run_schema_validation():
     logger.info("Starting monthly schema validation")
-    async with AsyncSessionLocal() as session:
+    async with AsyncSessionLocal() as session, new_crawl_client() as crawl_client:
         try:
             brands = await session.execute(select(Brand))
             notifications = NotificationService(session)
@@ -35,11 +35,9 @@ async def run_schema_validation():
                     if not piece.wp_post_url:
                         continue
                     try:
-                        async with httpx.AsyncClient(timeout=30.0) as client:
-                            resp = await client.get(piece.wp_post_url)
-                            has_schema = 'type="application/ld+json"' in resp.text
+                        state, fetch_detail = await check_page_jsonld(crawl_client, piece.wp_post_url)
 
-                        if has_schema:
+                        if state == "valid":
                             session.add(
                                 SchemaJob(
                                     brand_id=brand.id,
@@ -47,6 +45,20 @@ async def run_schema_validation():
                                     wp_post_url=piece.wp_post_url,
                                     schema_types=piece.schema_types or [],
                                     validation_status="valid",
+                                    validated_at=datetime.utcnow(),
+                                )
+                            )
+                        elif state == "unreachable":
+                            # Couldn't see the page (blocked/HTTP error) — that
+                            # says nothing about its schema, so record the error
+                            # without queuing a pointless regeneration.
+                            session.add(
+                                SchemaJob(
+                                    brand_id=brand.id,
+                                    wp_post_id=piece.wp_post_id,
+                                    wp_post_url=piece.wp_post_url,
+                                    validation_status="error",
+                                    error_details=fetch_detail,
                                     validated_at=datetime.utcnow(),
                                 )
                             )

@@ -80,6 +80,57 @@ export function SchemaHealthPage() {
         </div>
       )}
 
+      <div className="aeo-panel rounded overflow-hidden text-sm">
+        <div className="px-4 py-3 border-b border-border bg-void">
+          <h3 className="font-medium text-ink">How validation works</h3>
+        </div>
+        <div className="px-4 py-4 space-y-3 text-ink/80">
+          <div>
+            <p className="font-medium text-ink mb-1">What gets checked</p>
+            <p className="text-xs sm:text-sm">
+              Every <strong>published blog post</strong> plus every{" "}
+              <strong>approved brand-schema carrier page</strong> for the brand — that&apos;s the{" "}
+              <em>Pages Tracked</em> count. For each URL the validator fetches the live page the way
+              a browser would (following redirects) and looks for an{" "}
+              <code className="text-xs text-cyan">&lt;script type=&quot;application/ld+json&quot;&gt;</code>{" "}
+              block in the rendered HTML — the JSON-LD that AI engines and Google actually read.
+            </p>
+          </div>
+          <div>
+            <p className="font-medium text-ink mb-1">What the columns mean</p>
+            <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
+              <li>
+                <strong>Valid Schema</strong> — pages whose live HTML contains a JSON-LD block.
+              </li>
+              <li>
+                <strong>Errors</strong> — pages that loaded without JSON-LD, <em>or</em> pages the
+                validator couldn&apos;t fetch (deleted, or the crawler was blocked by the site&apos;s
+                bot protection). A blocked fetch is a measurement failure, not proof schema is
+                missing.
+              </li>
+              <li>
+                <strong>Coverage</strong> — Valid ÷ Pages Tracked, using only each page&apos;s{" "}
+                <em>latest</em> check. Re-running validation replaces a page&apos;s result; it never
+                double-counts.
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium text-ink mb-1">When it runs &amp; self-healing</p>
+            <p className="text-xs sm:text-sm">
+              Automatically once a month, or on demand with <strong>Run validation</strong> (per
+              brand — results land within a minute or two). The monthly run also self-heals: a post
+              that loads fine but has no JSON-LD gets its schema rebuilt from the stored draft and
+              queued in{" "}
+              <Link to="/schema/review" className="aeo-link">
+                Schema Review
+              </Link>{" "}
+              as &quot;Regenerated schema&quot; — nothing republishes without your approval.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {isError && (
         <div className="bg-warning/10 border border-warning/30 text-warning text-sm px-4 py-3 rounded">
           {(error as Error).message}
