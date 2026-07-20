@@ -459,8 +459,8 @@ async def reject_deployment(
 
 
 async def _validate_brand(brand_id: str):
-    import httpx
     from app.database import AsyncSessionLocal
+    from app.services.schema_crawl import check_page_jsonld, new_crawl_client
 
     async with AsyncSessionLocal() as session:
         brand = await session.get(Brand, brand_id)
@@ -490,32 +490,22 @@ async def _validate_brand(brand_id: str):
                 (dep.wp_post_id, dep.wp_post_url or "", [dep.schema_type or "BrandSchema"])
             )
 
-        for wp_post_id, url, schema_types in urls_to_check:
-            if not url:
-                continue
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.get(url)
-                    has_schema = 'type="application/ld+json"' in resp.text
-                    job = SchemaJob(
-                        brand_id=brand_id,
-                        wp_post_id=wp_post_id,
-                        wp_post_url=url,
-                        schema_types=schema_types,
-                        validation_status="valid" if has_schema else "error",
-                        error_details=None if has_schema else "Missing JSON-LD schema",
-                        validated_at=datetime.utcnow(),
-                    )
-                    session.add(job)
-            except Exception as e:
+        async with new_crawl_client() as client:
+            for wp_post_id, url, schema_types in urls_to_check:
+                if not url:
+                    continue
+                try:
+                    state, detail = await check_page_jsonld(client, url)
+                except Exception as e:
+                    state, detail = "unreachable", str(e)
                 session.add(
                     SchemaJob(
                         brand_id=brand_id,
                         wp_post_id=wp_post_id,
                         wp_post_url=url,
                         schema_types=schema_types,
-                        validation_status="error",
-                        error_details=str(e),
+                        validation_status="valid" if state == "valid" else "error",
+                        error_details=detail,
                         validated_at=datetime.utcnow(),
                     )
                 )
