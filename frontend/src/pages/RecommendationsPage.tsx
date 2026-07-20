@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import type { Recommendation, RecommendationsResponse } from "../types";
 
@@ -20,7 +20,7 @@ function priorityBadge(priority: number) {
 
 export function RecommendationsPage() {
   const queryClient = useQueryClient();
-  const [successMsg, setSuccessMsg] = useState("");
+  const navigate = useNavigate();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -31,13 +31,6 @@ export function RecommendationsPage() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["recommendations"] });
 
-  const showSuccess = (message: string) => {
-    setSuccessMsg(message);
-    invalidate();
-    queryClient.invalidateQueries({ queryKey: ["content-queue"] });
-    setTimeout(() => setSuccessMsg(""), 8000);
-  };
-
   const approve = useMutation({
     mutationFn: (key: string) =>
       apiFetch<{ queue_id: number }>(`/api/recommendations/${encodeURIComponent(key)}/approve`, {
@@ -45,8 +38,17 @@ export function RecommendationsPage() {
       }),
     onMutate: (key) => setPendingKey(key),
     onSettled: () => setPendingKey(null),
-    onSuccess: () =>
-      showSuccess("Approved — queued and generating. It will auto-publish once it passes validation."),
+    onSuccess: () => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ["content-queue"] });
+      // The draft is generating — hand off to Content Review, which live-polls
+      // generating drafts and is where it gets approved for publish. The row is
+      // created by a background task moments after this response, so refetch
+      // again shortly after landing or the page idles 30s before showing it.
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["drafts"] }), 4000);
+      navigate("/content/review");
+    },
   });
 
   const dismiss = useMutation({
@@ -65,19 +67,11 @@ export function RecommendationsPage() {
         <div>
           <h2 className="text-xl font-bold text-ink">Recommendations</h2>
           <p className="text-sm text-muted mt-0.5">
-            Ranked from live AI-citation gaps. Approve to queue, generate, and auto-publish — one click.
+            Ranked from live AI-citation gaps. Approve to generate a draft — it lands in Content
+            Review for your sign-off before anything publishes.
           </p>
         </div>
       </div>
-
-      {successMsg && (
-        <div className="bg-success/10 border border-success/25 text-success text-sm px-4 py-3 rounded">
-          {successMsg}{" "}
-          <Link to="/content/review" className="underline font-medium">
-            Go to Content Review
-          </Link>
-        </div>
-      )}
 
       {(approve.isError || dismiss.isError) && (
         <div className="bg-warning/10 border border-warning/30 text-warning text-sm px-4 py-3 rounded">
