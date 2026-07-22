@@ -134,6 +134,7 @@ async def get_content_queue(
             "scheduled_for": i.scheduled_for.isoformat() if i.scheduled_for else None,
             "source": i.source,
             "source_detail": i.source_detail,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
         }
         for i in items
     ]

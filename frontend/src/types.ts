@@ -219,6 +219,7 @@ export interface ContentQueueItem {
   scheduled_for?: string;
   source?: string | null;
   source_detail?: Record<string, unknown> | null;
+  created_at?: string | null;
 }
 
 export interface Recommendation {
