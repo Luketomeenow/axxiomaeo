@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.config import get_settings
 from app.database import init_db
 from app.routers import (
+    agent_api,
     brands,
     citations,
     content,
@@ -111,6 +112,7 @@ def create_app() -> FastAPI:
     app.include_router(reports.router)
     app.include_router(notifications.router)
     app.include_router(recommendations.router)
+    app.include_router(agent_api.router)
 
     return app
 

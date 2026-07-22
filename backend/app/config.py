@@ -117,6 +117,12 @@ class Settings(BaseSettings):
     )
 
     claude_model: str = "claude-sonnet-4-6"
+    # Machine-to-machine key for the /api/agent endpoints (Foundry AEO agent).
+    # Empty = the agent API is disabled. Set AGENT_API_KEY in Railway and put
+    # the same value in the Foundry "aeo-platform-api" custom-keys connection.
+    agent_api_key: str = ""
+    # Public base URL of this backend — used in the agent OpenAPI spec.
+    public_api_url: str = "https://axxiomaeo-production.up.railway.app"
     # Max pending queue items generated per brand, each daily content run.
     # 2 = two posts per brand per day (the first from the day's primary demand
     # signal, the second a rotated content type on another demand query).
