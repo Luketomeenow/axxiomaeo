@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Fix broken / invented links in ALREADY-published blog posts across brands.
+"""Content-hygiene backfill for ALREADY-published blog posts across brands:
+broken/invented links AND the author-byline compliance fix.
 
 Re-runs the link sanitizer over each published post's stored generated HTML —
 converting stray markdown links, trimming malformed hrefs (the "…/]" 404s), and
@@ -33,9 +34,10 @@ from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece
-from app.services.content_enrichment import _brand_host, sanitize_links
+from app.services.content_enrichment import _brand_host, normalize_author_byline, sanitize_links
 from app.services.content_service import _inject_brand_phone, _known_paths
 from app.services.link_verification import verify_external_links
+from app.services.schema_service import build_combined_schema
 from app.services.wordpress_service import WordPressService
 
 # Surface link_verification's INFO lines (which URL died, what replaced it).
@@ -43,13 +45,13 @@ logging.basicConfig(level=logging.WARNING, format="        %(message)s")
 logging.getLogger("app.services.link_verification").setLevel(logging.INFO)
 
 
-async def _update_healing_stale_id(wp, brand, piece, cleaned: str) -> str:
+async def _update_healing_stale_id(wp, brand, piece, cleaned: str, schema_json: str = "") -> str:
     """Update the WP post; when the stored wp_post_id is stale (WP answers
     404 "Invalid post ID" because the post was deleted/recreated on the WP
     side), re-resolve the live id by slug, persist it on the piece, and retry.
     Returns "ok", "healed", or "missing" (slug gone from WP entirely)."""
     try:
-        await wp.update_post(brand, piece.wp_post_id, content=cleaned, post_type="posts")
+        await wp.update_post(brand, piece.wp_post_id, content=cleaned, schema_json=schema_json, post_type="posts")
         return "ok"
     except ValueError as e:
         if "invalid post id" not in str(e).lower():
@@ -59,7 +61,7 @@ async def _update_healing_stale_id(wp, brand, piece, cleaned: str) -> str:
         return "missing"
     piece.wp_post_id = live["id"]
     piece.wp_post_url = live["url"]
-    await wp.update_post(brand, live["id"], content=cleaned, post_type="posts")
+    await wp.update_post(brand, live["id"], content=cleaned, schema_json=schema_json, post_type="posts")
     return "healed"
 
 
@@ -130,6 +132,9 @@ async def main() -> int:
                 original = _inject_brand_phone(draft.html_content, brand.phone)
                 cleaned = sanitize_links(original, brand, known)
                 cleaned = await verify_external_links(cleaned, skip_hosts={_brand_host(brand)})
+                # Compliance: swap the old individual-credential byline for the
+                # team byline (idempotent — unchanged when already safe).
+                cleaned = normalize_author_byline(cleaned, brand)
                 if cleaned == original:
                     continue
 
@@ -138,7 +143,13 @@ async def main() -> int:
                 print(f"  FIX   {piece.slug} — anchors {before}->{after}  {piece.wp_post_url or ''}")
                 if args.apply:
                     try:
-                        outcome = await _update_healing_stale_id(wp, brand, piece, cleaned)
+                        # Refresh the post's schema meta alongside the content —
+                        # the old schema asserted a Person author with an
+                        # unattested certification jobTitle.
+                        schema_json, _ = build_combined_schema(
+                            cleaned, brand, piece.title or "", piece.content_type or "faq_hub"
+                        )
+                        outcome = await _update_healing_stale_id(wp, brand, piece, cleaned, schema_json)
                         if outcome == "missing":
                             missing += 1
                             print(f"        ! slug not on WordPress anymore — stored post id {piece.wp_post_id} is an orphan")

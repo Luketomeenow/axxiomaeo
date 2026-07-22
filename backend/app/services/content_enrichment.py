@@ -8,10 +8,11 @@ from bs4 import BeautifulSoup
 from app.models.brand import Brand
 
 
-AUTHOR_BYLINE_HTML = (
-    '<p class="aeo-author-byline"><em>By {author_name}, '
-    "IUEC-Certified Elevator Technician at {brand_name}</em></p>"
-)
+# Team byline — deliberately names no individual and claims no credential.
+# Attributing AI-drafted posts to a named person with a certification they may
+# not hold (the old "By X, IUEC-Certified Elevator Technician") is an
+# FTC-deception exposure; the truthful attribution is the brand's team.
+AUTHOR_BYLINE_HTML = '<p class="aeo-author-byline"><em>By the {brand_name} Team</em></p>'
 
 # Unresolved phone token, optionally with a leading "at"/"on" so CTAs like
 # "Call us at [BRAND_PHONE] today" degrade to "Call us today".
@@ -29,10 +30,11 @@ def strip_phone_placeholder(html: str) -> str:
 
 
 def ensure_author_byline(html: str, brand: Brand, author_name: str | None = None) -> str:
+    # author_name is accepted for backward compatibility but no longer used:
+    # bylines are team-attributed, never individual (see AUTHOR_BYLINE_HTML).
     if "aeo-author-byline" in html:
-        return html
-    name = author_name or f"{brand.name} Technical Team"
-    byline = AUTHOR_BYLINE_HTML.format(author_name=name, brand_name=brand.name)
+        return normalize_author_byline(html, brand)
+    byline = AUTHOR_BYLINE_HTML.format(brand_name=brand.name)
     soup = BeautifulSoup(html, "lxml")
     body = soup.find("body") or soup
     first = body.find(["h1", "p", "div"])
@@ -41,6 +43,30 @@ def ensure_author_byline(html: str, brand: Brand, author_name: str | None = None
     else:
         body.insert(0, BeautifulSoup(byline, "lxml"))
     return str(soup)
+
+
+def normalize_author_byline(html: str, brand: Brand) -> str:
+    """Rewrite any existing byline to the safe team form.
+
+    Published posts (and model output that ignores the prompt) may carry the
+    old individual-credential byline; this swaps its content for the team
+    byline in place. Returns the input untouched when the byline is already
+    safe or absent, so backfills can detect "changed" cheaply.
+    """
+    if "aeo-author-byline" not in html:
+        return html
+    safe_text = f"By the {brand.name} Team"
+    soup = BeautifulSoup(html, "lxml")
+    changed = False
+    for p in soup.find_all(class_="aeo-author-byline"):
+        if p.get_text(" ", strip=True) == safe_text:
+            continue
+        p.clear()
+        em = soup.new_tag("em")
+        em.string = safe_text
+        p.append(em)
+        changed = True
+    return str(soup) if changed else html
 
 
 def ensure_tldr_block(html: str, target_query: str, max_words: int = 60) -> str:

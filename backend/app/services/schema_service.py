@@ -264,23 +264,11 @@ def build_service_schema(brand: Brand, service_type: str) -> str:
 
 
 def extract_author_from_html(html: str, brand: Brand) -> dict:
-    soup = BeautifulSoup(html, "lxml")
-    byline = soup.find(class_=re.compile(r"author|byline", re.I))
-    if byline:
-        name = byline.get_text(strip=True)
-        if name.lower().startswith("by "):
-            name = name[3:].strip()
-        if name:
-            return {
-                "name": name,
-                "url": brand.wp_url,
-                "jobTitle": "IUEC-Certified Elevator Technician",
-            }
-    return {
-        "name": f"{brand.name} Technical Team",
-        "url": brand.wp_url,
-        "jobTitle": "IUEC-Certified Elevator Technician",
-    }
+    """Author entity for Article schema. Always the brand's team as an
+    Organization — never a named Person with a credential (the old
+    Person + "IUEC-Certified" jobTitle asserted a certification we can't
+    attest, in machine-readable form)."""
+    return {"name": f"{brand.name} Team", "url": brand.wp_url}
 
 
 def extract_images_from_html(html: str) -> list[dict]:
@@ -322,17 +310,16 @@ def extract_images_from_html(html: str) -> list[dict]:
 def build_article_schema(post: ContentPiece, brand: Brand, author: dict | None = None, html: str = "") -> str:
     if author is None and html:
         author = extract_author_from_html(html, brand)
-    author = author or {"name": f"{brand.name} Technical Team", "url": brand.wp_url}
+    author = author or {"name": f"{brand.name} Team", "url": brand.wp_url}
     now = datetime.now(timezone.utc).isoformat()
     schema = {
         "@context": "https://schema.org",
         "@type": "Article",
         "headline": post.title,
         "author": {
-            "@type": "Person",
-            "name": author.get("name", f"{brand.name} Technical Team"),
+            "@type": "Organization",
+            "name": author.get("name", f"{brand.name} Team"),
             "url": author.get("url", brand.wp_url),
-            "jobTitle": author.get("jobTitle", "IUEC-Certified Elevator Technician"),
         },
         "datePublished": (post.published_at or datetime.utcnow()).isoformat() if post.published_at else now,
         "dateModified": now,

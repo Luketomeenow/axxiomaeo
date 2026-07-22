@@ -15,6 +15,7 @@ from app.services.content_enrichment import (
     ensure_tldr_block,
     inject_internal_links,
     normalize_article_headings,
+    normalize_author_byline,
     sanitize_links,
     strip_phone_placeholder,
 )
@@ -144,6 +145,7 @@ class ContentGenerationService:
 
         html_content = _inject_brand_phone(draft.html_content or "", brand.phone)
         html_content = normalize_article_headings(html_content, draft.title or "")
+        html_content = normalize_author_byline(html_content, brand)
         # Last-gate cleanup of markdown/malformed links (existence-checked at
         # generation; here we just clean, so verified links survive).
         html_content = sanitize_links(html_content, brand)
@@ -601,6 +603,7 @@ class ContentGenerationService:
 
         html_content = _inject_brand_phone(html_content, brand.phone)
         html_content = normalize_article_headings(html_content, draft.title or "")
+        html_content = normalize_author_byline(html_content, brand)
         html_content = sanitize_links(html_content, brand)
         html_content = await verify_external_links(html_content, skip_hosts={_brand_host(brand)})
         is_valid, failure_reason = await validate_answer_first(

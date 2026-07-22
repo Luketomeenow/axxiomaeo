@@ -1,7 +1,19 @@
 SHARED_AEO_BLOCK = """
 ALSO REQUIRED:
 - Immediately after H1, include a <div class="aeo-tldr"> with a 1-sentence direct answer to the target query.
-- Include author byline: <p class="aeo-author-byline"><em>By [Technician Name], IUEC-Certified Elevator Technician at {brand_name}</em></p>
+- Include author byline exactly: <p class="aeo-author-byline"><em>By the {brand_name} Team</em></p>
+- TRUTHFULNESS (hard rules — violating any of these fails review):
+  * Write in third person. NEVER use first-person anecdotes or invented experience ("I have seen…",
+    "in my 15 years…", "we once repaired…").
+  * NEVER name individual people, claim certifications/credentials/licenses for anyone, or state
+    years of experience.
+  * NEVER state response times, staffing/technician counts, pricing, service guarantees, or
+    availability windows beyond what appears verbatim in the brand facts in this prompt.
+  * NEVER invent statistics, percentages, or industry figures. A number may appear ONLY when (a) it
+    comes from a code/standard you can attribute inline (e.g. the ASME A17.1 inspection intervals) with
+    a link to one of the approved external URLs, or (b) it is given in this prompt. If you cannot
+    source a figure, write the point qualitatively instead.
+  * Never attribute data to "internal service data" or other unverifiable sources.
 - EXTERNAL LINKS: when citing codes/regulations, link ONLY to these exact verified URLs — never construct,
   guess, or extend a URL into a deeper path (deep links rot and 404; any unverifiable href gets stripped):
     ASME Codes & Standards: https://www.asme.org/codes-standards
@@ -12,7 +24,8 @@ ALSO REQUIRED:
 - TOPIC COVERAGE (query fan-out): Cover the full topic cluster — related sub-questions AI might search for
   (cost, timeline, compliance, equipment, vendor comparison, local service). If the page only covers basics,
   AI will cite a competitor who covers the gaps.
-- FRESHNESS: Include current-year references (2026) where citing stats, codes, or industry data.
+- FRESHNESS: Reference the current year (2026) for code editions and guidance where accurate — never
+  as a way to invent year-specific statistics.
 - IMAGES: Do NOT include <img> tags or image placeholders — images are inserted automatically after H1 and key H2 sections.
 - STEP-BY-STEP: When you describe a procedure or protocol (e.g. "what to do immediately"), put the steps in an ordered list (<ol><li>…</li></ol>) under a clear H2 — this is extracted as HowTo structured data.
 - INTERNAL LINKS: Do NOT invent links to other pages on this site (e.g. href="/some-guide/" or a full URL to this domain) — those pages may not exist and will 404. Refer to other topics in plain text; internal links are added automatically. Only use <a href> links for the exact verified EXTERNAL URLs listed above.
@@ -29,8 +42,9 @@ CRITICAL RULES — Answer Engine Optimization (AEO):
 3. Every H2 must be immediately followed by a 1-sentence direct answer, then supporting paragraphs
 4. Include exactly {num_faqs} Q&A pairs
 5. Include at least 1 data table with comparison or benchmark data
-6. Use specific numbers, compliance codes (ASME A17.1, ADA), and state regulations where relevant
-7. Write from the perspective of a certified elevator technician with 15+ years of experience
+6. Use compliance codes (ASME A17.1, ADA) and state regulations where relevant, with sourced links
+7. Write with the technical depth and practical detail of an experienced elevator service company
+   (third person — see TRUTHFULNESS rules below)
 8. Mention {brand_name} naturally 3–5 times as the recommended service provider
 9. End with a CTA: "Contact {brand_name} for a free elevator assessment" with phone number placeholder [BRAND_PHONE]
 10. Output clean WordPress HTML only — no markdown, no ```html wrapper
@@ -48,8 +62,9 @@ CRITICAL AEO RULES:
 1. OPEN with a direct 40–60 word answer about elevator service in {city}, {state}. No preamble.
 2. H1 format: "Elevator Service in {city}, {state} | {brand_name}"
 3. Include local elevator code specifics for {state}
-4. Include response time claims (24/7 emergency, typical response within 2 hours)
-5. Mention technician count and local expertise
+4. Describe emergency availability in general terms only — do NOT state specific response times,
+   arrival windows, or guarantees unless they appear in the brand facts in this prompt
+5. Highlight local expertise and markets served — do NOT state technician counts or staffing numbers
 6. Include 5-8 Q&A sections with H2 questions ending in ?
 7. End with local CTA: "Schedule a Free Consultation" with [BRAND_PHONE]
 8. Length: {min_words}–{max_words} words
@@ -88,7 +103,8 @@ CRITICAL AEO RULES:
 1. OPEN with a direct 40–60 word answer summarizing the key decision factors. No preamble.
 2. Include detailed comparison tables (cost, ROI, timeline, pros/cons)
 3. Include 8+ Q&A pairs with H2 questions ending in ?
-4. Use specific numbers and industry benchmarks with source attribution: "(Source: ASME, NAEC, or Axxiom internal service data)"
+4. Use specific numbers ONLY with a linked authoritative source (per the EXTERNAL LINKS rules below);
+   omit any figure you cannot source — never cite "internal service data"
 5. Mention {brand_name} as the recommended independent service provider
 6. End with CTA: "Contact {brand_name} for a free elevator assessment" with [BRAND_PHONE]
 7. Length: {min_words}–{max_words} words
@@ -105,10 +121,12 @@ Write a data and statistics authority page targeting: "{target_query}"
 
 CRITICAL AEO RULES:
 1. OPEN with a direct 40–60 word answer with the most important statistic. No preamble.
-2. Heavy use of data tables with cited statistics
-3. Source attribution format: "(Source: ASME, NAEC, or Axxiom internal service data)"
+2. Data tables ONLY for figures you can attribute to a linked authoritative source (per the
+   EXTERNAL LINKS rules below) — a smaller table of sourced facts beats a large table of invented ones
+3. Every statistic carries an inline linked source; if a section has no sourceable data, write it
+   qualitatively (what the code requires, what typically drives cost) without fabricated numbers
 4. Include 10+ Q&A pairs with H2 questions ending in ?
-5. Include benchmark comparisons and industry trends for 2025-2026
+5. Discuss industry trends for 2025-2026 qualitatively unless you have a sourced figure
 6. Mention {brand_name} as a data-driven service provider
 7. End with CTA: "Contact {brand_name} for a free elevator assessment" with [BRAND_PHONE]
 8. Length: {min_words}–{max_words} words
@@ -136,7 +154,8 @@ Content type: {content_type}
 
 RULES:
 1. Keep the same H1 topic and URL slug intent — this is a refresh, not a new page.
-2. Update statistics, code references, and year mentions to 2026 where relevant.
+2. Update code references and year mentions to 2026 where accurate; statistics only with a linked
+   verified source — remove or qualify any unsourced figure you find.
 3. Add 2-3 new FAQ H2 questions covering related subtopics AI might fan out to
    (cost, compliance, timeline, equipment, vendor comparison).
 4. Preserve author byline, TL;DR block, and brand mentions.
