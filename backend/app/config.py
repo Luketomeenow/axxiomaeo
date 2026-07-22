@@ -120,7 +120,9 @@ class Settings(BaseSettings):
     # Max pending queue items generated per brand, each daily content run.
     # 2 = two posts per brand per day (the first from the day's primary demand
     # signal, the second a rotated content type on another demand query).
-    content_generation_max_per_brand: int = 2
+    # 4/brand/day × 5 brands ≈ 20 posts/day — sized to the ~$100/mo image
+    # budget (3 images/post). Override per-env with CONTENT_GENERATION_MAX_PER_BRAND.
+    content_generation_max_per_brand: int = 4
     # Publish drafts automatically when they pass validation (monitor-after
     # model). Set false to restore the approve-before-publish gate — drafts
     # then wait in Content Review as before.
