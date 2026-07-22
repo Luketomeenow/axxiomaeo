@@ -1,10 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { DashboardData } from "../types";
 import { apiFetch } from "../lib/api";
 import { Pagination, usePaged } from "./Pagination";
 
 const PAGE_SIZE = 8;
+
+type RowOutcome = { kind: "queued" | "covered" | "error"; message?: string };
 
 const PRIORITY_ORDER: Record<string, number> = {
   emergency: 1,
@@ -25,7 +28,11 @@ const CONTENT_TYPE_BY_CATEGORY: Record<string, string> = {
 
 export function GapAnalysisTable({ gaps }: { gaps: DashboardData["gap_queries"] }) {
   const queryClient = useQueryClient();
-  const [queued, setQueued] = useState<string | null>(null);
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  // Per-row outcome, kept for the session so "Queued ✓" doesn't vanish and
+  // double-queueing is prevented on the client too (the API also 409s).
+  const [outcomes, setOutcomes] = useState<Record<string, RowOutcome>>({});
+  const [lastQueued, setLastQueued] = useState<string | null>(null);
 
   const addToQueue = useMutation({
     mutationFn: (gap: DashboardData["gap_queries"][0]) =>
@@ -43,10 +50,26 @@ export function GapAnalysisTable({ gaps }: { gaps: DashboardData["gap_queries"] 
           citation_record_id: gap.id ?? null,
         }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["content-queue"] });
-    },
   });
+
+  const queueGap = (gap: DashboardData["gap_queries"][0], key: string) => {
+    setPendingKey(key);
+    addToQueue.mutate(gap, {
+      onSuccess: () => {
+        setOutcomes((o) => ({ ...o, [key]: { kind: "queued" } }));
+        setLastQueued(gap.query);
+        queryClient.invalidateQueries({ queryKey: ["content-queue"] });
+      },
+      onError: (e: Error) => {
+        const covered = e.message.startsWith("Already covered");
+        setOutcomes((o) => ({
+          ...o,
+          [key]: { kind: covered ? "covered" : "error", message: e.message },
+        }));
+      },
+      onSettled: () => setPendingKey(null),
+    });
+  };
 
   const sorted = [...gaps].sort(
     (a, b) => (PRIORITY_ORDER[a.category] ?? 99) - (PRIORITY_ORDER[b.category] ?? 99)
@@ -62,6 +85,15 @@ export function GapAnalysisTable({ gaps }: { gaps: DashboardData["gap_queries"] 
           Queries where competitors win AI citations — queue content matched to gap type (FAQ, comparison, vertical, etc.)
         </p>
       </div>
+      {lastQueued && (
+        <div className="px-5 py-2.5 border-b border-border bg-success/[0.06] text-sm text-success">
+          Queued "{lastQueued}" — it generates in the next daily run (9:00 AM CT), or{" "}
+          <Link to="/content/queue" className="underline font-medium">
+            open Content Queue
+          </Link>{" "}
+          to Generate now.
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -96,19 +128,32 @@ export function GapAnalysisTable({ gaps }: { gaps: DashboardData["gap_queries"] 
                       {g.competitor_cited || (g.invisible ? "Not cited (invisible)" : "—")}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        disabled={addToQueue.isPending}
-                        onClick={() => {
-                          setQueued(key);
-                          addToQueue.mutate(g, {
-                            onSettled: () => setTimeout(() => setQueued(null), 2000),
-                          });
-                        }}
-                        className="text-xs text-ink hover:text-cyan font-medium disabled:opacity-50"
-                      >
-                        {queued === key && addToQueue.isPending ? "Adding…" : "Add to queue"}
-                      </button>
+                      {outcomes[key]?.kind === "queued" ? (
+                        <span className="text-xs text-success font-medium">Queued ✓</span>
+                      ) : outcomes[key]?.kind === "covered" ? (
+                        <span
+                          className="text-xs text-muted"
+                          title={outcomes[key]?.message}
+                        >
+                          Already covered
+                        </span>
+                      ) : (
+                        <div className="flex flex-col items-end gap-1">
+                          <button
+                            type="button"
+                            disabled={addToQueue.isPending}
+                            onClick={() => queueGap(g, key)}
+                            className="text-xs text-ink hover:text-cyan font-medium disabled:opacity-50"
+                          >
+                            {pendingKey === key && addToQueue.isPending ? "Adding…" : "Add to queue"}
+                          </button>
+                          {outcomes[key]?.kind === "error" && (
+                            <span className="text-[11px] text-warning max-w-[220px] text-right">
+                              {outcomes[key]?.message}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

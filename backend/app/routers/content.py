@@ -61,13 +61,30 @@ async def queue_from_gap(
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
-    """Add a citation gap query to the content queue for generation."""
+    """Add a citation gap query to the content queue for generation.
+
+    Dedupes against everything already queued, drafted, or published for the
+    brand (the same similarity check topic discovery and recommendations use),
+    so a double-click or an already-covered gap answers 409 instead of piling
+    up duplicate work for the daily run.
+    """
+    from app.services.topic_discovery_service import TopicDiscoveryService, queries_similar
+
+    existing = (await TopicDiscoveryService(db)._existing_queries_by_brand()).get(req.brand_id, [])
+    covered_by = next((q for q in existing if queries_similar(req.target_query, q)), None)
+    if covered_by:
+        raise HTTPException(
+            status_code=409,
+            detail=f'Already covered — "{covered_by}" is queued, drafted, or published for this brand',
+        )
+
     item = ContentQueue(
         brand_id=req.brand_id,
         content_type=req.content_type,
         target_query=req.target_query,
         title=req.title or req.target_query,
         priority=max(1, min(5, req.priority)),
+        source="citation_gap",
         source_citation_id=req.citation_record_id,
         status="pending",
     )
