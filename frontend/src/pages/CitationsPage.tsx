@@ -3,6 +3,7 @@ import { useState } from "react";
 import { CitationBarChart } from "../components/CitationBarChart";
 import { CitationInsightsPanel } from "../components/CitationInsightsPanel";
 import { GapAnalysisTable } from "../components/GapAnalysisTable";
+import { PlatformBrandChart } from "../components/PlatformBrandChart";
 import { Pagination, usePaged } from "../components/Pagination";
 import { QueryStatus } from "../components/QueryStatus";
 import { apiFetch } from "../lib/api";
@@ -54,6 +55,37 @@ function fmtDay(iso: string | null): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+/** Per-platform rows with one citation-share value per brand — feeds the
+ * grouped platform × brand chart. A brand with no checks on a platform is
+ * absent from that row (no bar) rather than a misleading 0%. */
+function platformBrandRows(
+  records: CitationRecord[],
+  brandOrder: string[]
+): Record<string, string | number>[] {
+  const acc = new Map<string, Map<string, { total: number; cited: number }>>();
+  for (const r of records) {
+    const platform = (r.platform || "").trim();
+    const brand = (r.brand_id || "").trim();
+    if (!platform || !brand) continue;
+    const byBrand = acc.get(platform) ?? new Map();
+    const cur = byBrand.get(brand) ?? { total: 0, cited: 0 };
+    cur.total += 1;
+    if (r.is_cited) cur.cited += 1;
+    byBrand.set(brand, cur);
+    acc.set(platform, byBrand);
+  }
+  return [...acc.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([platform, byBrand]) => {
+      const row: Record<string, string | number> = { platform };
+      for (const b of brandOrder) {
+        const v = byBrand.get(b);
+        if (v) row[b] = Math.round((v.cited / v.total) * 1000) / 10;
+      }
+      return row;
+    });
 }
 
 /** Citation share per distinct value of `pick`, sorted best-first. */
@@ -183,6 +215,14 @@ export function CitationsPage() {
     retry: 1,
   });
 
+  // Canonical brand roster — color assignment must be stable across scope
+  // changes (color follows the brand, not its position in the filtered set).
+  const { data: brandList } = useQuery({
+    queryKey: ["brands"],
+    queryFn: () => apiFetch<{ id: string; name: string }[]>("/api/brands"),
+    retry: 1,
+  });
+
   const cited = citations?.filter((c) => c.is_cited).length ?? 0;
   const total = citations?.length ?? 0;
   const listError = citationsError;
@@ -201,8 +241,12 @@ export function CitationsPage() {
 
   const byBrand = shareBy(citations ?? [], (r) => r.brand_id);
   const byCategory = shareBy(citations ?? [], (r) => r.query_category);
-  const byPlatform = shareBy(citations ?? [], (r) => r.platform);
   const byFunnel = shareBy(citations ?? [], (r) => r.funnel_stage);
+
+  const brandOrder = brandList?.length
+    ? brandList.map((b) => b.id).sort()
+    : [...new Set((citations ?? []).map((r) => r.brand_id))].sort();
+  const platformBrand = platformBrandRows(citations ?? [], brandOrder);
 
   const { page, setPage, slice: pagedCitations } = usePaged(citations ?? [], RESULTS_PAGE_SIZE);
 
@@ -365,11 +409,11 @@ export function CitationsPage() {
                       title={`Citation Share by Category — ${scopeLabel}`}
                     />
                   )}
-                  {byPlatform.length > 0 && (
-                    <CitationBarChart
-                      data={byPlatform}
-                      dataKey="label"
-                      title={`Citation Share by AI Platform — ${scopeLabel}`}
+                  {platformBrand.length > 0 && (
+                    <PlatformBrandChart
+                      rows={platformBrand}
+                      brands={brandOrder}
+                      title={`Citation Share by Platform × Brand — ${scopeLabel}`}
                     />
                   )}
                   {byFunnel.length > 0 && (
