@@ -6,6 +6,7 @@ const SECTIONS = [
   { id: "how", label: "How it works" },
   { id: "dashboard", label: "The dashboard" },
   { id: "content", label: "Content engine" },
+  { id: "guardrails", label: "Content guardrails" },
   { id: "schema", label: "Schema (structured data)" },
   { id: "tracking", label: "Citation tracking" },
   { id: "recommendations", label: "Recommendations" },
@@ -130,7 +131,8 @@ const STEPS: { title: string; body: ReactNode }[] = [
     body: (
       <>
         Claude generates a full article formatted to answer the question directly, with photorealistic
-        images and a named, credentialed author byline.
+        images and a team byline — written under hard truthfulness rules (no invented authors,
+        credentials, claims, or statistics; see Content guardrails).
       </>
     ),
   },
@@ -138,8 +140,10 @@ const STEPS: { title: string; body: ReactNode }[] = [
     title: "Quality-check",
     body: (
       <>
-        Validates that it answers the query, is long enough, has valid structured-data markup, and that
-        images carry proper alt text.
+        Validates that it answers the query and is long enough, carries valid structured-data markup and
+        image alt text — and verifies every link: external links are probed against the live web (dead
+        ones re-pointed to a working authority page or unlinked) and internal links are checked against
+        the brand's real published pages.
       </>
     ),
   },
@@ -166,7 +170,8 @@ const STEPS: { title: string; body: ReactNode }[] = [
     body: (
       <>
         From that tracking, ranks "you're invisible here and a competitor is winning — publish this" for a
-        human to approve.
+        human to approve. Approving generates a draft that waits in Content Review — recommendation
+        drafts never publish without sign-off.
       </>
     ),
   },
@@ -225,7 +230,7 @@ export function DocumentationPage() {
           </P>
           <div className="grid sm:grid-cols-3 gap-3.5 mt-5">
             <Card k="Writes" title="Content, daily">
-              AI-written articles per brand, from real search demand and citation gaps.
+              AI-written articles — up to 4 per brand per day — from real search demand and citation gaps.
             </Card>
             <Card k="Measures" title="AI visibility">
               Asks the engines real questions; records who's cited and who loses to a competitor.
@@ -271,22 +276,26 @@ export function DocumentationPage() {
           <P>A React dashboard (Netlify), grouped into what to watch, what to act on, and what to review.</P>
           <div className="grid sm:grid-cols-2 gap-3.5">
             <Card title="Dashboard">
-              Headline scorecard — citation share, AI visibility, share of voice vs competitors, and traffic.
+              Headline scorecard — citation share, AI visibility, share of voice vs competitors,
+              AI-referred sessions, and AI conversions (GA4 key events from AI visitors).
             </Card>
             <Card title="Recommendations">
-              Ranked "what to do next," each explaining why; one <Em>Approve</Em> queues, writes, and
-              publishes the fix.
+              Ranked "what to do next," each explaining why; one <Em>Approve</Em> queues the topic, writes
+              the draft, and hands it to Content Review for your sign-off.
             </Card>
             <Card title="Citations">
               The AI-visibility monitor — who's cited on which engine, for which questions, and who beats
-              them. Includes an <Em>AI Recommendations</Em> tab that reads the whole audit.
+              them. Browse the latest audit, any past audit, all history, or a date range; the platform
+              chart breaks citation share down per brand per engine. Includes an{" "}
+              <Em>AI Recommendations</Em> tab that reads the whole audit.
             </Card>
             <Card title="Reports">
-              Monthly snapshots with month-over-month trends, an AI executive summary, estimated/actual API
-              costs, and CSV / print export.
+              Monthly snapshots with month-over-month trends, AI conversions, an AI executive summary,
+              estimated/actual API costs, and CSV / print export.
             </Card>
             <Card title="Content Review & Published">
-              Every draft and everything that's gone live; regenerate, edit, or reject before it publishes.
+              Every draft and everything that's gone live — searchable and sortable; regenerate, edit, or
+              reject before it publishes, or pull a live post back to review.
             </Card>
             <Card title="Schema & Brand Settings">
               The structured data that makes pages machine-readable (human-approved), plus per-brand config
@@ -299,8 +308,9 @@ export function DocumentationPage() {
         <Section id="content" eyebrow="Content engine" title="From demand signal to published article">
           <P>
             Topic discovery mines Search Console demand, citation gaps, and coverage gaps into a per-brand
-            queue. The daily worker generates one draft per brand, validates it, and — under the
-            monitor-after model — publishes it automatically once it passes.
+            queue. The daily worker generates up to <Em>4 drafts per brand per day</Em>{" "}
+            (<Code>CONTENT_GENERATION_MAX_PER_BRAND</Code>), validates each, and — under the monitor-after
+            model — publishes automatically once a draft passes.
           </P>
           <H3>What makes a good AEO article here</H3>
           <List>
@@ -312,8 +322,12 @@ export function DocumentationPage() {
               <Em>Structured data</Em> — FAQ / LocalBusiness / Article schema so engines understand the page.
             </li>
             <li>
-              <Em>Real authorship</Em> — a named, certified-technician byline per brand (engines favor
-              credible authors).
+              <Em>Honest authorship</Em> — every post is bylined <em>"By the [Brand] Team"</em>; no invented
+              individuals or credentials (see Content guardrails below).
+            </li>
+            <li>
+              <Em>Verified links</Em> — external links are probed live before publish; internal links only to
+              pages that actually exist.
             </li>
             <li>
               <Em>On-topic photoreal images</Em> — varied per article, never the same generic stock shot.
@@ -323,6 +337,45 @@ export function DocumentationPage() {
             Only 3 drafts generate at once. Drafts stuck in "generating" hold those slots — the Content
             Review page flags stale ones to clear, which also frees regenerate/generate if they start
             returning "too many generating."
+          </Callout>
+        </Section>
+
+        {/* Content guardrails */}
+        <Section id="guardrails" eyebrow="Content guardrails" title="Truthful-claims rules every draft follows">
+          <P>
+            Because content publishes at scale under the brands' names, the generator runs under hard
+            truthfulness rules — added ahead of the volume increase to keep the sites clear of FTC
+            deception risk and Google's scaled-content spam policy.
+          </P>
+          <List>
+            <li>
+              <Em>Team bylines only</Em> — every post reads <em>"By the [Brand] Team"</em>. No named
+              individuals, no certifications or credentials, no years-of-experience claims. The Article
+              schema author is the brand organization, not a person.
+            </li>
+            <li>
+              <Em>Third person, no invented experience</Em> — first-person anecdotes ("I have personally
+              seen…") are banned; the model writes with expert depth but never a fabricated identity.
+            </li>
+            <li>
+              <Em>No unattested performance claims</Em> — response times, staffing counts, pricing, and
+              guarantees may only appear if supplied as brand facts; the model can't invent them.
+            </li>
+            <li>
+              <Em>Statistics need sources</Em> — a number appears only with a linked, verified authority
+              source (ASME, ADA, OSHA, official .gov). "Internal service data" attributions are banned.
+            </li>
+            <li>
+              <Em>Every external link is verified live</Em> before publish — hard-404s, dead domains, and
+              soft-404 redirects get re-pointed to a working authority page or unlinked.
+            </li>
+          </List>
+          <Callout tone="warn" tag="When scaling further">
+            Two practices to keep avoiding: publishing the <em>same</em> draft to multiple brand sites
+            (duplicate/doorway-page risk under Google's spam policies), and re-introducing individual
+            credentials into bylines or schema without documented attestation from that person. If a claim
+            like "our mechanics are IUEC-certified" is genuinely true for a brand, add it as an attested
+            brand fact rather than letting the model assert it.
           </Callout>
         </Section>
 
@@ -373,8 +426,12 @@ export function DocumentationPage() {
               content.
             </li>
             <li>
-              <Em>Schema Health</Em> — per brand: total pages, how many validate, error count, and
-              last-checked; <Em>Run validation</Em> re-checks on demand.
+              <Em>Schema Health</Em> — per brand: pages tracked (published posts + approved carrier pages),
+              how many validate, errors, and coverage. The validator fetches each live URL like a browser
+              and distinguishes <em>missing schema</em> (page loads, no JSON-LD → self-heal queues a
+              regenerated schema for review) from <em>unreachable</em> (blocked/404 — a measurement
+              failure, never a regeneration trigger). <Em>Run validation</Em> re-checks a brand on demand;
+              a monthly job sweeps everything.
             </li>
           </ol>
 
@@ -421,6 +478,15 @@ export function DocumentationPage() {
           <P>
             Audits run automatically on the 1st and 15th, or on demand via <Em>Run Citation Audit</Em>.
           </P>
+          <H3>Browsing audit history</H3>
+          <P>
+            The Citations page isn't pinned to the latest run: an <Em>Audit scope</Em> selector switches
+            between the latest audit, any past audit (each listed with its date, check count, and cited %),
+            all history, or a custom date range. Every chart and the results table follow the selection —
+            including the <Em>platform × brand</Em> chart, which shows each brand's citation share on each
+            engine so you can see who ChatGPT cites vs who Gemini cites. Gap analysis stays pinned to the
+            latest audit because it feeds Recommendations.
+          </P>
         </Section>
 
         {/* Recommendations */}
@@ -433,8 +499,9 @@ export function DocumentationPage() {
           </P>
           <List>
             <li>
-              <Em>Approve</Em> → queues the topic, generates the article, and auto-publishes it on validation
-              — same path as daily content.
+              <Em>Approve</Em> → queues the topic, generates the article, and takes you straight to Content
+              Review, where the draft waits for your sign-off — unlike daily content, recommendation drafts{" "}
+              <em>never</em> auto-publish.
             </li>
             <li>
               <Em>Dismiss</Em> → hides it for a 30-day cooldown, then it can resurface if still unaddressed.
@@ -448,8 +515,23 @@ export function DocumentationPage() {
           <P>
             Reports are point-in-time snapshots with a <Em>period selector</Em> to browse any month,{" "}
             <Em>month-over-month deltas</Em>, brand/category charts, an AI executive summary, and
-            top-performing / gap-query tables. Export as CSV or print to PDF.
+            top-performing / gap-query tables. Export as CSV or print to PDF. GA4 traffic and conversions
+            in a monthly report measure that exact calendar month (the live dashboard uses a rolling 30
+            days).
           </P>
+          <H3>AI conversions — does AEO convert anyone?</H3>
+          <P>
+            The dashboard and reports carry an <Em>AI Conversions</Em> KPI: GA4 key events (calls, form
+            submits) from sessions referred by ChatGPT, Perplexity, Claude, Gemini, Copilot, and other AI
+            assistants — with the conversion rate and month-over-month delta. The search-vs-generative
+            panel shows conversions for organic search and AI traffic side by side.
+          </P>
+          <Callout tone="warn" tag="Prerequisite">
+            The number reads 0 until each brand's GA4 property has <Em>key events</Em> configured
+            (click-to-call and form-submit), and <Code>GOOGLE_SERVICE_ACCOUNT_JSON</Code> must be a
+            base64-encoded <em>service-account key</em> granted access to each GA4 property — an OAuth
+            client JSON silently zeroes every Google metric (the backend logs exactly what's wrong).
+          </Callout>
           <H3>Billing-grade API cost tracking</H3>
           <P>
             A ledger records every billable API call with its real usage, summed on the Reports page into
@@ -547,7 +629,11 @@ export function DocumentationPage() {
               ["CITATION_PROVIDER", "brightdata (default)"],
               ["BRIGHT_DATA_API_KEY", "AI-search + account-balance cost"],
               ["AUTO_PUBLISH_ENABLED", "true = monitor-after; false = approve-first"],
+              ["CONTENT_GENERATION_MAX_PER_BRAND", "Daily posts per brand (default 4)"],
+              ["CLAUDE_MODEL", "Writing model (claude-sonnet-4-6)"],
+              ["GOOGLE_SERVICE_ACCOUNT_JSON", "Base64 service-account key — GA4 + Search Console"],
               ["WP_APP_PASSWORD_<brand>", "WordPress publishing per brand"],
+              ["WP_USERNAME_<brand>", "WP login for the app password (default admin)"],
               ["DISCORD_WEBHOOK_URL", "Published-post notifications"],
             ].map(([v, purpose]) => (
               <tr key={v}>
@@ -601,7 +687,10 @@ export function DocumentationPage() {
             {[
               ["Topic discovery", "daily, 8:00 AM"],
               ["Daily content + auto-publish", "daily, 9:00 AM"],
+              ["Daily schema auto-posting (if enabled)", "daily, 10:00 AM"],
               ["Citation audit", "1st & 15th, 8:00 AM"],
+              ["Schema validation sweep", "1st, 7:00 AM"],
+              ["Content refresh", "Sundays, 6:00 AM"],
               ["Monthly report", "last day, 11:00 PM"],
             ].map(([job, cadence]) => (
               <tr key={job}>
@@ -630,10 +719,26 @@ export function DocumentationPage() {
               <Em>Images 404 / 400</Em> — wrong Azure endpoint path or api-version (see the Images gotcha
               above).
             </li>
+            <li>
+              <Em>GA4 / Search Console metrics all zero</Em> — <Code>GOOGLE_SERVICE_ACCOUNT_JSON</Code> is
+              missing, an OAuth client JSON instead of a service-account key, or the account lacks access;
+              the backend log names the exact problem. Search-demand also needs each brand's GSC property
+              URL in Brand Settings.
+            </li>
+            <li>
+              <Em>Schema Health shows errors with "bot-blocked" details</Em> — the site's protection
+              challenged the crawler; a blocked fetch is a measurement failure, not missing schema. Re-run
+              validation.
+            </li>
+            <li>
+              <Em>A live post's links or byline look outdated</Em> — run the content-hygiene backfill
+              (<Code>scripts/fix_broken_links.py</Code>, dry-run by default) to re-verify links, normalize
+              bylines, and refresh schema across all published posts.
+            </li>
           </List>
 
           <p className="font-mono text-[11px] text-muted/60 mt-8 pt-4 border-t border-border">
-            AXXIOM AEO · internal platform documentation · v1 · 5 brands · production
+            AXXIOM AEO · internal platform documentation · v2 (July 2026) · 5 brands · production
           </p>
         </Section>
       </main>
