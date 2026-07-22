@@ -550,7 +550,7 @@ async def schema_health(
         pages = list(latest_by_page.values())
 
         valid = sum(1 for j in pages if j.validation_status == "valid")
-        errors = sum(1 for j in pages if j.validation_status == "error")
+        error_jobs = [j for j in pages if j.validation_status == "error"]
         last_validated = max((j.validated_at for j in job_list if j.validated_at), default=None)
         result.append(
             {
@@ -558,8 +558,19 @@ async def schema_health(
                 "brand_name": brand.name,
                 "total_pages": len(pages),
                 "valid_schema": valid,
-                "errors": errors,
+                "errors": len(error_jobs),
                 "last_validation": last_validated.isoformat() if last_validated else None,
+                # Latest check per failing page — what the Errors count is made of.
+                "error_pages": [
+                    {
+                        "wp_post_url": j.wp_post_url,
+                        "wp_post_id": j.wp_post_id,
+                        "error_details": j.error_details,
+                        "schema_types": j.schema_types or [],
+                        "validated_at": j.validated_at.isoformat() if j.validated_at else None,
+                    }
+                    for j in sorted(error_jobs, key=lambda x: x.wp_post_url or "")
+                ],
             }
         )
     return result
