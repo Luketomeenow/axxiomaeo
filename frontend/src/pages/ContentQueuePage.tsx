@@ -1,16 +1,45 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BrandLocationPicker } from "../components/BrandLocationPicker";
+import { Pagination, usePaged } from "../components/Pagination";
 import type { BrandLocation } from "../data/brandLocations";
 import { apiFetch } from "../lib/api";
 import type { ContentQueueItem } from "../types";
+
+const PAGE_SIZE = 10;
 
 const PRIORITY_LABEL: Record<number, string> = {
   1: "CRITICAL",
   3: "HIGH",
   5: "MEDIUM",
 };
+
+type SortKey = "title" | "brand_id" | "content_type" | "source" | "priority" | "status" | "when";
+
+const SORT_COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "title", label: "Title" },
+  { key: "brand_id", label: "Brand" },
+  { key: "content_type", label: "Type" },
+  { key: "source", label: "Source" },
+  { key: "priority", label: "Priority" },
+  { key: "status", label: "Status" },
+  { key: "when", label: "Scheduled / Added" },
+];
+
+// Scheduled date when set, else when the item entered the queue — one
+// temporal axis so "newest first" works for manual and discovered items alike.
+function whenValue(item: ContentQueueItem): string {
+  return item.scheduled_for || item.created_at || "";
+}
+
+function compareBy(key: SortKey, a: ContentQueueItem, b: ContentQueueItem): number {
+  if (key === "priority") return a.priority - b.priority;
+  if (key === "when") return whenValue(a).localeCompare(whenValue(b));
+  return String(a[key] ?? "").localeCompare(String(b[key] ?? ""), undefined, {
+    sensitivity: "base",
+  });
+}
 
 const CONTENT_TYPES = [
   { value: "faq_hub", label: "FAQ Hub" },
@@ -89,6 +118,45 @@ export function ContentQueuePage() {
   });
 
   const [generatingId, setGeneratingId] = useState<number | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [brandFilter, setBrandFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("priority");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const statuses = useMemo(
+    () => [...new Set((data ?? []).map((i) => i.status))].sort(),
+    [data],
+  );
+
+  const items = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = (data ?? []).filter((i) => {
+      if (brandFilter !== "all" && i.brand_id !== brandFilter) return false;
+      if (statusFilter !== "all" && i.status !== statusFilter) return false;
+      if (sourceFilter !== "all" && (i.source ?? "manual") !== sourceFilter) return false;
+      if (!q) return true;
+      return [i.title, i.target_query, brandsById?.[i.brand_id]].some((f) =>
+        (f ?? "").toLowerCase().includes(q),
+      );
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => dir * compareBy(sortKey, a, b));
+  }, [data, search, brandFilter, statusFilter, sourceFilter, sortKey, sortDir, brandsById]);
+
+  const paged = usePaged(items, PAGE_SIZE);
+
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      // Priority reads best critical-first (1=CRITICAL asc); dates newest-first.
+      setSortDir(key === "when" ? "desc" : "asc");
+    }
+  };
 
   const showSuccess = (message: string) => {
     setSuccessMsg(message);
@@ -193,17 +261,82 @@ export function ContentQueuePage() {
         </div>
       )}
 
+      <div className="aeo-panel p-4 flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search title, query, brand…"
+          aria-label="Search queue"
+          className="text-sm border border-border rounded px-3 py-2 bg-panel-elevated w-64 placeholder:text-muted focus:outline-none focus:border-cyan/50"
+        />
+        <select
+          value={brandFilter}
+          onChange={(e) => setBrandFilter(e.target.value)}
+          aria-label="Filter by brand"
+          className="text-sm border border-border rounded px-3 py-2 bg-panel-elevated"
+        >
+          <option value="all">All brands</option>
+          {Object.entries(brandsById ?? {}).map(([id, name]) => (
+            <option key={id} value={id}>
+              {name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Filter by status"
+          className="text-sm border border-border rounded px-3 py-2 bg-panel-elevated"
+        >
+          <option value="all">All statuses</option>
+          {statuses.map((s) => (
+            <option key={s} value={s}>
+              {s.replace(/_/g, " ")}
+            </option>
+          ))}
+        </select>
+        <select
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value)}
+          aria-label="Filter by source"
+          className="text-sm border border-border rounded px-3 py-2 bg-panel-elevated"
+        >
+          <option value="all">All sources</option>
+          <option value="citation_gap">Citation gap</option>
+          <option value="search_demand">Search demand</option>
+          <option value="coverage">Coverage</option>
+          <option value="manual">Manual</option>
+        </select>
+        <p className="text-xs text-muted ml-auto">
+          {items.length === (data?.length ?? 0)
+            ? `${items.length} item(s)`
+            : `${items.length} of ${data?.length ?? 0} match`}
+        </p>
+      </div>
+
       <div className="aeo-panel overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-muted">
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Brand</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Source</th>
-              <th className="px-4 py-3">Priority</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Scheduled</th>
+              {SORT_COLUMNS.map(({ key, label }) => (
+                <th key={key} className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(key)}
+                    className={`inline-flex items-center gap-1 hover:text-ink ${
+                      sortKey === key ? "text-ink" : ""
+                    }`}
+                    title={`Sort by ${label.toLowerCase()}`}
+                  >
+                    {label}
+                    <span className="text-[10px]">
+                      {sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
+                </th>
+              ))}
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -214,14 +347,16 @@ export function ContentQueuePage() {
                   Loading…
                 </td>
               </tr>
-            ) : !data?.length ? (
+            ) : !paged.slice.length ? (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-muted/80">
-                  Queue is empty — click Discover Topics to mine live demand signals
+                  {(data?.length ?? 0) > 0
+                    ? "No queue items match the current search/filters."
+                    : "Queue is empty — click Discover Topics to mine live demand signals"}
                 </td>
               </tr>
             ) : (
-              data.map((item) => (
+              paged.slice.map((item) => (
                 <tr key={item.id} className="border-t border-border">
                   <td className="px-4 py-3 font-medium">{item.title}</td>
                   <td className="px-4 py-3 text-muted">{brandsById?.[item.brand_id] ?? item.brand_id}</td>
@@ -253,8 +388,17 @@ export function ContentQueuePage() {
                       {PRIORITY_LABEL[item.priority] || "MEDIUM"}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{item.status}</td>
-                  <td className="px-4 py-3 text-muted">{item.scheduled_for || "—"}</td>
+                  <td className="px-4 py-3">{item.status.replace(/_/g, " ")}</td>
+                  <td className="px-4 py-3 text-muted text-xs whitespace-nowrap">
+                    {item.scheduled_for ||
+                      (item.created_at ? (
+                        <span title="When the item entered the queue">
+                          added {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                      ) : (
+                        "—"
+                      ))}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     {item.status === "pending" ? (
                       <button
@@ -303,6 +447,14 @@ export function ContentQueuePage() {
             )}
           </tbody>
         </table>
+        </div>
+        <Pagination
+          page={paged.page}
+          pageSize={PAGE_SIZE}
+          total={paged.total}
+          onPage={paged.setPage}
+          label="queue items"
+        />
       </div>
 
       {showModal && (
