@@ -3,6 +3,14 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { apiFetch } from "../lib/api";
 
+interface SchemaErrorPage {
+  wp_post_url: string | null;
+  wp_post_id: number | null;
+  error_details: string | null;
+  schema_types: string[];
+  validated_at: string | null;
+}
+
 interface SchemaHealthRow {
   brand_id: string;
   brand_name: string;
@@ -10,11 +18,13 @@ interface SchemaHealthRow {
   valid_schema: number;
   errors: number;
   last_validation: string | null;
+  error_pages?: SchemaErrorPage[];
 }
 
 export function SchemaHealthPage() {
   const queryClient = useQueryClient();
   const [msg, setMsg] = useState("");
+  const [expandedBrand, setExpandedBrand] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["schema-health"],
@@ -210,31 +220,83 @@ export function SchemaHealthPage() {
                     : coverage === 100 && row.total_pages > 0
                       ? "bg-success"
                       : "bg-cyan";
+                const expanded = expandedBrand === row.brand_id;
                 return (
-                  <tr key={row.brand_id} className="border-t border-border">
-                    <td className="px-4 py-3 font-medium">{row.brand_name}</td>
-                    <td className="px-4 py-3">{row.total_pages}</td>
-                    <td className="px-4 py-3 text-success">{row.valid_schema}</td>
-                    <td className={`px-4 py-3 ${row.errors > 0 ? "text-danger" : "text-muted"}`}>
-                      {row.errors}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white/10 rounded-full h-2 max-w-[100px]">
-                          <div
-                            className={`${barColor} h-2 rounded-full transition-all`}
-                            style={{ width: `${coverage}%` }}
-                          />
+                  <>
+                    <tr key={row.brand_id} className="border-t border-border">
+                      <td className="px-4 py-3 font-medium">{row.brand_name}</td>
+                      <td className="px-4 py-3">{row.total_pages}</td>
+                      <td className="px-4 py-3 text-success">{row.valid_schema}</td>
+                      <td className="px-4 py-3">
+                        {row.errors > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedBrand(expanded ? null : row.brand_id)}
+                            className="text-danger font-medium hover:text-warning inline-flex items-center gap-1"
+                            title="Show which pages failed and why"
+                          >
+                            {row.errors}
+                            <span className="text-[10px]">{expanded ? "▲" : "▼"}</span>
+                          </button>
+                        ) : (
+                          <span className="text-muted">0</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-white/10 rounded-full h-2 max-w-[100px]">
+                            <div
+                              className={`${barColor} h-2 rounded-full transition-all`}
+                              style={{ width: `${coverage}%` }}
+                            />
+                          </div>
+                          <span className="text-xs tabular-nums text-muted">{coverage}%</span>
                         </div>
-                        <span className="text-xs tabular-nums text-muted">{coverage}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted text-xs">
-                      {row.last_validation
-                        ? new Date(row.last_validation).toLocaleDateString()
-                        : "Never"}
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-4 py-3 text-muted text-xs">
+                        {row.last_validation
+                          ? new Date(row.last_validation).toLocaleDateString()
+                          : "Never"}
+                      </td>
+                    </tr>
+                    {expanded && (row.error_pages?.length ?? 0) > 0 && (
+                      <tr key={`${row.brand_id}-errors`} className="border-t border-border bg-void/60">
+                        <td colSpan={6} className="px-4 py-3">
+                          <p className="text-xs text-muted mb-2">
+                            Failing pages — latest check each. <em>HTTP 404</em> usually means the
+                            post was deleted or its permalink changed; <em>no application/ld+json
+                            block</em> means the page loads but carries no schema (the monthly sweep
+                            queues a regenerated schema for review); <em>bot-blocked</em> is a
+                            measurement failure, not missing schema.
+                          </p>
+                          <ul className="space-y-1.5">
+                            {row.error_pages?.map((ep, i) => (
+                              <li key={i} className="text-xs flex flex-wrap items-baseline gap-x-2">
+                                {ep.wp_post_url ? (
+                                  <a
+                                    href={ep.wp_post_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-ink hover:text-cyan font-mono break-all"
+                                  >
+                                    {ep.wp_post_url.replace(/^https?:\/\//, "")}
+                                  </a>
+                                ) : (
+                                  <span className="text-muted font-mono">post #{ep.wp_post_id ?? "?"}</span>
+                                )}
+                                <span className="text-warning">{ep.error_details || "unknown error"}</span>
+                                {ep.validated_at && (
+                                  <span className="text-muted/60">
+                                    checked {new Date(ep.validated_at).toLocaleString()}
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })
             )}
