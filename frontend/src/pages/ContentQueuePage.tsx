@@ -267,7 +267,27 @@ export function ContentQueuePage() {
                       </button>
                     ) : item.status === "in_progress" ? (
                       <span className="text-xs text-muted/80">Generating…</span>
-                    ) : item.status === "ready" || item.status === "needs_review" ? (
+                    ) : item.status === "needs_review" ? (
+                      // Either a draft failed validation (Review) or generation
+                      // was interrupted before a draft existed (Generate retries;
+                      // the API 409s harmlessly if a draft is already there).
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => generateFromQueue.mutate(item.id)}
+                          disabled={generatingId === item.id || generateFromQueue.isPending}
+                          className="px-3 py-1.5 bg-cyan text-void rounded text-xs font-medium hover:bg-cyan/90 disabled:opacity-50"
+                        >
+                          {generatingId === item.id ? "Starting…" : "Generate"}
+                        </button>
+                        <Link
+                          to="/content/review"
+                          className="text-xs text-ink font-medium hover:text-cyan"
+                        >
+                          Review →
+                        </Link>
+                      </div>
+                    ) : item.status === "ready" ? (
                       <Link
                         to="/content/review"
                         className="text-xs text-ink font-medium hover:text-cyan"

@@ -11,7 +11,11 @@ from app.auth import get_current_user
 from app.config import get_settings
 from app.database import get_db
 from app.models.content import ContentDraft, ContentPiece, ContentQueue
-from app.services.content_service import ContentGenerationService, recover_stale_generating_drafts
+from app.services.content_service import (
+    ContentGenerationService,
+    recover_orphaned_queue_items,
+    recover_stale_generating_drafts,
+)
 
 router = APIRouter(prefix="/api/content", tags=["content"])
 
@@ -98,6 +102,7 @@ async def get_content_queue(
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
+    await recover_orphaned_queue_items(db)
     result = await db.execute(select(ContentQueue).order_by(ContentQueue.priority, ContentQueue.scheduled_for))
     items = result.scalars().all()
     return [
@@ -131,6 +136,10 @@ async def list_drafts(
     _user: dict = Depends(get_current_user),
 ):
     await recover_stale_generating_drafts(db)
+    # Also rescue queue items whose generation task died pre-draft — the user
+    # lands here right after a Recommendations Approve, so this page load is
+    # the natural place to detect and surface that failure.
+    await recover_orphaned_queue_items(db)
     query = select(ContentDraft).order_by(ContentDraft.created_at.desc())
     if status:
         query = query.where(ContentDraft.status == status)

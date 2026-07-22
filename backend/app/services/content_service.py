@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -70,6 +70,61 @@ async def recover_stale_generating_drafts(db: AsyncSession) -> int:
         await db.flush()
         logger.info("Recovered %s stale generating draft(s)", count)
     return count
+
+
+STALE_QUEUE_IN_PROGRESS_MINUTES = 10
+
+
+async def recover_orphaned_queue_items(db: AsyncSession) -> int:
+    """Rescue queue items whose generation task died before creating a draft.
+
+    Triggering generation flips a queue row to in_progress, and the task
+    creates its ContentDraft within seconds. FastAPI background tasks run in
+    the web process, so a deploy landing right after (say) a Recommendations
+    Approve kills the task silently — the row then sits in_progress forever,
+    because the daily worker only picks up 'pending'.
+
+    Orphan test: in_progress + no draft for the queue id + NOTHING generating
+    anywhere (the daily worker marks its whole batch in_progress up front, so
+    a batch mid-run always has a generating draft — this guard keeps those
+    from being flagged) + a grace period. Flip to needs_review so the Content
+    Queue page offers Generate again. If the original task is somehow still
+    alive it harmlessly overwrites the status when it completes.
+    """
+    generating = await db.scalar(
+        select(func.count(ContentDraft.id)).where(ContentDraft.status == "generating")
+    )
+    if generating:
+        return 0
+
+    cutoff = datetime.utcnow() - timedelta(minutes=STALE_QUEUE_IN_PROGRESS_MINUTES)
+    result = await db.execute(
+        select(ContentQueue).where(
+            ContentQueue.status == "in_progress",
+            ContentQueue.created_at < cutoff,
+            ~select(ContentDraft.id).where(ContentDraft.queue_id == ContentQueue.id).exists(),
+        )
+    )
+    items = list(result.scalars().all())
+    if not items:
+        return 0
+
+    notifications = NotificationService(db)
+    for item in items:
+        item.status = "needs_review"
+        await notifications.create(
+            type="generation_interrupted",
+            title=f"Generation was interrupted: {item.title or item.target_query or 'queued topic'}",
+            body=(
+                f"Brand: {item.brand_id}. The server restarted before the draft was "
+                "created — open Content Queue and press Generate to retry."
+            ),
+            entity_type="content_queue",
+            entity_id=item.id,
+        )
+    await db.flush()
+    logger.info("Recovered %s orphaned in-progress queue item(s)", len(items))
+    return len(items)
 
 
 def _usable_phone(phone: str | None) -> str | None:
