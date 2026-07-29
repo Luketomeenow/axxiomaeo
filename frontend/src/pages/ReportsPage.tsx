@@ -647,6 +647,8 @@ export function ReportsPage() {
                         data={brandRows.map((b) => ({
                           brand_id: b.brand_id,
                           citation_share: b.citation_share ?? 0,
+                          cited_queries: b.cited_queries,
+                          total_queries: b.total_queries,
                         }))}
                         dataKey="brand_id"
                         title="Citation Share by Brand"

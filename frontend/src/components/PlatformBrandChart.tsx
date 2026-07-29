@@ -1,5 +1,7 @@
 import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { CHECK_DEFINITION } from "./CitationBarChart";
+
 /** Fixed categorical slots (CVD-validated against the app panel surface
  * #151b24 — lightness band, chroma, adjacent-pair CVD ΔE≥8, normal-vision
  * ΔE≥15, contrast ≥3:1 all pass). Color follows the brand: slots are assigned
@@ -23,11 +25,51 @@ export function brandColor(brand: string, canonicalOrder: string[]): string {
 
 interface Props {
   /** One row per platform: { platform, [brandId]: sharePct } — a brand with no
-   * checks on that platform is simply absent from the row (no bar). */
+   * checks on that platform is simply absent from the row (no bar). Rows may
+   * also carry `${brandId}__cited` / `${brandId}__total` counts, which the
+   * hover uses to show the math behind each share. */
   rows: Record<string, string | number>[];
   /** Canonical brand order (stable across scopes) — drives color assignment. */
   brands: string[];
   title: string;
+}
+
+interface PlatformTooltipProps {
+  active?: boolean;
+  label?: string | number;
+  payload?: {
+    dataKey?: string | number;
+    name?: string;
+    value?: number;
+    color?: string;
+    payload: Record<string, string | number | undefined>;
+  }[];
+}
+
+function PlatformTooltip({ active, payload, label }: PlatformTooltipProps) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload;
+  return (
+    <div className="bg-panel border border-border rounded-md px-3 py-2 text-xs shadow-lg max-w-[260px]">
+      <p className="text-ink font-semibold text-sm">Platform: {label}</p>
+      {payload.map((entry) => {
+        const key = String(entry.dataKey);
+        const cited = row[`${key}__cited`];
+        const total = row[`${key}__total`];
+        return (
+          <p key={key} className="mt-0.5" style={{ color: entry.color }}>
+            {entry.name}:{" "}
+            {entry.value == null
+              ? "no checks on this platform"
+              : `${entry.value}%${
+                  cited != null && total != null ? ` — cited in ${cited} of ${total} checks` : ""
+                }`}
+          </p>
+        );
+      })}
+      <p className="text-muted mt-1 leading-snug">{CHECK_DEFINITION}</p>
+    </div>
+  );
 }
 
 export function PlatformBrandChart({ rows, brands, title }: Props) {
@@ -39,10 +81,7 @@ export function PlatformBrandChart({ rows, brands, title }: Props) {
         <BarChart data={rows} layout="vertical" margin={{ left: 80 }} barGap={2} barCategoryGap="18%">
           <XAxis type="number" domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} />
           <YAxis type="category" dataKey="platform" width={75} tick={{ fontSize: 11 }} />
-          <Tooltip
-            formatter={(v, name) => [`${v ?? 0}%`, String(name)]}
-            labelFormatter={(label) => `Platform: ${label}`}
-          />
+          <Tooltip content={<PlatformTooltip />} />
           <Legend wrapperStyle={{ fontSize: 12 }} iconSize={10} />
           {brands.map((b) => (
             <Bar
