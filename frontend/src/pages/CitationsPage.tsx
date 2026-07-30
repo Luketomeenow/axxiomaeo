@@ -82,17 +82,22 @@ function platformBrandRows(
       const row: Record<string, string | number> = { platform };
       for (const b of brandOrder) {
         const v = byBrand.get(b);
-        if (v) row[b] = Math.round((v.cited / v.total) * 1000) / 10;
+        if (v) {
+          row[b] = Math.round((v.cited / v.total) * 1000) / 10;
+          row[`${b}__cited`] = v.cited;
+          row[`${b}__total`] = v.total;
+        }
       }
       return row;
     });
 }
 
-/** Citation share per distinct value of `pick`, sorted best-first. */
+/** Citation share per distinct value of `pick`, sorted best-first. Carries the
+ * cited/total counts so chart hovers can show where the percentage came from. */
 function shareBy(
   records: CitationRecord[],
   pick: (r: CitationRecord) => string | null | undefined
-): { label: string; citation_share: number }[] {
+): { label: string; citation_share: number; cited: number; total: number }[] {
   const acc = new Map<string, { total: number; cited: number }>();
   for (const r of records) {
     const key = (pick(r) || "").trim();
@@ -106,6 +111,8 @@ function shareBy(
     .map(([label, v]) => ({
       label,
       citation_share: Math.round((v.cited / v.total) * 1000) / 10,
+      cited: v.cited,
+      total: v.total,
     }))
     .sort((a, b) => b.citation_share - a.citation_share);
 }

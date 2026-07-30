@@ -262,6 +262,8 @@ class ReportService:
                 {
                     "category": row.query_category,
                     "citation_share": round(cited / total * 100, 1) if total else 0,
+                    "total_queries": total,
+                    "cited_queries": cited,
                 }
             )
         return rows

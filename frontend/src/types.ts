@@ -12,8 +12,18 @@ export interface DashboardData {
   content_published_mtd: number;
   schema_coverage_pct: number;
   last_updated: string;
-  citation_by_brand: { brand_id: string; citation_share: number }[];
-  citation_by_category: { category: string; citation_share: number }[];
+  citation_by_brand: {
+    brand_id: string;
+    citation_share: number;
+    cited_queries?: number;
+    total_queries?: number;
+  }[];
+  citation_by_category: {
+    category: string;
+    citation_share: number;
+    cited_queries?: number;
+    total_queries?: number;
+  }[];
   citation_by_funnel?: { funnel_stage: string; citation_share: number; avg_visibility_pct: number }[];
   visibility_by_platform?: {
     platform: string;
@@ -323,14 +333,27 @@ export interface MonthlyReportDetail {
     competitor_cited?: string;
     platform?: string;
   }[];
-  brand_breakdown?: Record<string, { brand_id?: string; citation_share?: number }>;
+  brand_breakdown?: Record<
+    string,
+    {
+      brand_id?: string;
+      citation_share?: number;
+      cited_queries?: number;
+      total_queries?: number;
+    }
+  >;
   full_report_json?: {
     citation_share?: number;
     avg_visibility_pct?: number;
     share_of_voice?: number;
     topic_coverage_pct?: number;
     content_published_mtd?: number;
-    by_category?: { category?: string; citation_share: number }[];
+    by_category?: {
+      category?: string;
+      citation_share: number;
+      cited_queries?: number;
+      total_queries?: number;
+    }[];
     by_platform?: { platform?: string; citation_share: number }[];
     by_funnel?: { funnel_stage?: string; citation_share: number }[];
     [key: string]: unknown;
