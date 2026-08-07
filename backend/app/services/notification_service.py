@@ -79,7 +79,10 @@ class NotificationService:
         if entity_type == "schema_deployment":
             # Dedicated schema channel; fall back to the general one if unset.
             return self.settings.discord_schema_webhook_url or self.settings.discord_webhook_url or None
-        if type == "published":
+        if type in ("published", "posting_alert"):
+            # posting_alert: the cadence monitor found a brand not publishing —
+            # same channel that announces published posts, so silence and its
+            # alert land in one place.
             return self.settings.discord_webhook_url or None
         return None
 
