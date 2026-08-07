@@ -22,4 +22,11 @@ class CitationRecord(Base):
     competitor_cited: Mapped[str | None] = mapped_column(String(200), nullable=True)
     citation_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     audit_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # Provenance of the audited query: custom (brand settings) | published
+    # (a post's target query) | gsc (real Google demand) | ghl (observed
+    # customer question) | bank (curated query bank).
+    query_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # ContentPiece.id when citation_url is a page we published — the direct
+    # "the AI cited OUR post" proof point.
+    cited_post_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     checked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

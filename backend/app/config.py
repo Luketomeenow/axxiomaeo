@@ -151,6 +151,19 @@ class Settings(BaseSettings):
     topic_discovery_max_total: int = 10
     topic_discovery_min_impressions: int = 20
 
+    # Citation-audit query composition (per brand, per audit). The audit mixes
+    # real-demand sources with the curated bank, in priority order: all custom
+    # brand queries, then recently-published posts' target queries, then GSC
+    # demand queries, then observed customer questions (ghl), then bank
+    # queries round-robin across categories to fill the remaining budget.
+    # Total of 30 keeps Bright Data cost unchanged (30 queries x 3 platforms).
+    citation_audit_max_queries: int = 30
+    citation_audit_published_slots: int = 8
+    citation_audit_published_days: int = 60
+    citation_audit_gsc_slots: int = 8
+    citation_audit_gsc_min_impressions: int = 20
+    citation_audit_ghl_slots: int = 4
+
     openai_api_key: str = ""
     openai_image_model: str = "gpt-image-1"
     openai_image_size: str = "1536x1024"

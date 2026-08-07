@@ -1,7 +1,10 @@
 """Automated topic discovery — mines real demand signals into the content queue.
 
-Each brand gets a pick from one of two philosophies, alternating day-to-day
-(or both the same day, once ``TOPIC_DISCOVERY_MAX_PER_BRAND`` &gt;= 2):
+``observed_demand`` (real customer questions pushed by the ghl-agent via
+POST /api/agent/observed-questions) outranks everything — literal human
+phrasing beats any inferred signal. After that, each brand gets a pick from
+one of two philosophies, alternating day-to-day (or both the same day, once
+``TOPIC_DISCOVERY_MAX_PER_BRAND`` &gt;= 2):
 
 1. ``trend``       — a ``search_demand`` (GSC) candidate with a genuine rising
    trigger: what people are actually searching for right now.
@@ -21,7 +24,7 @@ approval gate before publishing is unchanged.
 
 import logging
 import re
-from datetime import date
+from datetime import date, datetime, timedelta
 from urllib.parse import urlparse
 
 from sqlalchemy import select
@@ -30,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece, ContentQueue
+from app.models.observed_question import ObservedQuestion
 from app.services.gsc_service import GSCService
 from app.utils.query_bank import get_all_queries, interpolate_query
 from app.utils.query_fanout import CATEGORY_CONTENT_TYPE
@@ -255,14 +259,22 @@ class TopicDiscoveryService:
         # max_per_brand) could silently starve whichever brand sorted last.
         max_total = max(1, self.settings.topic_discovery_max_total, len(brands) * max_per_brand)
 
+        observed_by_brand = await self._observed_rows_by_brand()
+
         queued: list[dict] = []
-        sources_active = {"citation_gap": bool(gaps_by_brand), "search_demand": False, "coverage": True}
+        sources_active = {
+            "observed_demand": bool(observed_by_brand),
+            "citation_gap": bool(gaps_by_brand),
+            "search_demand": False,
+            "coverage": True,
+        }
         today_primary = todays_primary_bucket()
 
         for brand_index, brand in enumerate(brands):
             if len(queued) >= max_total:
                 break
 
+            observed_pool = self._from_observed(brand, observed_by_brand.get(brand.id, []))
             gap_pool = self._from_gaps(brand, gaps_by_brand.get(brand.id, []))
             gsc_candidates = await self._from_gsc(brand)
             if gsc_candidates:
@@ -280,20 +292,21 @@ class TopicDiscoveryService:
                 return min(max_per_brand - len(picked), max_total - len(queued) - len(picked))
 
             if max_per_brand == 1:
-                # Alternate which philosophy leads, day to day; fall through
-                # to the other philosophy, then coverage, if today's primary
-                # has nothing new for this brand.
+                # Observed customer questions outrank everything (they are
+                # literal human demand); then alternate which philosophy
+                # leads, day to day; fall through to the other philosophy,
+                # then coverage, if today's primary has nothing new.
                 primary_pool, secondary_pool = (
                     (trend_pool, gap_pool) if today_primary == "search_demand" else (gap_pool, trend_pool)
                 )
-                for pool in (primary_pool, secondary_pool, coverage_pool):
+                for pool in (observed_pool, primary_pool, secondary_pool, coverage_pool):
                     if _budget() <= 0:
                         break
                     picked += pick_from_pool(pool, known, _budget())
             else:
-                # One of each philosophy (when budget/data allow), then
-                # coverage fills any remaining slots.
-                for pool in (trend_pool, gap_pool):
+                # Observed first, then one of each philosophy (when
+                # budget/data allow), then coverage fills any remaining slots.
+                for pool in (observed_pool, trend_pool, gap_pool):
                     if _budget() <= 0:
                         break
                     picked += pick_from_pool(pool, known, min(1, _budget()))
@@ -375,6 +388,50 @@ class TopicDiscoveryService:
         for row in (await self.db.execute(select(ContentPiece.brand_id, ContentPiece.target_query, ContentPiece.title))).all():
             _add(row[0], row[1], row[2])
         return existing
+
+    async def _observed_rows_by_brand(self) -> dict[str, list[ObservedQuestion]]:
+        """Recent observed customer questions (GHL calls/chats/forms), newest
+        first — the highest-trust demand signal: literal human phrasing."""
+        cutoff = datetime.utcnow() - timedelta(days=90)
+        try:
+            rows = list(
+                (
+                    await self.db.execute(
+                        select(ObservedQuestion)
+                        .where(ObservedQuestion.created_at >= cutoff)
+                        .order_by(ObservedQuestion.created_at.desc())
+                    )
+                ).scalars().all()
+            )
+        except Exception as e:  # table may predate migration on old envs — never sink discovery
+            logger.warning("Topic discovery: observed-questions lookup failed: %s", e)
+            return {}
+        by_brand: dict[str, list[ObservedQuestion]] = {}
+        for row in rows:
+            by_brand.setdefault(row.brand_id, []).append(row)
+        return by_brand
+
+    def _from_observed(self, brand: Brand, rows: list[ObservedQuestion]) -> list[dict]:
+        candidates = []
+        for row in rows:
+            question = (row.question or "").strip()
+            if not question:
+                continue
+            candidates.append(
+                {
+                    "target_query": question,
+                    "title": derive_title(question),
+                    "content_type": infer_content_type(question, brand.markets),
+                    "priority": 1,
+                    "source": "observed_demand",
+                    "source_detail": {
+                        "source": row.source,
+                        "asked_at": row.asked_at.isoformat() if row.asked_at else None,
+                        "observed_question_id": row.id,
+                    },
+                }
+            )
+        return candidates
 
     def _from_gaps(self, brand: Brand, gaps: list[dict]) -> list[dict]:
         candidates = []
