@@ -23,6 +23,9 @@ interface CitationRecord {
   parent_query?: string | null;
   funnel_stage?: string | null;
   competitor_cited: string;
+  citation_url?: string | null;
+  query_source?: string | null;
+  cited_post_id?: number | null;
   audit_run_id?: string | null;
   checked_at: string;
 }
@@ -124,6 +127,8 @@ const GLOSSARY: { term: string; def: string }[] = [
   { term: "Gap", def: "A query where the brand isn't cited — often a competitor is cited instead. These feed the Recommendations inbox." },
   { term: "Mention / URL", def: "“mention” = the brand is named in the answer text; “url” = the brand's website is linked as a source." },
   { term: "Funnel stage", def: "Where the query sits in the buyer journey (awareness → consideration → decision)." },
+  { term: "Query source", def: "Where the audited query came from: custom (brand settings), published (a post we published targets it), gsc (real Google search demand), ghl (real customer questions from calls/chats/forms), bank (curated question bank)." },
+  { term: "Our post", def: "The AI engine's cited source URL is a page this platform published — direct proof the content is winning citations." },
 ];
 
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -249,6 +254,7 @@ export function CitationsPage() {
   const byBrand = shareBy(citations ?? [], (r) => r.brand_id);
   const byCategory = shareBy(citations ?? [], (r) => r.query_category);
   const byFunnel = shareBy(citations ?? [], (r) => r.funnel_stage);
+  const bySource = shareBy(citations ?? [], (r) => r.query_source);
 
   const brandOrder = brandList?.length
     ? brandList.map((b) => b.id).sort()
@@ -430,6 +436,13 @@ export function CitationsPage() {
                       title={`Citation Share by Funnel Stage — ${scopeLabel}`}
                     />
                   )}
+                  {bySource.length > 0 && (
+                    <CitationBarChart
+                      data={bySource}
+                      dataKey="label"
+                      title={`Citation Share by Query Source — ${scopeLabel}`}
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -478,7 +491,30 @@ export function CitationsPage() {
                     ) : (
                       pagedCitations.map((c) => (
                         <tr key={c.id} className="border-t border-border">
-                          <td className="px-4 py-3">{c.query}</td>
+                          <td className="px-4 py-3">
+                            {c.query}
+                            {c.query_source && (
+                              <span className="ml-2 text-[10px] uppercase tracking-wide text-muted/70">
+                                {c.query_source}
+                              </span>
+                            )}
+                            {c.cited_post_id != null &&
+                              (c.citation_url ? (
+                                <a
+                                  href={c.citation_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-success/15 text-success border border-success/30"
+                                  title="The AI cited a page we published — click to open it"
+                                >
+                                  our post
+                                </a>
+                              ) : (
+                                <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-success/15 text-success border border-success/30">
+                                  our post
+                                </span>
+                              ))}
+                          </td>
                           <td className="px-4 py-3 text-muted">{c.brand_id}</td>
                           <td className="px-4 py-3 text-muted">{c.platform}</td>
                           <td className="px-4 py-3">

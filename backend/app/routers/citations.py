@@ -28,6 +28,8 @@ def _serialize_record(r: CitationRecord) -> dict:
         "funnel_stage": r.funnel_stage,
         "competitor_cited": r.competitor_cited,
         "citation_url": r.citation_url,
+        "query_source": r.query_source,
+        "cited_post_id": r.cited_post_id,
         "audit_run_id": r.audit_run_id,
         "checked_at": r.checked_at.isoformat() if r.checked_at else None,
     }

@@ -2,10 +2,11 @@
 
 Auth is a shared key in the ``X-API-Key`` header (``AGENT_API_KEY`` env var;
 unset = this whole surface is disabled). The read endpoints give an agent a
-compact, LLM-friendly view of live AEO performance; the one write endpoint
-queues content generation through the exact same dedup + human-review pipeline
-the UI uses — an agent can DRAFT content, but publishing stays behind the
-human gate in Content Review.
+compact, LLM-friendly view of live AEO performance; the write endpoints queue
+content generation through the exact same dedup + human-review pipeline the UI
+uses (an agent can DRAFT content, but publishing stays behind the human gate
+in Content Review) and accept observed customer questions from the ghl-agent
+as demand signals.
 
 ``/api/agent/openapi.json`` serves a scoped OpenAPI spec (just these
 endpoints) for import as a Foundry OpenAPI tool.
@@ -13,6 +14,7 @@ endpoints) for import as a Foundry OpenAPI tool.
 
 import logging
 import secrets
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -23,6 +25,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.models.brand import Brand
 from app.models.content import ContentPiece, ContentQueue
+from app.models.observed_question import ObservedQuestion
 from app.routers.content import _generate_task, _parse_local_market
 
 logger = logging.getLogger(__name__)
@@ -30,6 +33,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/agent", tags=["agent-api"])
 
 VALID_CONTENT_TYPES = {"faq_hub", "local_page", "vertical_page", "comparison", "data_stats"}
+VALID_QUESTION_SOURCES = {"call", "chat", "form"}
 
 
 async def require_agent_key(x_api_key: str = Header(default="")) -> None:
@@ -177,6 +181,83 @@ async def agent_generate(
     }
 
 
+class ObservedQuestionIn(BaseModel):
+    brand_id: str = Field(description="Brand id, e.g. 'quality' — see /overview for the roster")
+    question: str = Field(min_length=8, max_length=500, description="The customer's question, as close to verbatim as possible")
+    source: str = Field(description="call | chat | form")
+    asked_at: datetime | None = Field(default=None, description="When the customer asked (ISO 8601)")
+    external_ref: str = Field(default="", max_length=200, description="Idempotency key, e.g. the GHL conversation id")
+
+
+@router.post("/observed-questions", dependencies=[Depends(require_agent_key)])
+async def agent_observed_questions(
+    items: list[ObservedQuestionIn],
+    db: AsyncSession = Depends(get_db),
+):
+    """Push real customer questions (from GHL calls/chats/forms) into the
+    platform. They become the highest-trust demand signal: audited on AI
+    engines bi-weekly (query_source="ghl") and fed to topic discovery as the
+    first-priority pool (source="observed_demand").
+
+    Near-duplicate questions (Jaccard >= 0.75 vs the brand's last-180-days
+    corpus, or a matching external_ref) are silently skipped and counted in
+    ``duplicates``. Contract for the ghl-agent: POST a JSON array of
+    {brand_id, question, source: call|chat|form, asked_at?, external_ref?}
+    with the X-API-Key header."""
+    from app.services.topic_discovery_service import queries_similar
+
+    if not items:
+        raise HTTPException(status_code=422, detail="Provide at least one question")
+
+    known_brands = {b.id for b in (await db.execute(select(Brand))).scalars().all()}
+    bad_brand = next((i.brand_id for i in items if i.brand_id not in known_brands), None)
+    if bad_brand:
+        raise HTTPException(status_code=404, detail=f"Unknown brand_id {bad_brand!r}; known: {sorted(known_brands)}")
+    bad_source = next((i.source for i in items if i.source not in VALID_QUESTION_SOURCES), None)
+    if bad_source:
+        raise HTTPException(status_code=422, detail=f"source must be one of {sorted(VALID_QUESTION_SOURCES)}")
+
+    cutoff = datetime.utcnow() - timedelta(days=180)
+    existing_rows = (
+        await db.execute(
+            select(ObservedQuestion.brand_id, ObservedQuestion.question, ObservedQuestion.external_ref)
+            .where(ObservedQuestion.created_at >= cutoff)
+        )
+    ).all()
+    questions_by_brand: dict[str, list[str]] = {}
+    refs_by_brand: dict[str, set[str]] = {}
+    for brand_id, question, ref in existing_rows:
+        questions_by_brand.setdefault(brand_id, []).append(question)
+        if ref:
+            refs_by_brand.setdefault(brand_id, set()).add(ref)
+
+    accepted_ids: list[int] = []
+    duplicates = 0
+    for item in items:
+        corpus = questions_by_brand.setdefault(item.brand_id, [])
+        refs = refs_by_brand.setdefault(item.brand_id, set())
+        if (item.external_ref and item.external_ref in refs) or any(
+            queries_similar(item.question, q) for q in corpus
+        ):
+            duplicates += 1
+            continue
+        row = ObservedQuestion(
+            brand_id=item.brand_id,
+            question=item.question.strip(),
+            source=item.source,
+            asked_at=item.asked_at,
+            external_ref=item.external_ref or None,
+        )
+        db.add(row)
+        await db.flush()
+        accepted_ids.append(row.id)
+        corpus.append(item.question)
+        if item.external_ref:
+            refs.add(item.external_ref)
+
+    return {"accepted": len(accepted_ids), "duplicates": duplicates, "ids": accepted_ids}
+
+
 @router.get("/openapi.json", include_in_schema=False)
 async def agent_openapi():
     """Scoped OpenAPI spec for the three agent endpoints — import this URL as
@@ -245,6 +326,43 @@ async def agent_openapi():
                     "responses": {
                         "200": {"description": "Generation started; draft goes to Content Review"},
                         "409": {"description": "Already covered by existing queue/draft/published content"},
+                    },
+                }
+            },
+            "/api/agent/observed-questions": {
+                "post": {
+                    "operationId": "pushObservedQuestions",
+                    "summary": (
+                        "Push real customer questions (from GHL calls/chats/forms). They feed the "
+                        "bi-weekly citation audit (provenance 'ghl') and topic discovery as the "
+                        "highest-trust demand pool. Near-duplicates are deduped server-side."
+                    ),
+                    "security": secured,
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "required": ["brand_id", "question", "source"],
+                                        "properties": {
+                                            "brand_id": {"type": "string", "description": "Brand id from /overview"},
+                                            "question": {"type": "string", "description": "The customer's question, near-verbatim (8-500 chars)"},
+                                            "source": {"type": "string", "enum": ["call", "chat", "form"]},
+                                            "asked_at": {"type": "string", "format": "date-time"},
+                                            "external_ref": {"type": "string", "description": "Idempotency key, e.g. GHL conversation id"},
+                                        },
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "200": {"description": "{accepted, duplicates, ids}"},
+                        "404": {"description": "Unknown brand_id"},
+                        "422": {"description": "Invalid source or empty batch"},
                     },
                 }
             },
