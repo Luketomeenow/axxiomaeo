@@ -506,3 +506,24 @@ async def regenerate_draft(
         draft_id,
     )
     return {"status": "regenerating", "draft_id": draft_id}
+
+
+@router.post("/posting-check")
+async def run_posting_check(
+    _user: dict = Depends(get_current_user),
+):
+    """Run the posting-cadence monitor now (same check the daily 3pm job runs).
+
+    Returns the per-brand status inline; if any brand is failing it also sends
+    the Discord/Slack alert, exactly as the scheduled run would.
+    """
+    from app.workers.posting_monitor_worker import alert_failures, check_posting
+
+    failing, healthy = await check_posting()
+    if failing:
+        await alert_failures(failing, healthy)
+    return {
+        "status": "alert_sent" if failing else "all_healthy",
+        "failing": failing,
+        "healthy": healthy,
+    }

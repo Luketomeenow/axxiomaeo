@@ -134,6 +134,11 @@ class Settings(BaseSettings):
     # then wait in Content Review as before.
     auto_publish_enabled: bool = True
 
+    # Daily posting-cadence monitor: checks each brand's live WordPress site
+    # and alerts Discord/Slack when a brand published nothing today (or its
+    # site can't be reached). Silent when all brands are healthy.
+    posting_monitor_enabled: bool = True
+
     # Daily schema auto-publish: when true, a worker publishes one missing or
     # outdated brand-level schema per brand per day straight to WordPress and
     # announces it on Discord (self-healing rollout of Organization +

@@ -7,6 +7,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.workers.citation_worker import run_citation_audit
 from app.workers.content_refresh_worker import run_content_refresh
 from app.workers.content_worker import run_daily_content
+from app.workers.posting_monitor_worker import run_posting_monitor
 from app.workers.report_worker import run_monthly_report
 from app.workers.schema_publish_worker import run_daily_schema_publish
 from app.workers.schema_worker import run_schema_validation
@@ -63,7 +64,16 @@ def setup_scheduler():
         id="content_refresh",
         replace_existing=True,
     )
-    logger.info("APScheduler configured with 7 cron jobs (America/Chicago)")
+    # Mid-afternoon, hours after the 9am content run has published — verifies
+    # each brand's live WP site actually received today's posts and alerts
+    # Discord when one went silent.
+    scheduler.add_job(
+        run_posting_monitor,
+        CronTrigger(hour=15, minute=0),
+        id="posting_monitor",
+        replace_existing=True,
+    )
+    logger.info("APScheduler configured with 8 cron jobs (America/Chicago)")
 
 
 def start_scheduler():
