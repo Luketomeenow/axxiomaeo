@@ -48,6 +48,20 @@ BRANDS = [
         "phone": "301-307-5363",
         "author_name": "Eric Amundson",
     },
+    {
+        # Added 2026-08-11. HQ: 777 Old Clemson Rd, Columbia SC 29229; site
+        # says "SC, NC & GA" — add the real market list in Brand Settings.
+        # author_name intentionally None: bylines must be a real team member
+        # (FTC-compliance rules) — set it before content generation starts.
+        "id": "carolina",
+        "name": "Carolina Elevator Service",
+        "wp_url": "https://carolinaelevatorservice.com",
+        "markets": ["Columbia SC"],
+        "is_corporate": False,
+        "phone": "803-865-1400",
+        "author_name": None,
+        "ga4_property_id": "547492838",
+    },
 ]
 
 CONTENT_QUEUE_SEED = [

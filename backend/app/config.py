@@ -82,12 +82,14 @@ class Settings(BaseSettings):
     wp_app_password_arizona_es: str = ""
     wp_app_password_liftech: str = ""
     wp_app_password_quality: str = ""
+    wp_app_password_carolina: str = ""
 
     wp_username_axxiom: str = "admin"
     wp_username_ameritex: str = "admin"
     wp_username_arizona_es: str = "admin"
     wp_username_liftech: str = "admin"
     wp_username_quality: str = "admin"
+    wp_username_carolina: str = "admin"
 
     # Discussion settings applied to every post we publish (and re-applied on
     # every update), so it never depends on each WP site's inconsistent
@@ -106,14 +108,17 @@ class Settings(BaseSettings):
     wp_author_id_arizona_es: int = 0
     wp_author_id_liftech: int = 0
     wp_author_id_quality: int = 0
+    wp_author_id_carolina: int = 0
 
     # Retired 2026-07-06: motion, evolution, ironhawk (see alter_aeo_v9.sql).
+    # Added 2026-08-11: carolina (Carolina Elevator Service, Columbia SC).
     brand_ids: tuple[str, ...] = (
         "axxiom",
         "ameritex",
         "arizona_es",
         "liftech",
         "quality",
+        "carolina",
     )
 
     claude_model: str = "claude-sonnet-4-6"
