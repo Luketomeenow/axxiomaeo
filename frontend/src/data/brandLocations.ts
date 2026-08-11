@@ -81,6 +81,14 @@ export const BRAND_LOCATIONS: BrandLocation[] = [
     city: "Bladensburg",
     state: "MD",
   },
+  {
+    id: "carolina_columbia",
+    brandId: "carolina",
+    name: "Carolina Elevator Service",
+    address: "777 Old Clemson Rd, Columbia, SC 29229",
+    city: "Columbia",
+    state: "SC",
+  },
 ];
 
 export function locationInitial(name: string): string {
