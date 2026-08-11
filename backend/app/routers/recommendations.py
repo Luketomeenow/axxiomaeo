@@ -33,11 +33,12 @@ router = APIRouter(prefix="/api/recommendations", tags=["recommendations"])
 @router.get("")
 async def list_recommendations(
     limit: int = 50,
+    brand_id: str | None = None,
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
     service = RecommendationService(db)
-    items = await service.list_recommendations(limit=limit)
+    items = await service.list_recommendations(limit=limit, brand_id=brand_id)
     return {"recommendations": items, "count": len(items)}
 
 

@@ -253,11 +253,20 @@ class TopicDiscoveryService:
         existing = await self._existing_queries_by_brand()
 
         max_per_brand = max(1, self.settings.topic_discovery_max_per_brand)
-        # Never let the global cap bind tighter than every brand's full
-        # allotment — the old fixed default (10) exactly equalled 5
-        # brands x 2, with zero headroom, so any growth (brand count or
-        # max_per_brand) could silently starve whichever brand sorted last.
-        max_total = max(1, self.settings.topic_discovery_max_total, len(brands) * max_per_brand)
+        # Per-brand allotment = global limit + that brand's boost (the
+        # visibility-sprint knob). Never let the global cap bind tighter than
+        # every brand's full allotment — the old fixed default (10) exactly
+        # equalled 5 brands x 2, with zero headroom, so any growth (brand
+        # count, max_per_brand, or a boost) could silently starve whichever
+        # brand sorted last.
+        def brand_allotment(b: Brand) -> int:
+            return max_per_brand + max(0, b.topic_boost or 0)
+
+        max_total = max(
+            1,
+            self.settings.topic_discovery_max_total,
+            sum(brand_allotment(b) for b in brands),
+        )
 
         observed_by_brand = await self._observed_rows_by_brand()
 
@@ -287,11 +296,12 @@ class TopicDiscoveryService:
 
             known = list(existing.get(brand.id, []))
             picked: list[dict] = []
+            brand_max = brand_allotment(brand)
 
             def _budget() -> int:
-                return min(max_per_brand - len(picked), max_total - len(queued) - len(picked))
+                return min(brand_max - len(picked), max_total - len(queued) - len(picked))
 
-            if max_per_brand == 1:
+            if brand_max == 1:
                 # Observed customer questions outrank everything (they are
                 # literal human demand); then alternate which philosophy
                 # leads, day to day; fall through to the other philosophy,

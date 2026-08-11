@@ -58,3 +58,30 @@ class WorkerError(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AdvisorReport(Base):
+    """A persisted Improvement Advisor run — unlike the in-memory insight
+    caches, history survives redeploys so week-over-week reports compare."""
+
+    __tablename__ = "advisor_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trigger: Mapped[str] = mapped_column(String(20), default="manual")  # manual | scheduled
+    payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class JobRun(Base):
+    """Outcome record per APScheduler job firing (ok | error | missed) — lets
+    the health check distinguish "job ran and produced nothing" from "job
+    never ran", which are indistinguishable from side effects alone."""
+
+    __tablename__ = "job_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scheduled_for: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

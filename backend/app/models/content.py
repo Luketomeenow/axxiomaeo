@@ -69,6 +69,11 @@ class ContentQueue(Base):
     status: Mapped[str] = mapped_column(String(50), default="pending")
     scheduled_for: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Touched on every status flip — lets the health check spot rows stuck
+    # in_progress. Nullable: rows predating v14 never got a value.
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, onupdate=datetime.utcnow
+    )
 
 
 from app.models.brand import Brand  # noqa: E402

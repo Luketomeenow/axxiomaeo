@@ -31,11 +31,13 @@ const navSections = [
     items: [
       { path: "/citations", label: "Citations", icon: "◎" },
       { path: "/reports", label: "Reports", icon: "▦" },
+      { path: "/advisor", label: "Advisor", icon: "✧" },
     ],
   },
   {
     label: "System",
     items: [
+      { path: "/health", label: "System Health", icon: "✚" },
       { path: "/settings/brands", label: "Brand Settings", icon: "⚙" },
       { path: "/notifications", label: "Notifications", icon: "◉" },
       { path: "/docs", label: "Documentation", icon: "§" },

@@ -21,6 +21,9 @@ class Brand(Base):
     author_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     target_queries: Mapped[list] = mapped_column(JSONB, default=list)
     service_page_urls: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # Extra daily topics/posts for this brand on top of the global limits —
+    # a visibility "sprint" knob (0 = normal share).
+    topic_boost: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     content_pieces: Mapped[list["ContentPiece"]] = relationship(back_populates="brand")
