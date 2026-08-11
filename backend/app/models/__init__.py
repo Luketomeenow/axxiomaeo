@@ -6,7 +6,9 @@ from app.models.observed_question import ObservedQuestion
 from app.models.report import MonthlyReport
 from app.models.cost import CostEvent
 from app.models.approval import (
+    AdvisorReport,
     ApprovalEvent,
+    JobRun,
     Notification,
     RecommendationAction,
     WorkerError,
@@ -23,7 +25,9 @@ __all__ = [
     "ObservedQuestion",
     "MonthlyReport",
     "CostEvent",
+    "AdvisorReport",
     "ApprovalEvent",
+    "JobRun",
     "Notification",
     "RecommendationAction",
     "WorkerError",

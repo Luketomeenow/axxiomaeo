@@ -1,12 +1,16 @@
+import asyncio
 import logging
 from datetime import datetime
 
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from app.workers.advisor_worker import run_improvement_advisor
 from app.workers.citation_worker import run_citation_audit
 from app.workers.content_refresh_worker import run_content_refresh
 from app.workers.content_worker import run_daily_content
+from app.workers.flow_health_worker import run_flow_health
 from app.workers.posting_monitor_worker import run_posting_monitor
 from app.workers.report_worker import run_monthly_report
 from app.workers.schema_publish_worker import run_daily_schema_publish
@@ -16,6 +20,46 @@ from app.workers.topic_worker import run_topic_discovery
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler(timezone="America/Chicago")
+
+
+async def _record_job_run(job_id: str, status: str, detail: str | None, scheduled_for):
+    """Persist one JobRun row — lets the health check tell 'job ran and
+    produced nothing' from 'job never ran'. Never raises."""
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models.approval import JobRun
+
+        scheduled_naive = None
+        if scheduled_for is not None:
+            scheduled_naive = scheduled_for.astimezone(tz=None).replace(tzinfo=None)
+        async with AsyncSessionLocal() as session:
+            session.add(
+                JobRun(
+                    job_id=job_id,
+                    status=status,
+                    detail=(detail or "")[:500] or None,
+                    scheduled_for=scheduled_naive,
+                )
+            )
+            await session.commit()
+    except Exception:
+        logger.warning("Failed to record job run for %s", job_id, exc_info=True)
+
+
+def _on_job_event(event):
+    status = "ok"
+    detail = None
+    if event.code == EVENT_JOB_ERROR:
+        status = "error"
+        detail = str(getattr(event, "exception", "") or "")
+    elif event.code == EVENT_JOB_MISSED:
+        status = "missed"
+    try:
+        asyncio.get_event_loop().create_task(
+            _record_job_run(event.job_id, status, detail, getattr(event, "scheduled_run_time", None))
+        )
+    except Exception:
+        logger.warning("Failed to schedule job-run record for %s", event.job_id, exc_info=True)
 
 
 def setup_scheduler():
@@ -73,7 +117,27 @@ def setup_scheduler():
         id="posting_monitor",
         replace_existing=True,
     )
-    logger.info("APScheduler configured with 8 cron jobs (America/Chicago)")
+    # Mid-morning, after discovery (8am), generation (9am), and schema (10am)
+    # have all run — diagnoses every stage of the flow and alerts Discord when
+    # anything failed or produced nothing. The escalation layer the August
+    # 2026 silent outage was missing.
+    scheduler.add_job(
+        run_flow_health,
+        CronTrigger(hour=10, minute=30),
+        id="flow_health",
+        replace_existing=True,
+    )
+    # Weekly AI improvement advisor — what to improve and why, from live data.
+    scheduler.add_job(
+        run_improvement_advisor,
+        CronTrigger(day_of_week="mon", hour=7, minute=0),
+        id="improvement_advisor",
+        replace_existing=True,
+    )
+    # Outcome record per firing (ok/error/missed) → aeo.job_runs, so health
+    # checks can tell "ran and produced nothing" from "never ran".
+    scheduler.add_listener(_on_job_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
+    logger.info("APScheduler configured with 10 cron jobs (America/Chicago)")
 
 
 def start_scheduler():

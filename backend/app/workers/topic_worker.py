@@ -15,6 +15,7 @@ from app.services.topic_discovery_service import TopicDiscoveryService
 logger = logging.getLogger(__name__)
 
 SOURCE_LABELS = {
+    "observed_demand": "customer questions",
     "citation_gap": "citation gaps",
     "search_demand": "search demand",
     "coverage": "coverage fill",
@@ -49,7 +50,18 @@ async def run_topic_discovery():
                     entity_type="content_queue",
                 )
             else:
-                logger.info("Topic discovery: no new topics (existing coverage is complete)")
+                # Zero topics means zero posts tomorrow — that must never be
+                # silent (the August 2026 outage started exactly this way).
+                logger.warning("Topic discovery queued 0 topics")
+                await NotificationService(session).create(
+                    type="flow_alert",
+                    title="Topic discovery queued 0 topics",
+                    body=(
+                        "No brand received a topic today — demand pools may be "
+                        "exhausted or the GSC/citation feeds are down. Nothing "
+                        "will publish at 9am. Check System Health."
+                    ),
+                )
             await session.commit()
             logger.info("Topic discovery complete: %s topic(s) queued", len(queued))
         except Exception as e:

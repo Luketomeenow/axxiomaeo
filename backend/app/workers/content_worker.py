@@ -28,19 +28,33 @@ async def run_daily_content():
 
             # Per-brand, not one global LIMIT — a global limit has no
             # fairness guarantee: one brand's backlog can starve every
-            # other brand's queue item for the whole run.
+            # other brand's queue item for the whole run. topic_boost keeps
+            # the generation cap in lockstep with discovery's boosted supply.
             items = []
             for brand in brands:
                 result = await session.execute(
                     select(ContentQueue)
                     .where(ContentQueue.status == "pending", ContentQueue.brand_id == brand.id)
                     .order_by(ContentQueue.priority, ContentQueue.scheduled_for)
-                    .limit(per_brand_limit)
+                    .limit(per_brand_limit + max(0, brand.topic_boost or 0))
                 )
                 items.extend(result.scalars().all())
 
             if not items:
-                logger.info("No pending content in queue")
+                # An empty queue means nothing publishes today — never silent
+                # (the August 2026 outage hid behind this exact log line).
+                logger.warning("Daily content: queue is empty — nothing will publish today")
+                from app.services.notification_service import NotificationService
+
+                await NotificationService(session).create(
+                    type="flow_alert",
+                    title="Daily content: queue is empty — nothing will publish today",
+                    body=(
+                        "The 8am discovery run left no pending items. "
+                        "Check System Health for the failing stage."
+                    ),
+                )
+                await session.commit()
                 return
 
             for queue_item in items:

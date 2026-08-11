@@ -77,8 +77,11 @@ class RecommendationService:
         )
         return {r[0] for r in rows.all()}
 
-    async def list_recommendations(self, limit: int = 50) -> list[dict]:
+    async def list_recommendations(self, limit: int = 50, brand_id: str | None = None) -> list[dict]:
         gaps = await self.reports.get_gap_queries(limit=GAP_FETCH_LIMIT)
+        if brand_id:
+            # Brand-scoped view (e.g. a visibility sprint for one brand).
+            gaps = [g for g in gaps if g.get("brand_id") == brand_id]
         if not gaps:
             return []
 

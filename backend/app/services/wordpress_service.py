@@ -83,6 +83,32 @@ class WordPressService:
 
             return await retry_with_backoff(do_request)
 
+    async def check_connection(self, brand: Brand) -> dict:
+        """One-shot auth probe (GET users/me) — NO retry_with_backoff, so a
+        hopeless 401 answers in seconds, not after backoff sleeps. Returns
+        {ok, status_code, error} and never raises."""
+        url = f"{self._base_url(brand)}/users/me"
+        try:
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+                response = await client.get(url, headers=self._auth_header(brand))
+        except Exception as e:
+            return {"ok": False, "status_code": None, "error": f"Site unreachable: {e}"}
+        if response.status_code < 400:
+            return {"ok": True, "status_code": response.status_code, "error": None}
+        if response.status_code == 401:
+            error = (
+                f"WordPress login failed for {brand.id} — regenerate the application "
+                f"password and update WP_APP_PASSWORD_{brand.id.upper()}."
+            )
+        elif response.status_code == 403 and "<html" in response.text.lower():
+            error = (
+                f"WordPress blocked the API request for {brand.id} (403). "
+                "Check WP Engine / Cloudflare REST API access."
+            )
+        else:
+            error = f"WordPress API error {response.status_code} for {brand.id}"
+        return {"ok": False, "status_code": response.status_code, "error": error}
+
     async def create_post(
         self,
         brand: Brand,

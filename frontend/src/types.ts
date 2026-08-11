@@ -118,6 +118,7 @@ export interface Brand {
   logo_url?: string;
   target_queries?: string[];
   service_page_urls?: Record<string, string>;
+  topic_boost?: number;
   wp_publish_configured?: boolean;
 }
 
@@ -386,4 +387,96 @@ export interface CostSummary {
     output_tokens?: number;
     actual?: boolean;
   }[];
+}
+
+export interface FlowStage {
+  key: string;
+  label: string;
+  status: "ok" | "warn" | "fail";
+  detail: string;
+  metrics: {
+    gsc_credential?: boolean;
+    citation_provider?: boolean;
+    discord_webhook?: boolean;
+    wordpress?: {
+      brand_id: string;
+      ok: boolean;
+      status_code?: number | null;
+      error?: string | null;
+      cached?: boolean;
+    }[];
+    queued_today?: number;
+    by_source?: Record<string, number>;
+    job_ran?: boolean;
+    drafts_today?: number;
+    stuck_in_progress?: number;
+    stranded?: {
+      queue_id: number;
+      draft_id: number;
+      brand_id: string;
+      title?: string | null;
+      age_days?: number | null;
+    }[];
+    published_today?: number;
+    by_brand?: Record<string, number>;
+    silent_brands?: string[];
+    last_24h?: number;
+    by_worker?: {
+      worker_name: string;
+      count: number;
+      latest_message?: string;
+      latest_at?: string | null;
+    }[];
+  };
+}
+
+export interface FlowHealth {
+  checked_at: string;
+  overall: "ok" | "warn" | "fail";
+  stages: FlowStage[];
+}
+
+export interface WorkerErrorItem {
+  id: number;
+  worker_name: string;
+  error_message?: string | null;
+  error_details?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
+export interface WpTestResult {
+  ok: boolean;
+  status_code?: number | null;
+  error?: string | null;
+  checked_at?: string;
+}
+
+export interface AdvisorImprovement {
+  title: string;
+  why: string;
+  category: string;
+  priority: string;
+  brand_id?: string | null;
+  effort: string;
+}
+
+export interface AdvisorReportPayload {
+  id: number;
+  created_at: string | null;
+  trigger: string;
+  summary?: string;
+  improvements?: AdvisorImprovement[];
+  quick_wins?: string[];
+  data_summary?: {
+    citation_share?: number | null;
+    brands_posting_7d?: number;
+    flow_overall?: string;
+  };
+}
+
+export interface AdvisorResponse {
+  status: "ok" | "no_data" | "error";
+  cached?: boolean;
+  message?: string;
+  report?: AdvisorReportPayload;
 }

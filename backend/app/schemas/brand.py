@@ -22,6 +22,8 @@ class BrandUpdate(BaseModel):
     logo_url: str | None = None
     target_queries: list[str] | None = None
     service_page_urls: dict[str, str] | None = None
+    # Extra daily topics/posts for this brand (visibility sprint knob).
+    topic_boost: int | None = None
 
     @field_validator("ga4_property_id", mode="before")
     @classmethod
@@ -40,6 +42,13 @@ class BrandUpdate(BaseModel):
         cleaned = value.strip()
         return cleaned or None
 
+    @field_validator("topic_boost")
+    @classmethod
+    def clamp_topic_boost(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        return max(0, min(10, value))
+
 
 def brand_to_dict(b) -> dict:
     from app.config import get_settings
@@ -57,5 +66,6 @@ def brand_to_dict(b) -> dict:
         "logo_url": b.logo_url,
         "target_queries": b.target_queries or [],
         "service_page_urls": b.service_page_urls or {},
+        "topic_boost": b.topic_boost or 0,
         "wp_publish_configured": settings.wp_publish_configured(b.id),
     }

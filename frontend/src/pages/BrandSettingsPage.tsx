@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../lib/api";
-import type { Brand } from "../types";
+import type { Brand, WpTestResult } from "../types";
 
 function normalizeGa4PropertyId(value: string): string {
   const trimmed = value.trim();
@@ -29,11 +29,21 @@ export function BrandSettingsPage() {
 
   const [form, setForm] = useState<Partial<Brand>>({});
   const [serviceUrlsRaw, setServiceUrlsRaw] = useState("");
+  const [wpTest, setWpTest] = useState<WpTestResult | null>(null);
+
+  const testConnection = useMutation({
+    mutationFn: () =>
+      apiFetch<WpTestResult>(`/api/brands/${brandId}/test-connection`, { method: "POST" }),
+    onSuccess: setWpTest,
+    onError: (err: Error) =>
+      setWpTest({ ok: false, error: err.message || "Test request failed" }),
+  });
 
   useEffect(() => {
     setForm({});
     setSaveMsg("");
     setSaveError("");
+    setWpTest(null);
   }, [brandId]);
 
   useEffect(() => {
@@ -122,6 +132,7 @@ export function BrandSettingsPage() {
     logo_url: form.logo_url ?? brand.logo_url ?? "",
     target_queries: form.target_queries ?? brand.target_queries ?? [],
     service_page_urls: form.service_page_urls ?? brand.service_page_urls ?? {},
+    topic_boost: form.topic_boost ?? brand.topic_boost ?? 0,
   };
 
   const marketsText = Array.isArray(values.markets) ? values.markets.join(", ") : "";
@@ -153,6 +164,7 @@ export function BrandSettingsPage() {
         .map((s) => s.trim())
         .filter(Boolean),
       service_page_urls: service_page_urls,
+      topic_boost: Math.max(0, Math.min(10, Number(values.topic_boost) || 0)),
     });
   };
 
@@ -190,12 +202,60 @@ export function BrandSettingsPage() {
         </div>
         <div>
           <label className="block text-xs font-medium text-muted mb-1">WordPress URL</label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={values.wp_url}
+              onChange={(e) => setForm({ ...form, wp_url: e.target.value })}
+              className="flex-1 border border-border rounded px-3 py-2 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => testConnection.mutate()}
+              disabled={testConnection.isPending}
+              className="shrink-0 px-3 py-2 border border-border rounded text-xs text-ink hover:border-cyan disabled:opacity-50"
+            >
+              {testConnection.isPending ? "Testing…" : "Test connection"}
+            </button>
+          </div>
+          {wpTest && (
+            <p className={`text-xs mt-1 ${wpTest.ok ? "text-success" : "text-red-400"}`}>
+              {wpTest.ok
+                ? "✓ Connected — WordPress accepted the credentials."
+                : `✗ ${wpTest.error || `Failed (HTTP ${wpTest.status_code ?? "?"})`}`}
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted mb-1">Logo URL</label>
           <input
             type="url"
-            value={values.wp_url}
-            onChange={(e) => setForm({ ...form, wp_url: e.target.value })}
+            value={values.logo_url}
+            onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
             className="w-full border border-border rounded px-3 py-2 text-sm"
+            placeholder="https://example.com/wp-content/uploads/logo.png"
           />
+          <p className="text-xs text-muted/80 mt-1">
+            Used in Organization JSON-LD. If empty, schema falls back to
+            <code> /wp-content/uploads/logo.png</code> on the brand site — often a 404.
+          </p>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted mb-1">
+            Topic boost (extra posts/day)
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={10}
+            value={values.topic_boost}
+            onChange={(e) => setForm({ ...form, topic_boost: Number(e.target.value) })}
+            className="w-32 border border-border rounded px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-muted/80 mt-1">
+            Extra daily topics and posts for this brand on top of the global limit — a
+            visibility-sprint knob. 0 = normal share.
+          </p>
         </div>
         <div>
           <label className="block text-xs font-medium text-muted mb-1">

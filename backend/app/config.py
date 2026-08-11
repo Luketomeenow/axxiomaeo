@@ -139,6 +139,16 @@ class Settings(BaseSettings):
     # site can't be reached). Silent when all brands are healthy.
     posting_monitor_enabled: bool = True
 
+    # Daily 10:30 CT flow-health check: diagnoses every pipeline stage
+    # (integrations, discovery, generation, publish, errors) and alerts when
+    # anything failed or produced nothing. Silent when healthy.
+    flow_health_enabled: bool = True
+
+    # Weekly AI improvement advisor (Mon 7am CT): analyzes live KPIs, citation
+    # data, posting cadence, and flow health into prioritized what-to-improve
+    # recommendations. Also available on demand at /api/advisor/latest.
+    advisor_enabled: bool = True
+
     # Daily schema auto-publish: when true, a worker publishes one missing or
     # outdated brand-level schema per brand per day straight to WordPress and
     # announces it on Discord (self-healing rollout of Organization +
