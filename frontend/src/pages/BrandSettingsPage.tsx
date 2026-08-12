@@ -332,7 +332,7 @@ export function BrandSettingsPage() {
             placeholder={"elevator repair Baltimore\nhow often elevator inspection Maryland"}
           />
           <p className="text-xs text-muted/80 mt-1">
-            Custom queries for bi-weekly citation audits (in addition to QUERY_BANK).
+            Custom queries for the weekly citation audits (in addition to QUERY_BANK).
           </p>
         </div>
         <div>

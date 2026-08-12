@@ -476,7 +476,7 @@ export function DocumentationPage() {
             <li>Results feed the Citations dashboard, the gap analysis, and the Recommendations inbox.</li>
           </List>
           <P>
-            Audits run automatically on the 1st and 15th, or on demand via <Em>Run Citation Audit</Em>.
+            Audits run automatically every Monday, or on demand via <Em>Run Citation Audit</Em>.
           </P>
           <H3>Browsing audit history</H3>
           <P>
@@ -688,7 +688,7 @@ export function DocumentationPage() {
               ["Topic discovery", "daily, 8:00 AM"],
               ["Daily content + auto-publish", "daily, 9:00 AM"],
               ["Daily schema auto-posting (if enabled)", "daily, 10:00 AM"],
-              ["Citation audit", "1st & 15th, 8:00 AM"],
+              ["Citation audit", "Mondays, 5:00 AM"],
               ["Schema validation sweep", "1st, 7:00 AM"],
               ["Content refresh", "Sundays, 6:00 AM"],
               ["Monthly report", "last day, 11:00 PM"],

@@ -154,12 +154,13 @@ class Settings(BaseSettings):
     # recommendations. Also available on demand at /api/advisor/latest.
     advisor_enabled: bool = True
 
-    # Daily schema auto-publish: when true, a worker publishes one missing or
-    # outdated brand-level schema per brand per day straight to WordPress and
-    # announces it on Discord (self-healing rollout of Organization +
-    # LocalBusiness + 5 Service schemas). Default false — the Schema Approval
-    # Inbox (human-approved) is the only path until you turn this on.
-    schema_auto_publish_enabled: bool = False
+    # Daily schema auto-publish: a worker publishes one missing or outdated
+    # brand-level schema per brand per day straight to WordPress and announces
+    # it on Discord (self-healing rollout of Organization + LocalBusiness +
+    # 5 Service schemas). Enabled 2026-08-12 as part of the citation-share
+    # push — set SCHEMA_AUTO_PUBLISH_ENABLED=false to restore the
+    # approval-inbox-only path.
+    schema_auto_publish_enabled: bool = True
 
     # Daily automated topic discovery (GSC demand + citation gaps + coverage).
     # max_per_brand=1 -> alternate trend/AEO-gap picks day-to-day. max_per_brand=2
@@ -170,6 +171,17 @@ class Settings(BaseSettings):
     topic_discovery_max_per_brand: int = 2
     topic_discovery_max_total: int = 10
     topic_discovery_min_impressions: int = 20
+    # Evergreen floor: when every demand pool AND the coverage bank are
+    # exhausted for a brand, Claude proposes fresh topics so discovery can
+    # never queue zero (the August 2026 outage). Costs one small LLM call per
+    # starving brand per day, ledgered as operation=evergreen_topics.
+    evergreen_topics_enabled: bool = True
+
+    # Content refresh (Sundays): re-optimize the least-recently-touched
+    # published posts for freshness (updated stats/years, extra FAQ coverage,
+    # stronger direct answers). Freshness is a real AI-citation signal.
+    content_refresh_days: int = 45
+    content_refresh_max_per_run: int = 6
 
     # Citation-audit query composition (per brand, per audit). The audit mixes
     # real-demand sources with the curated bank, in priority order: all custom

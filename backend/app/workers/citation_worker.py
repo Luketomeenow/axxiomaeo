@@ -1,4 +1,4 @@
-"""Bi-weekly citation audit — asks AI engines the queries we care about.
+"""Weekly citation audit — asks AI engines the queries we care about.
 
 Query composition is demand-driven (v13): each brand's ~30 audit slots are
 filled in trust order — custom brand queries, recently-published posts' target
@@ -382,7 +382,7 @@ async def run_citation_audit():
         notifications = NotificationService(session)
         await notifications.create(
             type="citation_complete",
-            title="Bi-weekly citation audit complete",
+            title="Weekly citation audit complete",
             body="Results available in dashboard",
             send_slack=True,
         )

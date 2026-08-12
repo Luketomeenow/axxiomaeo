@@ -63,7 +63,7 @@ class ContentQueue(Base):
     priority: Mapped[int] = mapped_column(Integer, default=5)
     source_citation_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Topic provenance: manual | citation_gap | search_demand | observed_demand
-    # | coverage | agent (null = seeded/legacy)
+    # | coverage | evergreen | agent (null = seeded/legacy)
     source: Mapped[str | None] = mapped_column(String(30), nullable=True)
     source_detail: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="pending")

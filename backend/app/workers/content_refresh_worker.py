@@ -1,41 +1,53 @@
 import logging
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
+from app.config import get_settings
 from app.database import AsyncSessionLocal
 from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece
 from app.services.claude_service import ClaudeService
 from app.services.content_service import ContentGenerationService
+from app.services.notification_service import NotificationService, record_worker_error
 
 logger = logging.getLogger(__name__)
 
-STALE_CONTENT_DAYS = 90
-MAX_REFRESH_PER_RUN = 2
-
 
 async def run_content_refresh():
-    """Regenerate and re-publish stale content (Ahrefs: freshness matters for AI citations)."""
+    """Re-optimize and re-publish stale content (freshness is a real AI-citation
+    signal): updated stats/years, extra FAQ coverage, stronger direct answers.
+
+    Rotation is least-recently-touched first, keyed on
+    coalesce(last_refreshed_at, published_at) — the old selection filtered on
+    published_at alone with no ordering, so the same arbitrary two pieces were
+    re-eligible (and re-picked) every single week while everything else aged.
+    """
+    settings = get_settings()
     logger.info("Starting content refresh job")
-    cutoff = datetime.utcnow() - timedelta(days=STALE_CONTENT_DAYS)
+    cutoff = datetime.utcnow() - timedelta(days=max(1, settings.content_refresh_days))
+    last_touched = func.coalesce(ContentPiece.last_refreshed_at, ContentPiece.published_at)
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(ContentPiece).where(
+            select(ContentPiece)
+            .where(
                 ContentPiece.status == "published",
                 ContentPiece.published_at.isnot(None),
-                ContentPiece.published_at < cutoff,
+                last_touched < cutoff,
             )
+            .order_by(last_touched.asc())
+            .limit(max(1, settings.content_refresh_max_per_run))
         )
-        pieces = result.scalars().all()[:MAX_REFRESH_PER_RUN]
+        pieces = result.scalars().all()
 
     if not pieces:
         logger.info("No stale content to refresh")
         return
 
     claude = ClaudeService()
-    refreshed = 0
+    refreshed: list[str] = []
+    skipped_no_draft = 0
     for piece in pieces:
         async with AsyncSessionLocal() as session:
             p = await session.get(ContentPiece, piece.id)
@@ -54,6 +66,7 @@ async def run_content_refresh():
             )
             draft = draft_q.scalar_one_or_none()
             if not draft or not draft.html_content:
+                skipped_no_draft += 1
                 continue
 
             brand = await session.get(Brand, p.brand_id)
@@ -71,24 +84,34 @@ async def run_content_refresh():
                 svc = ContentGenerationService(session)
                 await svc._publish_draft_to_brand(draft, p.brand_id)
                 await session.commit()
-                refreshed += 1
+                refreshed.append(f"{p.brand_id}: {p.title or p.slug}")
                 logger.info("Refreshed content piece %s for brand %s", p.id, p.brand_id)
-            except Exception:
+            except Exception as e:
                 logger.exception("Refresh failed for content piece %s", p.id)
+                await record_worker_error(
+                    session,
+                    "content_refresh",
+                    f"Refresh failed for piece {p.id} ({p.brand_id}): {e}",
+                    error_details={"piece_id": p.id, "brand_id": p.brand_id},
+                    notify=False,  # System Health's errors stage surfaces these
+                )
+                await session.commit()
 
-    logger.info("Content refresh complete: %s piece(s) updated", refreshed)
-
-    async with AsyncSessionLocal() as session:
-        recheck_cutoff = datetime.utcnow() - timedelta(days=30)
-        gap_pieces = await session.execute(
-            select(ContentPiece).where(
-                ContentPiece.source_citation_id.isnot(None),
-                ContentPiece.published_at.isnot(None),
-                ContentPiece.published_at < recheck_cutoff,
+    logger.info(
+        "Content refresh complete: %s piece(s) updated, %s skipped (no stored draft html)",
+        len(refreshed),
+        skipped_no_draft,
+    )
+    if refreshed:
+        async with AsyncSessionLocal() as session:
+            await NotificationService(session).create(
+                type="content_refresh",
+                title=f"{len(refreshed)} post(s) re-optimized for freshness",
+                body="\n".join(refreshed)[:1500],
             )
-        )
-        if gap_pieces.scalars().first():
-            logger.info("Triggering citation re-audit after gap-sourced publishes")
-            from app.workers.citation_worker import run_citation_audit
+            await session.commit()
 
-            await run_citation_audit()
+    # NOTE: this worker used to conditionally trigger a full citation
+    # re-audit here (gap-sourced pieces >30 days old). Audits now run weekly
+    # on Mondays, so the Sunday-night extra run would just double Bright
+    # Data spend for data that's hours from arriving anyway.

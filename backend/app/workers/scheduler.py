@@ -76,9 +76,13 @@ def setup_scheduler():
         id="daily_content",
         replace_existing=True,
     )
+    # Weekly (was 1st & 15th, doubled 2026-08-12 for the citation-share
+    # push): fresh audits regenerate the citation-gap topic pool 4x/month
+    # and give week-over-week share feedback. Monday 5am so results are
+    # ready before the 7am improvement advisor and the day's content run.
     scheduler.add_job(
         run_citation_audit,
-        CronTrigger(day="1,15", hour=8, minute=0),
+        CronTrigger(day_of_week="mon", hour=5, minute=0),
         id="citation_audit",
         replace_existing=True,
     )
