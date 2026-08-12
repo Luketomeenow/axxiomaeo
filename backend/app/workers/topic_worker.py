@@ -19,6 +19,7 @@ SOURCE_LABELS = {
     "citation_gap": "citation gaps",
     "search_demand": "search demand",
     "coverage": "coverage fill",
+    "evergreen": "evergreen (AI-proposed)",
 }
 
 

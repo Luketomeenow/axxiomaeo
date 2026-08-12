@@ -98,7 +98,7 @@ async def agent_overview(db: AsyncSession = Depends(get_db)):
         "queue_by_status": queue_counts,
         "top_recommendations": recommendations,
         "notes": (
-            "Citation figures reflect the latest audit run (audits run the 1st & 15th). "
+            "Citation figures reflect the latest audit run (audits run weekly, Mondays). "
             "Use POST /api/agent/generate to queue an article; drafts always wait for "
             "human approval in Content Review before publishing."
         ),
@@ -196,7 +196,7 @@ async def agent_observed_questions(
 ):
     """Push real customer questions (from GHL calls/chats/forms) into the
     platform. They become the highest-trust demand signal: audited on AI
-    engines bi-weekly (query_source="ghl") and fed to topic discovery as the
+    engines weekly (query_source="ghl") and fed to topic discovery as the
     first-priority pool (source="observed_demand").
 
     Near-duplicate questions (Jaccard >= 0.75 vs the brand's last-180-days
@@ -334,7 +334,7 @@ async def agent_openapi():
                     "operationId": "pushObservedQuestions",
                     "summary": (
                         "Push real customer questions (from GHL calls/chats/forms). They feed the "
-                        "bi-weekly citation audit (provenance 'ghl') and topic discovery as the "
+                        "weekly citation audit (provenance 'ghl') and topic discovery as the "
                         "highest-trust demand pool. Near-duplicates are deduped server-side."
                     ),
                     "security": secured,

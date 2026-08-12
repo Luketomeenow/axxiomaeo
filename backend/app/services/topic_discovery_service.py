@@ -22,6 +22,7 @@ The daily content worker generates drafts from the queue as usual — the human
 approval gate before publishing is unchanged.
 """
 
+import json
 import logging
 import re
 from datetime import date, datetime, timedelta
@@ -63,6 +64,35 @@ _VERTICAL_HINTS = (
 )
 
 _QUESTION_STARTERS = ("how", "what", "why", "when", "who", "which", "can", "should", "is", "are", "do", "does")
+
+_VALID_CONTENT_TYPES = {"faq_hub", "local_page", "vertical_page", "comparison", "data_stats"}
+
+# The floor of last resort (below even coverage): when every demand pool AND
+# the finite coverage pool are exhausted, ask Claude for fresh evergreen
+# topics instead of silently queueing nothing. The August 2026 outage was
+# exactly this — all pools dry, pipeline stopped, nobody told.
+EVERGREEN_PROMPT = """You are the content strategist for {brand_name}, an elevator service company \
+serving: {markets}. It is {month}.
+
+Propose {n} NEW article topics answering questions building owners, property managers, and \
+facility directors actually ask AI assistants (ChatGPT, Gemini, Perplexity) about elevators.
+
+Services offered: {services}.
+Relevant verticals: hospitals, hotels, apartments/multifamily, offices, schools, senior living, \
+retail, warehouses.
+
+Return ONLY a valid JSON array (no markdown fences), each item exactly:
+{{"target_query": "the question as a user would ask it", "title": "article title", \
+"content_type": "faq_hub|local_page|vertical_page|comparison|data_stats"}}
+
+Rules:
+- Practical buyer questions (cost, timelines, compliance, choosing vendors, troubleshooting,
+  planning) — not marketing copy. Mix decision-stage and research-stage.
+- Elevator/escalator/lift specific. Use the markets for local_page topics only.
+- Seasonal or {month}-relevant angles where natural (budget season, weather, inspections).
+- Do NOT duplicate or paraphrase any of these existing topics:
+{existing}
+"""
 
 
 def normalize_query(query: str) -> str:
@@ -276,6 +306,7 @@ class TopicDiscoveryService:
             "citation_gap": bool(gaps_by_brand),
             "search_demand": False,
             "coverage": True,
+            "evergreen": False,
         }
         today_primary = todays_primary_bucket()
 
@@ -322,6 +353,15 @@ class TopicDiscoveryService:
                     picked += pick_from_pool(pool, known, min(1, _budget()))
                 if _budget() > 0:
                     picked += pick_from_pool(coverage_pool, known, _budget())
+
+            # Evergreen floor: only when every pool above (including the
+            # finite coverage pool) left slots empty — LLM-proposed topics so
+            # discovery can never starve the pipeline to zero again.
+            if _budget() > 0 and self.settings.evergreen_topics_enabled:
+                evergreen_pool = await self._from_evergreen(brand, known, need=_budget())
+                if evergreen_pool:
+                    sources_active["evergreen"] = True
+                picked += pick_from_pool(evergreen_pool, known, _budget())
 
             # The second (and any later) daily pick rotates its content type for
             # variety/coverage — the query still comes from real demand. The
@@ -504,6 +544,65 @@ class TopicDiscoveryService:
             }
             for row in rows
         ]
+
+    async def _from_evergreen(self, brand: Brand, known: list[str], need: int) -> list[dict]:
+        """LLM-proposed evergreen topics — the last-resort floor when every
+        demand pool and the coverage bank are exhausted. Failure → [] (the
+        flow_alert for a zero-topic day still fires, so this can degrade but
+        never hide a problem)."""
+        try:
+            from app.services.claude_service import ClaudeService
+            from app.services.cost_service import create_and_record
+            from app.services.schema_service import SERVICE_TYPES
+
+            claude = ClaudeService()
+            markets = ", ".join(brand.markets or []) or "its service area"
+            existing_sample = "\n".join(f"- {q}" for q in known[-40:]) or "- (none yet)"
+            prompt = EVERGREEN_PROMPT.format(
+                brand_name=brand.name,
+                markets=markets,
+                month=datetime.utcnow().strftime("%B %Y"),
+                n=max(need * 2, 4),  # over-ask; similarity dedup thins the list
+                services=", ".join(SERVICE_TYPES),
+                existing=existing_sample,
+            )
+            response = await create_and_record(
+                claude.client,
+                operation="evergreen_topics",
+                model=claude.model,
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = response.content[0].text.strip()
+            text = re.sub(r"^```json\s*", "", text)
+            text = re.sub(r"^```\s*", "", text)
+            text = re.sub(r"\s*```$", "", text)
+            items = json.loads(text)
+        except Exception as e:
+            logger.warning("Evergreen topic generation failed for %s: %s", brand.id, e)
+            return []
+
+        candidates: list[dict] = []
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            query = str(item.get("target_query") or "").strip()
+            if len(query) < 12:
+                continue
+            content_type = str(item.get("content_type") or "").strip()
+            if content_type not in _VALID_CONTENT_TYPES:
+                content_type = infer_content_type(query, brand.markets)
+            candidates.append(
+                {
+                    "target_query": query,
+                    "title": str(item.get("title") or "").strip() or derive_title(query),
+                    "content_type": content_type,
+                    "priority": 5,
+                    "source": "evergreen",
+                    "source_detail": {"reason": "evergreen_floor"},
+                }
+            )
+        return candidates
 
     def _from_coverage(self, brand: Brand, existing: list[str]) -> list[dict]:
         """Fallback: markets without a local page, then uncovered bank queries."""
