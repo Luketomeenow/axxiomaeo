@@ -20,6 +20,7 @@ from sqlalchemy import select
 
 from app.config import get_settings
 from app.database import AsyncSessionLocal
+from app.models.approval import JobRun
 from app.models.brand import Brand
 from app.models.citation import CitationRecord
 from app.models.content import ContentPiece
@@ -286,6 +287,18 @@ async def _notify_provider_unavailable(reason: str, brand_id: str | None = None)
         await session.commit()
 
 
+async def _record_audit_job(status: str, detail: str) -> None:
+    """JobRun row per audit lifecycle event ('started' / 'ok' / 'error') —
+    lets System Health spot an audit that a deploy/restart killed mid-run
+    (the Aug 12 audit died exactly this way, invisibly). Never raises."""
+    try:
+        async with AsyncSessionLocal() as session:
+            session.add(JobRun(job_id="citation_audit", status=status, detail=detail[:500]))
+            await session.commit()
+    except Exception:
+        logger.warning("Failed to record citation-audit job run", exc_info=True)
+
+
 async def run_citation_audit():
     logger.info("Starting citation audit")
     settings = get_settings()
@@ -304,11 +317,56 @@ async def run_citation_audit():
         logger.info("Citation audit: no brands configured")
         return
 
-    published_pools = await _published_queries_by_brand(settings)
-    observed_pools = await _observed_questions_by_brand()
-
     audit_run_id = str(uuid.uuid4())
+    await _record_audit_job("started", audit_run_id)
 
+    try:
+        published_pools = await _published_queries_by_brand(settings)
+        observed_pools = await _observed_questions_by_brand()
+        records_by_brand = await _audit_brands(
+            brands, citation_service, published_pools, observed_pools, settings, audit_run_id
+        )
+    except Exception as e:
+        # A crash here used to vanish (background task, nothing recorded).
+        logger.exception("Citation audit crashed mid-run: %s", e)
+        await _record_audit_job("error", f"{audit_run_id}: {e}")
+        async with AsyncSessionLocal() as session:
+            await record_worker_error(
+                session,
+                "citation_audit",
+                f"Audit crashed mid-run: {str(e)[:400]}",
+                error_details={"audit_run_id": audit_run_id},
+            )
+            await session.commit()
+        return
+
+    total = sum(records_by_brand.values())
+    summary = ", ".join(f"{b}: {n}" for b, n in records_by_brand.items()) or "no records"
+    await _record_audit_job("ok", f"{audit_run_id}: {total} records ({summary})")
+
+    async with AsyncSessionLocal() as session:
+        notifications = NotificationService(session)
+        await notifications.create(
+            type="citation_complete",
+            title="Weekly citation audit complete",
+            body=f"{total} checks saved — {summary}",
+            send_slack=True,
+        )
+        await session.commit()
+
+    logger.info("Citation audit complete: %s records", total)
+
+
+async def _audit_brands(
+    brands: list[Brand],
+    citation_service: CitationService,
+    published_pools: dict[str, list[str]],
+    observed_pools: dict[str, list[str]],
+    settings,
+    audit_run_id: str,
+) -> dict[str, int]:
+    """Run the audit for every brand; returns {brand_id: records_saved}."""
+    records_by_brand: dict[str, int] = {}
     for brand in brands:
         gsc_pool = await _gsc_queries_for_brand(brand, settings)
         query_strings, meta_by_query = _build_brand_queries(
@@ -335,20 +393,24 @@ async def run_citation_audit():
         async with AsyncSessionLocal() as session:
             notifications = NotificationService(session)
             if status == "manual_required":
-                reason = citation_service.unavailable_reason()
+                # Prefer the real exception over the generic config hint —
+                # "snapshot not ready after 60 polls" must not masquerade as
+                # "check your API key".
+                reason = citation_service.last_error or citation_service.unavailable_reason()
                 await notifications.create(
                     type="citation_manual",
-                    title=f"Citation audit requires manual review: {brand.name}",
+                    title=f"Citation audit failed for {brand.name}",
                     body=reason,
                 )
                 await record_worker_error(
                     session,
                     "citation_audit",
-                    reason,
-                    error_details={"brand_id": brand.id},
+                    f"{brand.id}: {reason}",
+                    error_details={"brand_id": brand.id, "audit_run_id": audit_run_id},
                     notify=False,  # the citation_manual notification above already alerts
                 )
                 await session.commit()
+                records_by_brand[brand.id] = 0
                 continue
 
             for result in results:
@@ -377,15 +439,10 @@ async def run_citation_audit():
                     )
                 )
             await session.commit()
+            records_by_brand[brand.id] = len(results)
+            logger.info(
+                "Citation audit: %s saved %s records (%d/%d brands done)",
+                brand.id, len(results), len(records_by_brand), len(brands),
+            )
 
-    async with AsyncSessionLocal() as session:
-        notifications = NotificationService(session)
-        await notifications.create(
-            type="citation_complete",
-            title="Weekly citation audit complete",
-            body="Results available in dashboard",
-            send_slack=True,
-        )
-        await session.commit()
-
-    logger.info("Citation audit complete")
+    return records_by_brand

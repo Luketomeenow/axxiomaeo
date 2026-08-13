@@ -338,7 +338,35 @@ class PipelineHealthService:
                 }
             )
         total = sum(w["count"] for w in by_worker)
-        metrics = {"last_24h": total, "by_worker": by_worker}
+
+        # A citation audit that recorded 'started' but never 'ok'/'error' was
+        # killed mid-run (deploy/restart) — the Aug 12 failure mode. Latest
+        # lifecycle row still 'started' after 3h = interrupted.
+        stalled_audit = None
+        latest_audit_run = (
+            await self.db.execute(
+                select(JobRun)
+                .where(JobRun.job_id == "citation_audit")
+                .order_by(JobRun.finished_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if (
+            latest_audit_run is not None
+            and latest_audit_run.status == "started"
+            and latest_audit_run.finished_at is not None
+            and latest_audit_run.finished_at < datetime.utcnow() - timedelta(hours=3)
+        ):
+            stalled_audit = latest_audit_run.finished_at
+
+        metrics = {"last_24h": total, "by_worker": by_worker,
+                   "stalled_audit_started_at": stalled_audit.isoformat() if stalled_audit else None}
+        if stalled_audit:
+            return _stage(
+                "errors", "Worker errors (24h)", "fail",
+                f"A citation audit started {stalled_audit.strftime('%b %d %H:%M')} UTC never "
+                "finished — likely killed by a deploy/restart mid-run. Re-run it from the "
+                "Citations page (avoid merging during the ~2h run).", metrics)
         if any(w["count"] >= 5 for w in by_worker):
             worst = max(by_worker, key=lambda w: w["count"])
             return _stage("errors", "Worker errors (24h)", "fail",
