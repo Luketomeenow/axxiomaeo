@@ -54,6 +54,11 @@ class CitationService:
         self.peec = PeecService()
         self.geo_aeo = GeoAeoTrackerService()
         self.bright_data = BrightDataService()
+        # The real exception text from the last failed run_audit — callers
+        # surface this instead of the generic config hint, so "Bright Data
+        # snapshot not ready after 60 polls" doesn't masquerade as "check
+        # your API key".
+        self.last_error: str | None = None
 
     async def provider_available(self) -> bool:
         provider = self.provider
@@ -115,6 +120,7 @@ class CitationService:
             else:
                 provider = "none"
 
+        self.last_error = None
         try:
             if provider == "brightdata":
                 results = await self.bright_data.get_citation_share(brand, queries, query_meta=query_meta)
@@ -131,6 +137,7 @@ class CitationService:
             return [], "manual_required"
         except Exception as e:
             logger.error("Citation audit failed (%s): %s", provider, e)
+            self.last_error = f"{provider}: {str(e)[:400]}"
             return [], "manual_required"
 
     def build_gap_list(self, results: list[CitationResult]) -> list[dict]:
