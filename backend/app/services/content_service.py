@@ -295,6 +295,12 @@ class ContentGenerationService:
             self.db.add(piece)
 
         await self.wp.ping_bing_sitemap(brand)
+        # IndexNow: tell Bing (= ChatGPT search's index) about this exact URL
+        # immediately — sitemap pings alone leave discovery to crawl schedules.
+        if result.get("post_url"):
+            from app.services.indexnow_service import submit_urls_background
+
+            submit_urls_background([result["post_url"]])
         return {
             "post_id": result.get("post_id"),
             "post_url": result.get("post_url"),
