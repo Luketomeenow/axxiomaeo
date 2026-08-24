@@ -34,7 +34,13 @@ from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece
-from app.services.content_enrichment import _brand_host, normalize_author_byline, sanitize_links
+from app.services.content_enrichment import (
+    _brand_host,
+    ensure_cta_block,
+    find_contact_url,
+    normalize_author_byline,
+    sanitize_links,
+)
 from app.services.content_service import _inject_brand_phone, _known_paths
 from app.services.link_verification import verify_external_links
 from app.services.schema_service import build_combined_schema
@@ -101,10 +107,11 @@ async def main() -> int:
                 print(f"[{brand.id}] skipped — WordPress not configured")
                 continue
 
+            wp_pages = await wp.get_existing_pages(brand, post_type="pages")
             known = _known_paths(
-                await wp.get_existing_pages(brand, post_type="posts")
-                + await wp.get_existing_pages(brand, post_type="pages")
+                await wp.get_existing_pages(brand, post_type="posts") + wp_pages
             )
+            contact_url = find_contact_url(wp_pages)
 
             pieces = list(
                 (
@@ -135,6 +142,9 @@ async def main() -> int:
                 # Compliance: swap the old individual-credential byline for the
                 # team byline (idempotent — unchanged when already safe).
                 cleaned = normalize_author_byline(cleaned, brand)
+                # Lead capture: add the click-to-call/quote CTA to live posts
+                # that predate it (idempotent — skipped when already present).
+                cleaned = ensure_cta_block(cleaned, brand, contact_url)
                 if cleaned == original:
                     continue
 

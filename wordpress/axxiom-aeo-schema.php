@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Axxiom AEO Schema
- * Description: AEO plumbing for Axxiom brand sites: JSON-LD output from post meta, robots.txt with sitemap + LLM policy, generated /llms.txt, and the IndexNow key file (Axxiom AEO Automation Platform).
- * Version: 1.2.0
+ * Description: AEO plumbing for Axxiom brand sites: JSON-LD output from post meta, robots.txt with sitemap + LLM policy, generated /llms.txt, the IndexNow key file, and GA4 phone-click conversion tracking (Axxiom AEO Automation Platform).
+ * Version: 1.3.0
  * Author: Axxiom Elevator
  *
  * Install: copy to wp-content/mu-plugins/axxiom-aeo-schema.php on each brand site.
@@ -84,6 +84,35 @@ add_filter('robots_txt', function ($output) {
     ];
     return trim($output) === '' ? implode("\n", $lines) . "\n"
         : rtrim($output) . "\n\n" . implode("\n", array_slice($lines, 3)) . "\n";
+});
+
+/**
+ * GA4 phone-click conversion tracking: fires a `phone_call_click` event when
+ * any tel: link is clicked (the AEO CTA buttons, header phone numbers, etc.).
+ * Works with gtag or GTM (dataLayer); silently does nothing if neither is on
+ * the page. Mark `phone_call_click` as a key event in GA4 to count it as a
+ * conversion — the AEO platform's conversion KPIs read exactly that.
+ */
+add_action('wp_footer', function () {
+    ?>
+    <script id="axxiom-aeo-telclick">
+    document.addEventListener('click', function (e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href^="tel:"]') : null;
+        if (!a) return;
+        var payload = {
+            phone_number: (a.getAttribute('href') || '').replace('tel:', ''),
+            link_text: (a.textContent || '').trim().slice(0, 100),
+            page_location: window.location.href
+        };
+        if (typeof window.gtag === 'function') {
+            window.gtag('event', 'phone_call_click', payload);
+        } else if (window.dataLayer && window.dataLayer.push) {
+            payload.event = 'phone_call_click';
+            window.dataLayer.push(payload);
+        }
+    }, true);
+    </script>
+    <?php
 });
 
 /**

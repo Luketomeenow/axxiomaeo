@@ -27,6 +27,19 @@ def _serialize_report(report: MonthlyReport) -> dict:
     }
 
 
+@router.get("/aeo-calls")
+async def get_aeo_call_attribution(
+    days: int = Query(30, ge=7, le=365),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Phone calls (CallRail, via the marketing warehouse) whose landing page
+    is an article this platform published — the lead evidence for AEO."""
+    from app.services.callrail_service import aeo_call_attribution
+
+    return await aeo_call_attribution(db, days=days)
+
+
 @router.get("/costs")
 async def get_report_costs(
     db: AsyncSession = Depends(get_db),

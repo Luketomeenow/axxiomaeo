@@ -45,6 +45,74 @@ def ensure_author_byline(html: str, brand: Brand, author_name: str | None = None
     return str(soup)
 
 
+def ensure_cta_block(html: str, brand: Brand, contact_url: str | None = None) -> str:
+    """Append a lead-capture CTA block: click-to-call + quote link.
+
+    The posts winning AI citations had essentially no conversion surface (one
+    inline tel: link, no buttons, no form path). This adds a visible CTA at
+    the end of every article. Inline styles because the six brand themes
+    share no CSS. The tel: anchor is what the mu-plugin's phone_call_click
+    GA4 event hooks; the contact link is only included when the brand
+    actually has a contact page (never an invented URL). Idempotent.
+    """
+    if not html or "aeo-cta" in html:
+        return html
+    phone = (brand.phone or "").strip()
+    if phone == "[BRAND_PHONE]":
+        phone = ""
+    if not phone and not contact_url:
+        return html  # nothing truthful to offer — skip rather than fake it
+
+    btn = (
+        "display:inline-block;padding:12px 22px;margin:4px 8px 4px 0;"
+        "border-radius:6px;font-weight:600;text-decoration:none;"
+    )
+    parts = [
+        '<div class="aeo-cta" style="margin:32px 0;padding:20px 24px;'
+        "border:1px solid #d6d9de;border-left:4px solid #0b7285;"
+        'border-radius:8px;background:#f6f8fa;">',
+        '<p style="margin:0 0 10px;font-size:1.05em;">'
+        f"<strong>Need elevator service you can rely on?</strong> "
+        f"{html_module.escape(brand.name)} is ready to help.</p>",
+        "<p style=\"margin:0;\">",
+    ]
+    if phone:
+        tel = re.sub(r"[^0-9+]", "", phone)
+        parts.append(
+            f'<a class="aeo-cta-call" href="tel:{tel}" '
+            f'style="{btn}background:#0b7285;color:#ffffff;">'
+            f"Call {html_module.escape(phone)}</a>"
+        )
+    if contact_url:
+        parts.append(
+            f'<a class="aeo-cta-quote" href="{html_module.escape(contact_url, quote=True)}" '
+            f'style="{btn}background:#ffffff;color:#0b7285;border:2px solid #0b7285;">'
+            "Request a free quote</a>"
+        )
+    parts.append("</p></div>")
+    block = "".join(parts)
+
+    soup = BeautifulSoup(html, "lxml")
+    body = soup.find("body") or soup
+    related = body.find(class_="aeo-related-resources")
+    cta = BeautifulSoup(block, "lxml")
+    if related:
+        related.insert_before(cta)  # CTA belongs to the article, above link lists
+    else:
+        body.append(cta)
+    return str(soup)
+
+
+def find_contact_url(pages: list[dict]) -> str | None:
+    """The brand's real contact page from its live WP pages, if one exists."""
+    for page in pages or []:
+        slug = (page.get("slug") or "").lower()
+        title = (page.get("title") or "").lower()
+        if "contact" in slug or "contact" in title:
+            return page.get("url")
+    return None
+
+
 def normalize_author_byline(html: str, brand: Brand) -> str:
     """Rewrite any existing byline to the safe team form.
 

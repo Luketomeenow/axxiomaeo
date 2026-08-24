@@ -12,7 +12,9 @@ from app.services.claude_service import ClaudeService, validate_answer_first
 from app.services.content_enrichment import (
     _brand_host,
     ensure_author_byline,
+    ensure_cta_block,
     ensure_tldr_block,
+    find_contact_url,
     inject_internal_links,
     normalize_article_headings,
     normalize_author_byline,
@@ -416,6 +418,9 @@ class ContentGenerationService:
         related = (related_posts + related_pages)[:8]
         html_content = ensure_tldr_block(html_content, target_query)
         html_content = ensure_author_byline(html_content, brand, brand.author_name)
+        # Lead capture: click-to-call + quote link on every article. The
+        # contact link only appears when the brand has a real contact page.
+        html_content = ensure_cta_block(html_content, brand, find_contact_url(related_pages))
         html_content = inject_internal_links(html_content, brand, related)
         # Drop any invented/broken links the model wrote before they can 404 —
         # internal links validated against the brand's real published
