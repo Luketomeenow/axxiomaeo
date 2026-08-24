@@ -52,6 +52,11 @@ class Settings(BaseSettings):
 
     google_service_account_json: str = ""
     bing_api_key: str = ""
+    # IndexNow (Bing/ChatGPT-search indexing): ping on every publish. The key
+    # must match AXXIOM_INDEXNOW_KEY served by the mu-plugin at /<key>.txt on
+    # each brand site (v1.2.0+). Empty key or enabled=false disables pings.
+    indexnow_enabled: bool = True
+    indexnow_key: str = "c550d35adee3985871ee6e39bd7f8e35"
     # Comma-separated override of AI-assistant referrer hosts for GA4 segmentation.
     ai_referrer_hosts: str = ""
 
