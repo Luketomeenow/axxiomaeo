@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Axxiom AEO Schema
  * Description: AEO plumbing for Axxiom brand sites: JSON-LD output from post meta, robots.txt with sitemap + LLM policy, generated /llms.txt, the IndexNow key file, and GA4 phone-click conversion tracking (Axxiom AEO Automation Platform).
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: Axxiom Elevator
  *
  * Install: copy to wp-content/mu-plugins/axxiom-aeo-schema.php on each brand site.
@@ -84,6 +84,32 @@ add_filter('robots_txt', function ($output) {
     ];
     return trim($output) === '' ? implode("\n", $lines) . "\n"
         : rtrim($output) . "\n\n" . implode("\n", array_slice($lines, 3)) . "\n";
+});
+
+/**
+ * WP Engine/Cloudflare serve unknown root *.txt requests from the static
+ * layer — they never reach WordPress (only allowlisted names like robots.txt
+ * and llms.txt pass through). So the IndexNow key file must exist as a
+ * PHYSICAL file at the web root. Write it on admin page loads (i.e. the
+ * first time anyone opens wp-admin after installing this version). Also
+ * write a physical robots.txt, but ONLY when the existing one is missing or
+ * empty — several sites carry an empty physical robots.txt that masks
+ * WordPress's virtual one, and an empty robots.txt declares no sitemap.
+ */
+add_action('admin_init', function () {
+    $key_path = ABSPATH . AXXIOM_INDEXNOW_KEY . '.txt';
+    if (!file_exists($key_path)) {
+        @file_put_contents($key_path, AXXIOM_INDEXNOW_KEY);
+    }
+
+    $robots_path = ABSPATH . 'robots.txt';
+    $existing = file_exists($robots_path) ? trim((string) @file_get_contents($robots_path)) : null;
+    if ($existing === '' || ($existing === null && !file_exists($robots_path))) {
+        $robots = "User-agent: *\nAllow: /\n\n"
+            . 'LLM-Policy: ' . home_url('/llms.txt') . "\n"
+            . 'Sitemap: ' . axxiom_aeo_sitemap_url() . "\n";
+        @file_put_contents($robots_path, $robots);
+    }
 });
 
 /**
