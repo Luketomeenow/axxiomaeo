@@ -31,7 +31,7 @@ SITES = [
     "https://azelevatorsolutions.com",
     "https://liftechelevator.com",
     "https://qualityelevator.com",
-    "https://carolinaelevator.com",
+    "https://carolinaelevatorservice.com",
 ]
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (AxxiomAEO IndexNow submitter)"}

@@ -116,6 +116,79 @@ function SummaryPanel({ id, enabled }: { id: number; enabled: boolean }) {
   );
 }
 
+interface AeoCallsSummary {
+  available: boolean;
+  days: number;
+  total_calls: number;
+  answered?: number;
+  first_time_callers?: number;
+  by_brand?: { brand_id: string; calls: number; answered: number; first_time: number }[];
+  top_posts?: { title: string | null; url: string; brand_id: string; calls: number }[];
+  by_source?: { source: string; calls: number }[];
+}
+
+function AeoCallsPanel() {
+  const [days, setDays] = useState<30 | 90>(30);
+  const { data } = useQuery({
+    queryKey: ["aeo-calls", days],
+    queryFn: () => apiFetch<AeoCallsSummary>(`/api/reports/aeo-calls?days=${days}`),
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+  if (!data || !data.available) return null;
+  return (
+    <div className="aeo-panel p-5">
+      <div className="flex items-center justify-between gap-4 mb-1">
+        <h3 className="aeo-title text-ink">Leads — phone calls from AEO content</h3>
+        <div className="flex items-center gap-2">
+          {[30, 90].map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDays(d as 30 | 90)}
+              className={`text-xs px-2.5 py-1 rounded border ${
+                days === d ? "border-cyan text-cyan" : "border-border text-muted hover:text-ink"
+              }`}
+            >
+              {d}d
+            </button>
+          ))}
+          <span className="aeo-kpi-value text-2xl">{data.total_calls.toLocaleString()}</span>
+        </div>
+      </div>
+      <p className="text-xs text-muted mb-4">
+        CallRail calls whose landing page is an article this platform published —{" "}
+        {data.answered?.toLocaleString() ?? 0} answered, {data.first_time_callers?.toLocaleString() ?? 0}{" "}
+        first-time callers. Phone calls are the leads web analytics never sees.
+      </p>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <p className="text-[10px] text-muted uppercase tracking-widest mb-2">By brand</p>
+          {(data.by_brand ?? []).map((b) => (
+            <div key={b.brand_id} className="flex justify-between text-sm py-1 border-b border-border/60 last:border-0">
+              <span className="text-muted">{b.brand_id.replace(/_/g, " ")}</span>
+              <span className="text-ink tabular-nums">
+                {b.calls} <span className="text-muted/70 text-xs">({b.answered} answered)</span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <div>
+          <p className="text-[10px] text-muted uppercase tracking-widest mb-2">Top ringing articles</p>
+          {(data.top_posts ?? []).slice(0, 6).map((p) => (
+            <div key={p.url} className="flex justify-between gap-2 text-sm py-1 border-b border-border/60 last:border-0">
+              <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-muted hover:text-cyan truncate">
+                {p.title ?? p.url}
+              </a>
+              <span className="text-ink tabular-nums shrink-0">{p.calls}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CostsPanel() {
   const { data } = useQuery({
     queryKey: ["report-costs"],
@@ -637,6 +710,8 @@ export function ReportsPage() {
                 {effectiveId != null && (
                   <SummaryPanel id={effectiveId} enabled={tab === "report"} />
                 )}
+
+                <AeoCallsPanel />
 
                 <CostsPanel />
 
