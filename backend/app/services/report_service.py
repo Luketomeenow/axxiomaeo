@@ -592,12 +592,20 @@ class ReportService:
 
         # Store a self-contained snapshot so a stored report renders full charts
         # (and its estimated API spend) later without depending on live data.
+        # Phone leads from AEO content, measured over this calendar month —
+        # the same CallRail join the live panel uses, snapshotted so lead
+        # trends survive without warehouse access.
+        from app.services.callrail_service import aeo_call_attribution
+
+        aeo_calls = await aeo_call_attribution(self.db, days=max(now.day, 1))
+
         full_report = {
             **kpis,
             "by_category": by_category,
             "by_platform": by_platform,
             "by_funnel": by_funnel,
             "costs": costs,
+            "aeo_calls": aeo_calls,
         }
 
         # Upsert by month: regenerating the same month updates its row instead of
@@ -612,6 +620,7 @@ class ReportService:
         report.overall_citation_share = kpis["citation_share"]
         report.ai_referred_sessions = kpis["ai_referred_sessions"]
         report.ai_referred_conversions = kpis["ai_referred_conversions"]
+        report.aeo_attributed_calls = aeo_calls.get("total_calls", 0) if aeo_calls.get("available") else None
         report.content_pieces_published = kpis["content_published_mtd"]
         report.schema_coverage_pct = kpis["schema_coverage_pct"]
         report.gap_queries = gap_queries[:10]

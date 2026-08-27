@@ -14,6 +14,8 @@ class MonthlyReport(Base):
     ai_referred_sessions: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # GA4 key events (calls/forms) from AI-referred visitors that month.
     ai_referred_conversions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # CallRail calls whose landing page is an AEO-published article that month.
+    aeo_attributed_calls: Mapped[int | None] = mapped_column(Integer, nullable=True)
     content_pieces_published: Mapped[int | None] = mapped_column(Integer, nullable=True)
     schema_coverage_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
     top_performing_queries: Mapped[list] = mapped_column(JSONB, default=list)

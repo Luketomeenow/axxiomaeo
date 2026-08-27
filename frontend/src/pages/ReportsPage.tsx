@@ -489,6 +489,7 @@ export function ReportsPage() {
       ["Citation share %", report.overall_citation_share ?? 0],
       ["AI-referred sessions", report.ai_referred_sessions ?? 0],
       ["AI-referred conversions", report.ai_referred_conversions ?? 0],
+      ["AEO phone calls (CallRail)", report.aeo_attributed_calls ?? 0],
       ["Content published", report.content_pieces_published ?? 0],
       ["Schema coverage %", report.schema_coverage_pct ?? 0],
       [],
@@ -605,6 +606,7 @@ export function ReportsPage() {
                           <th className="px-4 py-3">Citation share</th>
                           <th className="px-4 py-3">AI sessions</th>
                           <th className="px-4 py-3">AI conversions</th>
+                          <th className="px-4 py-3">AEO calls</th>
                           <th className="px-4 py-3">Content</th>
                           <th className="px-4 py-3">Schema</th>
                           <th className="px-4 py-3 text-right">Open</th>
@@ -617,6 +619,7 @@ export function ReportsPage() {
                             <td className="px-4 py-3">{r.overall_citation_share}%</td>
                             <td className="px-4 py-3 text-muted">{r.ai_referred_sessions ?? 0}</td>
                             <td className="px-4 py-3 text-muted">{r.ai_referred_conversions ?? 0}</td>
+                            <td className="px-4 py-3 text-muted">{r.aeo_attributed_calls ?? 0}</td>
                             <td className="px-4 py-3 text-muted">{r.content_pieces_published ?? 0}</td>
                             <td className="px-4 py-3 text-muted">{r.schema_coverage_pct}%</td>
                             <td className="px-4 py-3 text-right">
@@ -650,7 +653,7 @@ export function ReportsPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                   <KpiCard
                     label="Citation Share"
                     value={`${report?.overall_citation_share ?? 0}%`}
@@ -680,6 +683,17 @@ export function ReportsPage() {
                       previous
                         ? (report?.ai_referred_conversions ?? 0) -
                           (previous.ai_referred_conversions ?? 0)
+                        : undefined
+                    }
+                  />
+                  <KpiCard
+                    label="AEO Phone Calls"
+                    value={report?.aeo_attributed_calls ?? 0}
+                    sub="Calls landing on AEO articles (CallRail)"
+                    delta={
+                      previous
+                        ? (report?.aeo_attributed_calls ?? 0) -
+                          (previous.aeo_attributed_calls ?? 0)
                         : undefined
                     }
                   />

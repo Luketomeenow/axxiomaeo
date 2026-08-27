@@ -302,6 +302,7 @@ export interface ReportListItem {
   overall_citation_share: number;
   ai_referred_sessions: number | null;
   ai_referred_conversions?: number | null;
+  aeo_attributed_calls?: number | null;
   content_pieces_published: number | null;
   schema_coverage_pct: number;
   created_at: string | null;
@@ -319,6 +320,7 @@ export interface MonthlyReportDetail {
   overall_citation_share?: number;
   ai_referred_sessions?: number | null;
   ai_referred_conversions?: number | null;
+  aeo_attributed_calls?: number | null;
   content_pieces_published?: number | null;
   schema_coverage_pct?: number;
   created_at?: string | null;
