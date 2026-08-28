@@ -130,6 +130,24 @@ async def main() -> int:
 
             for piece in pieces:
                 scanned += 1
+
+                # A '?p=<id>' wp_post_url means the WP post is still a DRAFT
+                # (pretty permalinks only exist once published) — invisible to
+                # visitors and, worse, its query-stripped URL is the bare
+                # homepage, which corrupted call attribution. Publish it and
+                # store the real permalink.
+                if args.apply and piece.wp_post_url and "?p=" in piece.wp_post_url:
+                    try:
+                        await wp.set_post_status(brand, piece.wp_post_id, "publish")
+                        live = await wp.find_by_slug(brand, piece.slug, post_type="posts")
+                        if live:
+                            piece.wp_post_id = live["id"]
+                            piece.wp_post_url = live["url"]
+                            await session.commit()
+                            print(f"  PUBLISH {piece.slug} — was a WP draft; now live at {live['url']}")
+                    except Exception as e:
+                        print(f"  ! couldn't publish draft post {piece.slug}: {e}")
+
                 draft = await _latest_draft_html(session, brand.id, piece.slug)
                 if not draft or not draft.html_content:
                     skipped += 1

@@ -40,6 +40,10 @@ JOIN aeo.content_pieces p
   ON p.status = 'published' AND p.wp_post_url IS NOT NULL
  AND c.lp = rtrim(lower(regexp_replace(
          split_part(p.wp_post_url, '?', 1), '^https?://(www\.)?', '')), '/')
+ -- An article match requires a PATH. Draft posts carry '?p=<id>' URLs whose
+ -- query-stripped form is the bare homepage — without this guard, every
+ -- homepage call got credited to those "articles" (386 phantom calls found).
+ AND position('/' in c.lp) > 0
 """)
 
 
