@@ -68,7 +68,23 @@ async def queue_from_gap(
     so a double-click or an already-covered gap answers 409 instead of piling
     up duplicate work for the daily run.
     """
+    from app.models.brand import Brand
     from app.services.topic_discovery_service import TopicDiscoveryService, queries_similar
+    from app.utils.geography import query_out_of_market
+
+    brand = await db.get(Brand, req.brand_id)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Unknown brand {req.brand_id!r}")
+    if get_settings().market_scope_guard_enabled:
+        foreign_state = query_out_of_market(req.target_query, req.title, brand.markets)
+        if foreign_state:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Out of market — this topic is about {foreign_state}, which {brand.name} "
+                    f"does not serve (markets: {', '.join(brand.markets or []) or 'none set'})."
+                ),
+            )
 
     existing = (await TopicDiscoveryService(db)._existing_queries_by_brand()).get(req.brand_id, [])
     covered_by = next((q for q in existing if queries_similar(req.target_query, q)), None)

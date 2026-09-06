@@ -26,6 +26,7 @@ from app.services.content_image_pipeline import ContentImagePipeline
 from app.services.notification_service import NotificationService
 from app.services.schema_service import build_combined_schema
 from app.services.wordpress_service import WordPressService
+from app.utils.geography import validate_market_scope
 from app.utils.helpers import count_words, h2_question_ratio
 
 logger = logging.getLogger(__name__)
@@ -170,6 +171,25 @@ class ContentGenerationService:
         self.wp = WordPressService()
         self.notifications = NotificationService(db)
 
+    def _check_market_scope(
+        self,
+        html: str,
+        title: str,
+        target_query: str,
+        markets: list[str],
+        brand_name: str,
+    ) -> tuple[bool, str, dict]:
+        if not self.settings.market_scope_guard_enabled:
+            return True, "", {"checked": False, "reason": "guard disabled"}
+        return validate_market_scope(
+            html,
+            title=title,
+            target_query=target_query,
+            markets=markets,
+            brand_name=brand_name,
+            max_body_mentions=max(0, self.settings.market_scope_max_foreign_mentions),
+        )
+
     def _resolve_publish_targets(
         self,
         draft_brand_id: str,
@@ -177,6 +197,12 @@ class ContentGenerationService:
         publish_all: bool,
     ) -> list[str]:
         if publish_all:
+            if not self.settings.allow_cross_brand_publish:
+                raise ValueError(
+                    "Cross-brand publishing is disabled: this draft was written for "
+                    f"{draft_brand_id}'s markets (jurisdiction, phone, schema). Queue the "
+                    "topic for the other brands instead, or set ALLOW_CROSS_BRAND_PUBLISH=true."
+                )
             configured = self.settings.wp_configured_brand_ids()
             if not configured:
                 raise ValueError("No WordPress credentials configured for any brand")
@@ -189,6 +215,13 @@ class ContentGenerationService:
                 if brand_id not in seen:
                     seen.add(brand_id)
                     targets.append(brand_id)
+            foreign = [b for b in targets if b != draft_brand_id]
+            if foreign and not self.settings.allow_cross_brand_publish:
+                raise ValueError(
+                    f"Cross-brand publishing is disabled: draft belongs to {draft_brand_id}, "
+                    f"cannot publish to {', '.join(foreign)}. Queue the topic for that brand "
+                    "instead, or set ALLOW_CROSS_BRAND_PUBLISH=true."
+                )
             return targets
 
         return [draft_brand_id]
@@ -363,6 +396,7 @@ class ContentGenerationService:
         is_valid = False
         failure_reason = ""
         validation_attempts = 0
+        scope_details: dict = {}
 
         try:
             for attempt in range(2):
@@ -383,11 +417,19 @@ class ContentGenerationService:
                         target_query=target_query,
                         brand_name=brand_name,
                         previous_content=html_content,
+                        markets=brand_markets,
                     )
 
                 is_valid, failure_reason = await validate_answer_first(
                     html_content, target_query, content_type
                 )
+                if is_valid:
+                    # Jurisdiction gate: an article about another state's codes
+                    # (or citing its regulators) fails → correction attempt with
+                    # the exact reason, then needs_review. Never auto-publishes.
+                    is_valid, failure_reason, scope_details = self._check_market_scope(
+                        html_content, draft_title, target_query, brand_markets, brand_name
+                    )
                 if is_valid:
                     break
         except Exception as exc:
@@ -473,6 +515,8 @@ class ContentGenerationService:
             # Reviewer heads-up: CTAs were de-phoned because the brand has no
             # phone configured — set one in Brand Settings and regenerate.
             "phone_missing": phone_missing,
+            # Which out-of-market states (if any) the jurisdiction gate saw.
+            "market_scope": scope_details,
         }
 
         if is_valid:
@@ -675,6 +719,15 @@ class ContentGenerationService:
         is_valid, failure_reason = await validate_answer_first(
             html_content, draft.target_query or "", draft.content_type or "faq_hub"
         )
+        scope_details: dict = {}
+        if is_valid:
+            is_valid, failure_reason, scope_details = self._check_market_scope(
+                html_content,
+                draft.title or "",
+                draft.target_query or "",
+                brand.markets or [],
+                brand.name,
+            )
         schema_json, schema_types = build_combined_schema(
             html_content, brand, draft.title or "", draft.content_type or "faq_hub"
         )
@@ -689,6 +742,7 @@ class ContentGenerationService:
             "h2_question_ratio": round(ratio, 2),
             "h2_questions": h2_questions,
             "h2_total": h2_total,
+            "market_scope": scope_details,
         }
         draft.status = "pending_review" if is_valid else "needs_review"
         await self.db.flush()

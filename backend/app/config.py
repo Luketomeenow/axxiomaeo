@@ -143,6 +143,19 @@ class Settings(BaseSettings):
     # model). Set false to restore the approve-before-publish gate — drafts
     # then wait in Content Review as before.
     auto_publish_enabled: bool = True
+    # Market-scope guard (2026-09 cleanup): drop out-of-market topics at
+    # discovery/queue time and fail drafts that are about — or cite the
+    # regulators of — a state the brand doesn't operate in. A foreign state
+    # may be named at most MAX_FOREIGN_MENTIONS times in the body (a passing
+    # mention in a national comparison), never in the title/query, and
+    # state-specific regulators (Cal/OSHA, TDLR…) never.
+    market_scope_guard_enabled: bool = True
+    market_scope_max_foreign_mentions: int = 2
+    # Publishing one brand's draft to another brand's site. Off by default:
+    # drafts are written for one brand's markets (phone, schema, jurisdiction),
+    # and the 2026-09 cleanup found the same article live on 6-7 sites. Queue
+    # the topic for the other brand instead. Set true only as an escape hatch.
+    allow_cross_brand_publish: bool = False
 
     # Daily posting-cadence monitor: checks each brand's live WordPress site
     # and alerts Discord/Slack when a brand published nothing today (or its

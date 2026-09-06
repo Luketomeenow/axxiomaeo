@@ -36,6 +36,7 @@ from app.models.brand import Brand
 from app.models.content import ContentDraft, ContentPiece, ContentQueue
 from app.models.observed_question import ObservedQuestion
 from app.services.gsc_service import GSCService
+from app.utils.geography import query_out_of_market
 from app.utils.query_bank import get_all_queries, interpolate_query
 from app.utils.query_fanout import CATEGORY_CONTENT_TYPE
 
@@ -301,6 +302,7 @@ class TopicDiscoveryService:
         observed_by_brand = await self._observed_rows_by_brand()
 
         queued: list[dict] = []
+        skipped_out_of_market: list[dict] = []
         sources_active = {
             "observed_demand": bool(observed_by_brand),
             "citation_gap": bool(gaps_by_brand),
@@ -314,16 +316,22 @@ class TopicDiscoveryService:
             if len(queued) >= max_total:
                 break
 
-            observed_pool = self._from_observed(brand, observed_by_brand.get(brand.id, []))
-            gap_pool = self._from_gaps(brand, gaps_by_brand.get(brand.id, []))
-            gsc_candidates = await self._from_gsc(brand)
+            # Jurisdiction filter on every demand pool: Search Console and
+            # observed questions echo whatever a site ranks for — cloned
+            # content made the Florida site "demand" Maryland AHJ articles.
+            def _in_market(pool: list[dict]) -> list[dict]:
+                return self._drop_out_of_market(brand, pool, skipped_out_of_market)
+
+            observed_pool = _in_market(self._from_observed(brand, observed_by_brand.get(brand.id, [])))
+            gap_pool = _in_market(self._from_gaps(brand, gaps_by_brand.get(brand.id, [])))
+            gsc_candidates = _in_market(await self._from_gsc(brand))
             if gsc_candidates:
                 sources_active["search_demand"] = True
             trend_pool = [
                 c for c in gsc_candidates
                 if (c.get("source_detail") or {}).get("trigger") in _TREND_TRIGGERS
             ]
-            coverage_pool = self._from_coverage(brand, existing.get(brand.id, []))
+            coverage_pool = _in_market(self._from_coverage(brand, existing.get(brand.id, [])))
 
             known = list(existing.get(brand.id, []))
             picked: list[dict] = []
@@ -358,7 +366,7 @@ class TopicDiscoveryService:
             # finite coverage pool) left slots empty — LLM-proposed topics so
             # discovery can never starve the pipeline to zero again.
             if _budget() > 0 and self.settings.evergreen_topics_enabled:
-                evergreen_pool = await self._from_evergreen(brand, known, need=_budget())
+                evergreen_pool = _in_market(await self._from_evergreen(brand, known, need=_budget()))
                 if evergreen_pool:
                     sources_active["evergreen"] = True
                 picked += pick_from_pool(evergreen_pool, known, _budget())
@@ -402,7 +410,40 @@ class TopicDiscoveryService:
             existing[brand.id] = known
 
         await self.db.flush()
-        return {"count": len(queued), "queued": queued, "sources_active": sources_active}
+        if skipped_out_of_market:
+            logger.info(
+                "Topic discovery: dropped %s out-of-market candidate(s): %s",
+                len(skipped_out_of_market),
+                "; ".join(f"{s['brand_id']}: {s['target_query']!r} ({s['state']})" for s in skipped_out_of_market[:10]),
+            )
+        return {
+            "count": len(queued),
+            "queued": queued,
+            "sources_active": sources_active,
+            "skipped_out_of_market": skipped_out_of_market,
+        }
+
+    def _drop_out_of_market(self, brand: Brand, pool: list[dict], skipped: list[dict]) -> list[dict]:
+        """Remove candidates whose query/title names a state the brand doesn't
+        serve. Records each drop (brand, query, source, state) so the discovery
+        response and logs show what the guard did."""
+        if not self.settings.market_scope_guard_enabled:
+            return pool
+        kept: list[dict] = []
+        for cand in pool:
+            state = query_out_of_market(cand.get("target_query", ""), cand.get("title", ""), brand.markets)
+            if state:
+                skipped.append(
+                    {
+                        "brand_id": brand.id,
+                        "target_query": cand.get("target_query", ""),
+                        "source": cand.get("source"),
+                        "state": state,
+                    }
+                )
+                continue
+            kept.append(cand)
+        return kept
 
     async def _gap_rows_by_brand(self) -> dict[str, list[dict]]:
         from app.services.report_service import ReportService

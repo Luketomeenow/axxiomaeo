@@ -14,6 +14,7 @@ ALSO REQUIRED:
     a link to one of the approved external URLs, or (b) it is given in this prompt. If you cannot
     source a figure, write the point qualitatively instead.
   * Never attribute data to "internal service data" or other unverifiable sources.
+{market_scope}
 - EXTERNAL LINKS: when citing codes/regulations, link ONLY to these exact verified URLs — never construct,
   guess, or extend a URL into a deeper path (deep links rot and 404; any unverifiable href gets stripped):
     ASME Codes & Standards: https://www.asme.org/codes-standards
@@ -143,6 +144,7 @@ Your previous content failed AEO validation. Fix the following issues:
 Original query: "{target_query}"
 
 Rewrite the content addressing ALL validation failures. Maintain the same topic and brand ({brand_name}).
+{market_scope}
 Output clean WordPress HTML only.
 """
 
@@ -190,13 +192,19 @@ def build_prompt(
     state: str = "",
     vertical: str = "healthcare",
 ) -> str:
+    from app.utils.geography import market_scope_rule
+
     config = CONTENT_TYPE_CONFIG.get(content_type, CONTENT_TYPE_CONFIG["faq_hub"])
     markets_str = ", ".join(markets)
+    # Jurisdiction guardrail — the positive "markets served" line alone let
+    # the model write a Maryland AHJ article for the Florida brand.
+    market_scope = market_scope_rule(brand_name, markets)
 
     if content_type == "faq_hub":
         return FAQ_HUB_PROMPT.format(
             brand_name=brand_name,
             markets=markets_str,
+            market_scope=market_scope,
             target_query=target_query,
             num_faqs=config["num_faqs"],
             min_words=config["min_words"],
@@ -205,6 +213,7 @@ def build_prompt(
     if content_type == "local_page":
         return LOCAL_PAGE_PROMPT.format(
             brand_name=brand_name,
+            market_scope=market_scope,
             target_query=target_query,
             city=city or markets[0].split()[0] if markets else "City",
             state=state or (markets[0].split()[-1] if markets else "State"),
@@ -214,6 +223,7 @@ def build_prompt(
     if content_type == "vertical_page":
         return VERTICAL_PAGE_PROMPT.format(
             brand_name=brand_name,
+            market_scope=market_scope,
             target_query=target_query,
             vertical=VERTICALS.get(vertical, vertical),
             markets=markets_str,
@@ -223,6 +233,7 @@ def build_prompt(
     if content_type == "comparison":
         return COMPARISON_PAGE_PROMPT.format(
             brand_name=brand_name,
+            market_scope=market_scope,
             target_query=target_query,
             title=title or target_query,
             min_words=config["min_words"],
@@ -231,6 +242,7 @@ def build_prompt(
     if content_type == "data_stats":
         return DATA_STATS_PROMPT.format(
             brand_name=brand_name,
+            market_scope=market_scope,
             target_query=target_query,
             min_words=config["min_words"],
             max_words=config["max_words"],
@@ -238,6 +250,7 @@ def build_prompt(
     return FAQ_HUB_PROMPT.format(
         brand_name=brand_name,
         markets=markets_str,
+        market_scope=market_scope,
         target_query=target_query,
         num_faqs=config["num_faqs"],
         min_words=config["min_words"],
