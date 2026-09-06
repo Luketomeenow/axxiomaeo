@@ -139,6 +139,20 @@ async def agent_generate(
         known = [b.id for b in (await db.execute(select(Brand))).scalars().all()]
         raise HTTPException(status_code=404, detail=f"Unknown brand_id {req.brand_id!r}; known: {known}")
 
+    if get_settings().market_scope_guard_enabled:
+        from app.utils.geography import query_out_of_market
+
+        foreign_state = query_out_of_market(req.target_query, req.title, brand.markets)
+        if foreign_state:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Out of market — this topic is about {foreign_state}, which {brand.name} does not "
+                    f"serve (markets: {', '.join(brand.markets or []) or 'none set'}). Queue it for the "
+                    "brand that operates there."
+                ),
+            )
+
     existing = (await TopicDiscoveryService(db)._existing_queries_by_brand()).get(req.brand_id, [])
     covered_by = next((q for q in existing if queries_similar(req.target_query, q)), None)
     if covered_by:

@@ -56,11 +56,17 @@ class ClaudeService:
         target_query: str,
         brand_name: str,
         previous_content: str,
+        markets: list[str] | None = None,
     ) -> str:
+        from app.utils.geography import market_scope_rule
+
         prompt = CORRECTION_PROMPT.format(
             failure_reason=failure_reason,
             target_query=target_query,
             brand_name=brand_name,
+            # The correction pass is what removes an out-of-market state, so
+            # it needs the same jurisdiction rule the first pass had.
+            market_scope=market_scope_rule(brand_name, markets or []),
         )
         response = await create_and_record(
             self.client,

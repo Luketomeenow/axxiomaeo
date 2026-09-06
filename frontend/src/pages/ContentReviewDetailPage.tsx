@@ -1,12 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { SchemaPreview } from "../components/SchemaPreview";
 import { ValidationPanel } from "../components/ValidationPanel";
 import { apiFetch } from "../lib/api";
 import type { ApprovePublishResponse, Brand, ContentDraftDetail } from "../types";
-
-type PublishMode = "draft" | "selected" | "all";
 
 export function ContentReviewDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,8 +12,6 @@ export function ContentReviewDetailPage() {
   const queryClient = useQueryClient();
   const [rejectNotes, setRejectNotes] = useState("");
   const [showReject, setShowReject] = useState(false);
-  const [publishMode, setPublishMode] = useState<PublishMode>("draft");
-  const [selectedBrandId, setSelectedBrandId] = useState("");
   const [publishResults, setPublishResults] = useState<{ brand_id: string; url: string }[]>([]);
   const [editedHtml, setEditedHtml] = useState("");
   const [htmlDirty, setHtmlDirty] = useState(false);
@@ -35,27 +31,17 @@ export function ContentReviewDetailPage() {
       query.state.data?.status === "generating" ? 5000 : false,
   });
 
-  const configuredBrands = useMemo(
-    () => brands?.filter((b) => b.wp_publish_configured) ?? [],
-    [brands],
-  );
-
   const draftBrand = brands?.find((b) => b.id === draft?.brand_id);
 
   const approve = useMutation({
-    mutationFn: () => {
-      const body =
-        publishMode === "all"
-          ? { publish_all: true }
-          : publishMode === "selected"
-            ? { brand_ids: [selectedBrandId || draft?.brand_id] }
-            : {};
-
-      return apiFetch<ApprovePublishResponse>(`/api/content/drafts/${id}/approve`, {
+    // Publishes to the draft's own brand only. Cross-brand publishing was
+    // removed after the 2026-09 cleanup found the same article live on 6-7
+    // sites — a draft is written for one brand's jurisdiction, phone and schema.
+    mutationFn: () =>
+      apiFetch<ApprovePublishResponse>(`/api/content/drafts/${id}/approve`, {
         method: "POST",
-        body: JSON.stringify(body),
-      });
-    },
+        body: JSON.stringify({}),
+      }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["drafts"] });
       queryClient.invalidateQueries({ queryKey: ["published-content"] });
@@ -123,12 +109,7 @@ export function ContentReviewDetailPage() {
   if (!draft) return <p className="text-warning">Draft not found</p>;
 
   const canPublish =
-    draft.validation_result?.valid !== false &&
-    ((publishMode === "draft" && !!draftBrand?.wp_publish_configured) ||
-      (publishMode === "selected" &&
-        !!selectedBrandId &&
-        !!brands?.find((b) => b.id === selectedBrandId)?.wp_publish_configured) ||
-      (publishMode === "all" && configuredBrands.length > 0));
+    draft.validation_result?.valid !== false && !!draftBrand?.wp_publish_configured;
 
   const displayHtml = htmlDirty ? editedHtml : (draft.html_content ?? "");
 
@@ -193,68 +174,19 @@ export function ContentReviewDetailPage() {
 
       <div className="bg-panel-elevated border border-black/10 rounded p-4 space-y-3">
         <p className="text-sm font-medium text-ink">Publish destination</p>
-        <div className="flex flex-col gap-2 text-sm">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="publishMode"
-              checked={publishMode === "draft"}
-              onChange={() => setPublishMode("draft")}
-            />
-            <span>
-              Draft brand — {draftBrand?.name ?? draft.brand_id}
-              {!draftBrand?.wp_publish_configured && (
-                <span className="text-warning ml-1">(no WP credentials in backend)</span>
-              )}
-            </span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="publishMode"
-              checked={publishMode === "selected"}
-              onChange={() => {
-                setPublishMode("selected");
-                if (!selectedBrandId && configuredBrands[0]) {
-                  setSelectedBrandId(configuredBrands[0].id);
-                }
-              }}
-            />
-            <span>Choose brand</span>
-          </label>
-          {publishMode === "selected" && (
-            <select
-              value={selectedBrandId}
-              onChange={(e) => setSelectedBrandId(e.target.value)}
-              className="ml-6 border border-border rounded px-3 py-2 text-sm max-w-xs"
-            >
-              <option value="">Select brand…</option>
-              {brands?.map((b) => (
-                <option key={b.id} value={b.id} disabled={!b.wp_publish_configured}>
-                  {b.name}
-                  {!b.wp_publish_configured ? " (not configured)" : ""}
-                </option>
-              ))}
-            </select>
+        <p className="text-sm">
+          {draftBrand?.name ?? draft.brand_id}
+          {draftBrand?.wp_url && (
+            <span className="text-muted ml-1">({draftBrand.wp_url.replace(/^https?:\/\//, "")})</span>
           )}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="publishMode"
-              checked={publishMode === "all"}
-              onChange={() => setPublishMode("all")}
-            />
-            <span>
-              All configured brands ({configuredBrands.length})
-              {configuredBrands.length === 0 && (
-                <span className="text-warning ml-1">— add WP app passwords in backend .env</span>
-              )}
-            </span>
-          </label>
-        </div>
+          {!draftBrand?.wp_publish_configured && (
+            <span className="text-warning ml-1">(no WP credentials in backend)</span>
+          )}
+        </p>
         <p className="text-xs text-muted">
-          Use “Choose brand” to test on Quality Elevator while the draft was generated for another brand.
-          Schema and phone numbers are adjusted for each target site.
+          Drafts publish only to the brand they were written for — the article’s jurisdiction, phone
+          number and schema are brand-specific. To cover this topic on another brand, queue it for that
+          brand in Content Queue.
         </p>
       </div>
 
