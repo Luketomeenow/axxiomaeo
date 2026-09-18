@@ -45,20 +45,20 @@ stay live until the cutover below.
 ### A. Parallel run (no production impact)
 
 0. **Cloud Shell needs a current pg client.** Its stock `pg_dump` is older than
-   Supabase's server and refuses to dump ("server version mismatch"). Once per
-   Cloud Shell session (containers are recycled):
+   Supabase's server and refuses to dump ("server version mismatch"), and sudo
+   is blocked there ("no new privileges"), so apt is not an option. Unpack the
+   PGDG packages into `$HOME` instead — once per Cloud Shell session, since the
+   containers are recycled:
 
    ```bash
-   sudo install -d /usr/share/postgresql-common/pgdg
-   sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
-   . /etc/os-release
-   echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-   sudo apt-get update -qq && sudo apt-get install -y postgresql-client-18
+   curl -sO https://raw.githubusercontent.com/Luketomeenow/axxiomaeo/main/scripts/azure/cloudshell-pg-client.sh
+   bash cloudshell-pg-client.sh
    ```
 
-   The script then finds it automatically (newest `/usr/lib/postgresql/*/bin`;
-   override with `PG_BIN=`). Client 18 both dumps the Supabase server and
-   restores into Azure PG 18.
+   `aeo-data-cutover.sh` then finds `~/pgclient` on its own (it picks the newest
+   `pg_dump` across `~/pgclient` and `/usr/lib/postgresql`, and sets
+   `LD_LIBRARY_PATH`). `PG_BIN=` overrides. Client 18 both dumps the Supabase
+   server and restores into Azure PG 18.
 1. **Luke, Cloud Shell:** `export SUPABASE_DB_PASSWORD='…'` then
    `curl -sO https://raw.githubusercontent.com/Luketomeenow/axxiomaeo/main/scripts/azure/aeo-data-cutover.sh && bash aeo-data-cutover.sh --init`.
    Expect `0 mismatches / 16 tables` and `t|t` on the privilege line. If the privilege line

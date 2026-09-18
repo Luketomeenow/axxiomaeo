@@ -31,10 +31,19 @@ az_token() { az account get-access-token --resource-type oss-rdbms --query acces
 : "${SUPABASE_DB_PASSWORD:?export SUPABASE_DB_PASSWORD first}"
 
 # --- client version preflight -------------------------------------------------
-# pg_dump refuses to dump a server NEWER than itself. Prefer the newest client
-# installed on this machine (Debian/Ubuntu keep them side by side).
+# pg_dump refuses to dump a server NEWER than itself. Pick the newest client on
+# this machine, counting a rootless ~/pgclient install (see
+# scripts/azure/cloudshell-pg-client.sh) alongside the system ones.
+libpq="$(find "$HOME/pgclient" -name 'libpq.so.5*' 2>/dev/null | head -1)"
+[[ -n "$libpq" ]] && export LD_LIBRARY_PATH="$(dirname "$libpq")${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 if [[ -z "${PG_BIN:-}" ]]; then
-  PG_BIN="$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)"
+  best_major=0
+  for d in "$HOME"/pgclient/usr/lib/postgresql/*/bin /usr/lib/postgresql/*/bin; do
+    [[ -x "$d/pg_dump" ]] || continue
+    m="$("$d/pg_dump" --version 2>/dev/null | sed -E 's/.* ([0-9]+).*/\1/')"
+    [[ "$m" =~ ^[0-9]+$ ]] || continue
+    if (( m > best_major )); then best_major=$m; PG_BIN="$d"; fi
+  done
 fi
 [[ -n "${PG_BIN:-}" && -x "$PG_BIN/pg_dump" ]] && export PATH="$PG_BIN:$PATH"
 
@@ -47,13 +56,10 @@ echo "clients: pg_dump $client_major ($(command -v pg_dump))  |  supabase server
 if (( client_major < server_major )); then
   cat <<HINT
 STOP: pg_dump $client_major cannot dump a version-$server_major server.
-Install a newer client, then re-run this script (Azure Cloud Shell, ~1 min):
+Azure Cloud Shell blocks sudo, so install a client into your home directory
+(no root) and re-run this script:
 
-  sudo install -d /usr/share/postgresql-common/pgdg
-  sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
-  . /etc/os-release
-  echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt \$VERSION_CODENAME-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-  sudo apt-get update -qq && sudo apt-get install -y postgresql-client-18
+  bash cloudshell-pg-client.sh
 
 Cloud Shell containers are recycled, so this may need repeating in a new session.
 HINT
