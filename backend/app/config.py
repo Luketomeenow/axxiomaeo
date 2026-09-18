@@ -15,6 +15,25 @@ class Settings(BaseSettings):
     anthropic_base_url: str = ""
     database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/axxiom_aeo"
     db_schema: str = "aeo"
+    # Azure Database for PostgreSQL (App Service deploy). When AZURE_PG_USER is
+    # set the app ignores DATABASE_URL/DB_PASSWORD and connects to AZURE_PG_HOST
+    # as that role with a Microsoft Entra access token (managed identity in
+    # Azure, `az login` locally) — no database password anywhere. Same pattern
+    # as the marketing hub's Azure backend (DATA_BACKEND=azure).
+    azure_pg_user: str = ""
+    azure_pg_client_id: str = ""
+    azure_pg_host: str = "psql-axxiom-marketing.postgres.database.azure.com"
+    azure_pg_database: str = "axxiom_hub"
+    azure_pg_port: int = 5432
+    azure_pg_pool_size: int = 5
+    # Parallel-run kill switch: false keeps the API up but never starts the
+    # APScheduler jobs (no content generation, publishing, audits, alerts).
+    # The Azure app runs with this false until Railway is stopped at cutover —
+    # two schedulers would double-publish to WordPress.
+    scheduler_enabled: bool = True
+    # Serve the built React dashboard from this process (single origin, no
+    # CORS). Path to the Vite `dist/` folder; empty/missing = API only.
+    frontend_dist_dir: str = ""
     supabase_project_ref: str = "cdlssoeqqfrgckpxewhn"
     supabase_db_region: str = ""
     db_password: str = ""
@@ -293,8 +312,18 @@ class Settings(BaseSettings):
             return f"{region}.pooler.supabase.com"
         return f"aws-0-{region}.pooler.supabase.com"
 
+    @property
+    def uses_azure_pg(self) -> bool:
+        return bool(self.azure_pg_user.strip())
+
     def resolved_database_url(self) -> str:
         """Build pooler URL from DB_PASSWORD (avoids @/# breaking DATABASE_URL)."""
+        if self.uses_azure_pg:
+            user = quote_plus(self.azure_pg_user.strip())
+            return (
+                f"postgresql://{user}@{self.azure_pg_host}:{self.azure_pg_port}"
+                f"/{self.azure_pg_database}"
+            )
         if self.db_password and self.supabase_db_region:
             encoded = quote_plus(self.db_password)
             ref = self.supabase_project_ref

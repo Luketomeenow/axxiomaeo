@@ -1,6 +1,11 @@
 import { supabase } from "./supabase";
 
 function normalizeApiUrl(raw: string | undefined): string {
+  // Unset → local dev backend. Explicitly EMPTY → same origin (the Azure App
+  // Service build, where FastAPI serves this bundle and the API together).
+  if (raw !== undefined && raw.trim() === "") {
+    return "";
+  }
   const value = (raw || "http://localhost:8000").trim().replace(/\/+$/, "");
   // A scheme-less value (e.g. "api.example.com") would be treated as a relative
   // path by fetch() and hit the Netlify site instead of the backend.

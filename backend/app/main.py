@@ -1,10 +1,12 @@
 import logging
 import re
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
@@ -35,9 +37,15 @@ async def lifespan(app: FastAPI):
         await seed_brands_and_queue()
     except Exception as e:
         logger.error("Database init/seed failed: %s", e)
-    start_scheduler()
+    if get_settings().scheduler_enabled:
+        start_scheduler()
+    else:
+        logger.warning("SCHEDULER_ENABLED=false — API only, no background jobs will run")
     yield
     stop_scheduler()
+    from app.database import close_credential
+
+    await close_credential()
 
 
 def create_app() -> FastAPI:
@@ -116,7 +124,37 @@ def create_app() -> FastAPI:
     app.include_router(advisor.router)
     app.include_router(agent_api.router)
 
+    _mount_frontend(app, settings.frontend_dist_dir)
+
     return app
+
+
+def _mount_frontend(app: FastAPI, dist_dir: str) -> None:
+    """Serve the built React dashboard (Vite `dist/`) from this process so the
+    Azure App Service deploy is one origin for UI + API. API routes are
+    registered first, so they win; everything else falls back to index.html
+    for client-side routing. No-op when the folder is absent (Railway/local)."""
+    if not dist_dir:
+        return
+    dist = Path(dist_dir)
+    index = dist / "index.html"
+    if not index.is_file():
+        logger.warning("FRONTEND_DIST_DIR=%s has no index.html — API only", dist_dir)
+        return
+    assets = dist / "assets"
+    if assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets)), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa(full_path: str):
+        if full_path.startswith(("api/", "api", "health", "docs", "openapi.json")):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        candidate = (dist / full_path).resolve() if full_path else None
+        if candidate and candidate.is_file() and str(candidate).startswith(str(dist.resolve())):
+            return FileResponse(candidate)
+        return FileResponse(index)
+
+    logger.info("Serving dashboard from %s", dist)
 
 
 app = create_app()
