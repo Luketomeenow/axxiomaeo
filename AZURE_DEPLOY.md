@@ -55,10 +55,12 @@ stay live until the cutover below.
    bash cloudshell-pg-client.sh
    ```
 
-   `aeo-data-cutover.sh` then finds `~/pgclient` on its own (it picks the newest
-   `pg_dump` across `~/pgclient` and `/usr/lib/postgresql`, and sets
-   `LD_LIBRARY_PATH`). `PG_BIN=` overrides. Client 18 both dumps the Supabase
-   server and restores into Azure PG 18.
+   Cloud Shell runs Azure Linux, not Ubuntu, so the script falls back to
+   micromamba + conda-forge there (a ~100 MB download into `~/pgclient`); on a
+   Debian host it unpacks the PGDG `.deb` files instead. Either way
+   `aeo-data-cutover.sh` finds the result on its own — it picks the newest
+   `pg_dump` across `~/pgclient`, `/usr/lib/postgresql` and `/usr/bin`, and sets
+   `LD_LIBRARY_PATH`. `PG_BIN=` overrides.
 1. **Luke, Cloud Shell:** `export SUPABASE_DB_PASSWORD='…'` then
    `curl -sO https://raw.githubusercontent.com/Luketomeenow/axxiomaeo/main/scripts/azure/aeo-data-cutover.sh && bash aeo-data-cutover.sh --init`.
    Expect `0 mismatches / 16 tables` and `t|t` on the privilege line. If the privilege line

@@ -38,7 +38,7 @@ libpq="$(find "$HOME/pgclient" -name 'libpq.so.5*' 2>/dev/null | head -1)"
 [[ -n "$libpq" ]] && export LD_LIBRARY_PATH="$(dirname "$libpq")${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 if [[ -z "${PG_BIN:-}" ]]; then
   best_major=0
-  for d in "$HOME"/pgclient/usr/lib/postgresql/*/bin /usr/lib/postgresql/*/bin; do
+  for d in "$HOME"/pgclient/pg/bin "$HOME"/pgclient/usr/lib/postgresql/*/bin /usr/lib/postgresql/*/bin /usr/bin; do
     [[ -x "$d/pg_dump" ]] || continue
     m="$("$d/pg_dump" --version 2>/dev/null | sed -E 's/.* ([0-9]+).*/\1/')"
     [[ "$m" =~ ^[0-9]+$ ]] || continue
