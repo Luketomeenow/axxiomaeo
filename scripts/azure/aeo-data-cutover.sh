@@ -9,8 +9,15 @@
 #   bash aeo-data-cutover.sh            CUTOVER: data-only — wipe Azure aeo rows, reload,
 #                                       verify. Railway must be STOPPED first (one writer).
 #
-# Prereqs: export SUPABASE_DB_PASSWORD='...' (Supabase → Project Settings → Database;
-# same value as the vault secret supabase-db-password). `az` is logged in (Cloud Shell is).
+# Prereqs:
+#   export SUPABASE_DB_PASSWORD='...'   (or read it from the vault:
+#     export SUPABASE_DB_PASSWORD="$(az keyvault secret show --vault-name kv-axxiom-marketing \
+#       --name supabase-db-password --query value -o tsv)")
+#   `az` logged in (Cloud Shell already is), and a pg client at least as new as
+#   Supabase's server — Cloud Shell's stock pg_dump is older and refuses
+#   ("aborting because of server version mismatch"). This script picks the
+#   newest client under /usr/lib/postgresql/*/bin automatically; install one with
+#   the commands it prints if none is new enough. Override with PG_BIN=/path/bin.
 set -uo pipefail
 
 SUPA="host=aws-1-ap-northeast-1.pooler.supabase.com port=5432 dbname=postgres user=postgres.cdlssoeqqfrgckpxewhn sslmode=require"
@@ -22,6 +29,37 @@ MODE="${1:-data}"
 
 az_token() { az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv; }
 : "${SUPABASE_DB_PASSWORD:?export SUPABASE_DB_PASSWORD first}"
+
+# --- client version preflight -------------------------------------------------
+# pg_dump refuses to dump a server NEWER than itself. Prefer the newest client
+# installed on this machine (Debian/Ubuntu keep them side by side).
+if [[ -z "${PG_BIN:-}" ]]; then
+  PG_BIN="$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)"
+fi
+[[ -n "${PG_BIN:-}" && -x "$PG_BIN/pg_dump" ]] && export PATH="$PG_BIN:$PATH"
+
+client_major="$(pg_dump --version | sed -E 's/.* ([0-9]+).*/\1/')"
+server_major="$(PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$SUPA" -tA -c 'show server_version' 2>/dev/null | cut -d. -f1)"
+if [[ -z "$server_major" ]]; then
+  echo "STOP: cannot reach Supabase — check SUPABASE_DB_PASSWORD."; exit 1
+fi
+echo "clients: pg_dump $client_major ($(command -v pg_dump))  |  supabase server: $server_major"
+if (( client_major < server_major )); then
+  cat <<HINT
+STOP: pg_dump $client_major cannot dump a version-$server_major server.
+Install a newer client, then re-run this script (Azure Cloud Shell, ~1 min):
+
+  sudo install -d /usr/share/postgresql-common/pgdg
+  sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+  . /etc/os-release
+  echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt \$VERSION_CODENAME-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+  sudo apt-get update -qq && sudo apt-get install -y postgresql-client-18
+
+Cloud Shell containers are recycled, so this may need repeating in a new session.
+HINT
+  exit 1
+fi
+# -----------------------------------------------------------------------------
 
 if [[ "$MODE" == "--init" ]]; then
   echo "== 1/4 dump Supabase aeo (schema + data) =="
