@@ -45,21 +45,35 @@ install_deb() {
 }
 
 install_conda() {
-  local spec mm_arch
+  local spec mm_arch tarball mm="$PREFIX/bin/micromamba"
   spec="postgresql${MAJOR:+=$MAJOR}"; [[ -z "$MAJOR" ]] && spec="postgresql>=17"
   case "$(uname -m)" in
     x86_64) mm_arch=linux-64 ;;
     aarch64|arm64) mm_arch=linux-aarch64 ;;
     *) echo "STOP: unsupported architecture $(uname -m)"; return 1 ;;
   esac
-  echo "== micromamba + conda-forge ($mm_arch, $spec) — a ~100 MB download =="
-  if [[ ! -x "$PREFIX/bin/micromamba" ]]; then
-    mkdir -p "$PREFIX/bin"
-    curl -Ls "https://micro.mamba.pm/api/micromamba/$mm_arch/latest" \
-      | tar -xj -C "$PREFIX" --strip-components=1 bin/micromamba || return 1
-    chmod +x "$PREFIX/bin/micromamba"
+
+  if [[ -x "$PREFIX/pg/bin/pg_dump" ]]; then
+    echo "== reusing existing $PREFIX/pg =="
+  else
+    echo "== micromamba + conda-forge ($mm_arch, $spec) — a ~100 MB download =="
+    if [[ ! -x "$mm" ]]; then
+      tarball="$PREFIX/micromamba.tar.bz2"
+      curl -fsSL -o "$tarball" "https://micro.mamba.pm/api/micromamba/$mm_arch/latest" || {
+        echo "   download failed — is micro.mamba.pm reachable from here?"; return 1; }
+      [[ -s "$tarball" ]] || { echo "   empty download"; return 1; }
+      # The archive holds bin/micromamba — extract it as-is (no strip), so the
+      # binary lands at $PREFIX/bin/micromamba.
+      tar -xjf "$tarball" -C "$PREFIX" bin/micromamba || { echo "   extract failed"; return 1; }
+      rm -f "$tarball"
+      chmod +x "$mm"
+    fi
+    [[ -x "$mm" ]] || { echo "   micromamba missing at $mm"; return 1; }
+    "$mm" --version >/dev/null 2>&1 || { echo "   micromamba will not run here"; return 1; }
+    export MAMBA_ROOT_PREFIX="$PREFIX/mamba"
+    "$mm" create -y -p "$PREFIX/pg" -c conda-forge "$spec" || return 1
   fi
-  "$PREFIX/bin/micromamba" create -y -q -p "$PREFIX/pg" -c conda-forge "$spec" >/dev/null || return 1
+
   BIN="$PREFIX/pg/bin"
   LIB="$PREFIX/pg/lib"
 }
