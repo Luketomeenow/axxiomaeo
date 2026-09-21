@@ -3,9 +3,16 @@
 # secrets become @Microsoft.KeyVault references into kv-axxiom-marketing (loaded
 # into the vault from ENV_FILE when missing), config vars are plain values, and
 # the Azure-specific platform settings are fixed below.
-#   ./scripts/azure/sync-app-settings.sh            # dry-run
-#   ./scripts/azure/sync-app-settings.sh --apply
-#   ./scripts/azure/sync-app-settings.sh --apply --live   # cutover: SCHEDULER_ENABLED=true
+#   ./scripts/azure/sync-app-settings.sh                      # dry-run
+#   ./scripts/azure/sync-app-settings.sh --apply              # settings + vault secrets
+#   ./scripts/azure/sync-app-settings.sh --apply --no-secrets # platform/config only, no vault
+#   ./scripts/azure/sync-app-settings.sh --apply --live       # cutover: SCHEDULER_ENABLED=true
+#
+# ENV_FILE is the source of secret VALUES and defaults to backend/.env, which is
+# a developer file and can drift from what production actually runs. Before the
+# cutover, export the live Railway variables and point ENV_FILE at them:
+#   railway variables --json | python3 -c 'import json,sys; [print(f"{k}={v}") for k,v in json.load(sys.stdin).items()]' > backend/.env.railway
+#   ENV_FILE=backend/.env.railway ./scripts/azure/sync-app-settings.sh --apply
 # Vault names = env name lowercased, '_' → '-' (hub convention). The six
 # wp-app-password-* and wp-username-* secrets already exist from the hub —
 # they are shared, not duplicated.
@@ -16,10 +23,11 @@ APP="${APP:-app-axxiom-aeo}"
 RG="${RG:-Axxiom-devs-foundry}"
 VAULT="${VAULT:-kv-axxiom-marketing}"
 ENV_FILE="${ENV_FILE:-backend/.env}"
-APPLY=false; LIVE=false
+APPLY=false; LIVE=false; NO_SECRETS=false
 for arg in "$@"; do
   [[ "$arg" == "--apply" ]] && APPLY=true
   [[ "$arg" == "--live" ]] && LIVE=true
+  [[ "$arg" == "--no-secrets" ]] && NO_SECRETS=true
 done
 HOST="https://$(az webapp show -g "$RG" -n "$APP" --query defaultHostName -o tsv)"
 
@@ -30,11 +38,21 @@ SECRETS=(
   WP_APP_PASSWORD_AXXIOM WP_APP_PASSWORD_AMERITEX WP_APP_PASSWORD_ARIZONA_ES
   WP_APP_PASSWORD_LIFTECH WP_APP_PASSWORD_QUALITY WP_APP_PASSWORD_CAROLINA
 )
+# The vault already holds the marketing hub's wp-app-password-* secrets, but
+# there is no way to confirm they are the same WordPress accounts AEO publishes
+# with today. AEO gets its own aeo-* copies so behaviour on Azure is identical
+# to Railway, and a rotation on one system cannot silently change the other.
 # AEO-specific Discord channels must not collide with the hub's discord-webhook-url.
 typeset -A VAULT_NAME_OVERRIDE
 # ANTHROPIC_API_KEY is the Azure Foundry key (ANTHROPIC_BASE_URL points at Axxiom-AI), which may
 # differ from the hub's anthropic-api-key — keep AEO's own copy rather than guess.
 VAULT_NAME_OVERRIDE=(ANTHROPIC_API_KEY aeo-anthropic-api-key
+                     WP_APP_PASSWORD_AXXIOM aeo-wp-app-password-axxiom
+                     WP_APP_PASSWORD_AMERITEX aeo-wp-app-password-ameritex
+                     WP_APP_PASSWORD_ARIZONA_ES aeo-wp-app-password-arizona-es
+                     WP_APP_PASSWORD_LIFTECH aeo-wp-app-password-liftech
+                     WP_APP_PASSWORD_QUALITY aeo-wp-app-password-quality
+                     WP_APP_PASSWORD_CAROLINA aeo-wp-app-password-carolina
                      DISCORD_WEBHOOK_URL aeo-discord-webhook-url DISCORD_SCHEMA_WEBHOOK_URL aeo-discord-schema-webhook-url
                      SECRET_KEY aeo-secret-key AGENT_API_KEY aeo-agent-api-key SLACK_WEBHOOK_URL aeo-slack-webhook-url)
 CONFIG=(
@@ -68,6 +86,7 @@ settings=(
   # parallel run: API + dashboard up, NO jobs until Railway is stopped
   "SCHEDULER_ENABLED=$($LIVE && echo true || echo false)"
 )
+$NO_SECRETS && SECRETS=()
 for var in "${SECRETS[@]}"; do
   name="${VAULT_NAME_OVERRIDE[$var]:-$(echo "$var" | tr 'A-Z_' 'a-z-')}"
   if ! az keyvault secret show --vault-name "$VAULT" --name "$name" --query name -o tsv >/dev/null 2>&1; then
@@ -84,7 +103,7 @@ for var in "${CONFIG[@]}"; do
   settings+=("$var=$val")
 done
 
-echo "${#settings[@]} settings prepared for $APP ($(printf '%s\n' "${settings[@]}" | grep -c KeyVault) vault refs; SCHEDULER_ENABLED=$($LIVE && echo true || echo false))"
+echo "${#settings[@]} settings prepared for $APP ($(printf '%s\n' "${settings[@]}" | grep -c KeyVault) vault refs; SCHEDULER_ENABLED=$($LIVE && echo true || echo false)$($NO_SECRETS && echo "; --no-secrets"))"
 if $APPLY; then
   az webapp config appsettings set -g "$RG" -n "$APP" --settings "${settings[@]}" --query "length(@)" -o tsv
   az webapp config set -g "$RG" -n "$APP" --startup-file "bash startup.sh" --always-on true --query "{startup:appCommandLine,alwaysOn:alwaysOn}" -o json

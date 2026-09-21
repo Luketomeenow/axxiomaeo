@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from sqlalchemy import MetaData
@@ -5,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -99,18 +102,27 @@ async def run_alter_migrations():
     sql_files = sorted(migrations_dir.glob("alter_aeo_*.sql"))
     if not sql_files:
         return
-    async with engine.begin() as conn:
-        for sql_path in sql_files:
-            sql = sql_path.read_text(encoding="utf-8")
-            for statement in sql.split(";"):
-                lines = [
-                    line
-                    for line in statement.splitlines()
-                    if line.strip() and not line.strip().startswith("--")
-                ]
-                stmt = "\n".join(lines).strip()
-                if stmt:
-                    await conn.exec_driver_sql(stmt)
+    # One transaction PER FILE, and a failure logs loudly instead of aborting
+    # startup: on Azure the tables are owned by `dataservices` (created by the
+    # cutover restore), so ALTER TABLE fails unless the app's identity is a
+    # member of that role. The API must still come up, and the remaining
+    # migrations must still be attempted, rather than one file taking the app
+    # down or silently skipping the rest.
+    for sql_path in sql_files:
+        sql = sql_path.read_text(encoding="utf-8")
+        try:
+            async with engine.begin() as conn:
+                for statement in sql.split(";"):
+                    lines = [
+                        line
+                        for line in statement.splitlines()
+                        if line.strip() and not line.strip().startswith("--")
+                    ]
+                    stmt = "\n".join(lines).strip()
+                    if stmt:
+                        await conn.exec_driver_sql(stmt)
+        except Exception as e:
+            logger.error("Migration %s failed, continuing: %s", sql_path.name, e)
 
 
 async def init_db():
@@ -124,11 +136,17 @@ async def init_db():
             # they are owned by `dataservices` and mirror to Fabric. If the app
             # itself ran create_all first, the tables would belong to the
             # managed identity and the restore would collide — refuse.
+            # text() + bound param: exec_driver_sql passes SQL straight to
+            # asyncpg, which does not understand %s placeholders.
+            from sqlalchemy import text as _text
+
             count = (
-                await conn.exec_driver_sql(
-                    "SELECT count(*) FROM information_schema.tables "
-                    "WHERE table_schema = %s AND table_type = 'BASE TABLE'",
-                    (settings.db_schema,),
+                await conn.execute(
+                    _text(
+                        "SELECT count(*) FROM information_schema.tables "
+                        "WHERE table_schema = :schema AND table_type = 'BASE TABLE'"
+                    ),
+                    {"schema": settings.db_schema},
                 )
             ).scalar()
             if not count:
