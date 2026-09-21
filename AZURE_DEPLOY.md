@@ -42,6 +42,15 @@ stay live until the cutover below.
 
 ## Runbook
 
+### Status
+
+**Parallel run is LIVE (2026-09-21).** https://app-axxiom-aeo.azurewebsites.net —
+dashboard + API on one origin, `/health` reports `database: connected` through the
+managed identity. `SCHEDULER_ENABLED=false`, so Railway is still the only writer and
+nothing publishes twice. Data copied with `0 mismatches / 16 tables`. Steps 0–1 and 3
+below are done; what remains is the secret load (step 2), the Supabase redirect
+(step 4), and section B.
+
 ### A. Parallel run (no production impact)
 
 0. **Cloud Shell needs a current pg client.** Its stock `pg_dump` is older than
@@ -67,7 +76,16 @@ stay live until the cutover below.
    shows `f`, run as your login: `GRANT USAGE ON SCHEMA aeo TO "umi-marketing-functions"; GRANT
    SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA aeo TO "umi-marketing-functions"; GRANT
    USAGE,SELECT ON ALL SEQUENCES IN SCHEMA aeo TO "umi-marketing-functions";`
-2. `./scripts/azure/sync-app-settings.sh --apply` (SCHEDULER_ENABLED=false).
+2. **Secrets — Luke.** `./scripts/azure/sync-app-settings.sh --apply`. The
+   non-secret half is already applied (`--no-secrets`); this adds the Key Vault
+   secrets and their references. Prefer the live Railway values over the
+   developer `.env`:
+   ```bash
+   railway variables --json | python3 -c 'import json,sys; [print(f"{k}={v}") for k,v in json.load(sys.stdin).items()]' > backend/.env.railway
+   ENV_FILE=backend/.env.railway ./scripts/azure/sync-app-settings.sh --apply
+   ```
+   Until this runs the app has no Claude key, no Bright Data key, no WordPress
+   passwords and no Discord/Slack webhooks — fine while the scheduler is off.
 3. `./scripts/azure/package-app.sh --deploy`; watch `az webapp log tail -g Axxiom-devs-foundry -n app-axxiom-aeo`.
 4. Supabase → Authentication → URL Configuration: add `https://app-axxiom-aeo.azurewebsites.net` to Redirect URLs.
 5. Verify: `/health` → `"database": "connected"`; log in; Published Content, Citations,
@@ -93,12 +111,17 @@ service. Rows written on Azure after the flip would need a reverse copy — deci
 ## Known gaps / follow-ups
 
 - Alerts: `DISCORD_WEBHOOK_URL`, `DISCORD_SCHEMA_WEBHOOK_URL`, `SLACK_WEBHOOK_URL` live only in
-  Railway variables, not in `backend/.env` — export them into `backend/.env` (or set
-  `ENV_FILE`) before `sync-app-settings.sh --apply`, or the Azure app posts no notifications.
-- Startup migrations (`ALTER TABLE aeo.* …`) need table ownership. Tables restored by Luke are
-  owned by `dataservices`; if the app identity is not a member of that role, new
-  `alter_aeo_vN.sql` files fail silently on Azure (init errors are caught) → ask Zach for
-  `GRANT dataservices TO "umi-marketing-functions"`, or run new migrations by hand in Cloud Shell.
+  Railway variables, not in `backend/.env` — sourcing `ENV_FILE` from `railway variables`
+  (step 2) covers them; otherwise the Azure app posts no notifications.
+- Cloud Shell runs Azure Linux with sudo blocked, and `$HOME` does not survive between
+  sessions — re-fetch the scripts and re-run `cloudshell-pg-client.sh` each time.
+- **Migration ownership (blocking before cutover).** `alter_aeo_vN.sql` runs
+  `ALTER TABLE aeo.*`, which requires ownership. The restore created the tables as
+  Luke, so they belong to `dataservices`, and the app's identity is not a member.
+  Each migration file is now attempted independently and a failure is logged rather
+  than taking startup down, but new migrations will not apply until Zach runs
+  `GRANT dataservices TO "umi-marketing-functions"` (or they are applied by hand in
+  Cloud Shell).
 - No CI yet — deploys are the manual zip push, same as the hub. A GitHub Actions OIDC
   workflow is the natural next step for both repos.
 - Entra ID login (replacing Supabase Auth) is the last Supabase dependency to remove.
