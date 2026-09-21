@@ -114,3 +114,25 @@ PGPASSWORD="$(az_token)" psql "$AZ" -tA -c "
   select has_schema_privilege('umi-marketing-functions','aeo','USAGE'),
          bool_and(has_table_privilege('umi-marketing-functions', format('aeo.%I', table_name), 'SELECT,INSERT,UPDATE,DELETE'))
   from information_schema.tables where table_schema='aeo' and table_type='BASE TABLE'"
+
+# GRANTs are not the whole story. Supabase enables Row-Level Security on the
+# tables it exposes through PostgREST, pg_dump carries that across, and on Azure
+# the app connects as a NON-OWNER, so RLS is enforced against it: SELECT quietly
+# returns nothing and INSERT is rejected. has_table_privilege still reports true,
+# which is why this needs its own check.
+echo "== RLS enforced against the app identity? =="
+PGPASSWORD="$(az_token)" psql "$AZ" -tA -F $'\t' -c "
+  select c.relname,
+         pg_has_role('umi-marketing-functions', c.relowner, 'USAGE') as owner_or_member
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname='aeo' and c.relkind='r' and c.relrowsecurity
+    and not pg_has_role('umi-marketing-functions', c.relowner, 'USAGE')" > /tmp/aeo_rls.tsv
+if [[ -s /tmp/aeo_rls.tsv ]]; then
+  echo "BLOCKED: $(wc -l < /tmp/aeo_rls.tsv) table(s) enforce RLS against umi-marketing-functions:"
+  cut -f1 /tmp/aeo_rls.tsv | paste -sd' ' -
+  echo "The app will read ZERO rows from these until it is a member of the owning"
+  echo "role. Ask Zach for:  GRANT dataservices TO \"umi-marketing-functions\";"
+  echo "(that also lets the app apply alter_aeo_vN.sql migrations)."
+else
+  echo "ok — no table enforces RLS against the app identity"
+fi

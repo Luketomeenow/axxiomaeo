@@ -122,6 +122,20 @@ async def run_alter_migrations():
                     if stmt:
                         await conn.exec_driver_sql(stmt)
         except Exception as e:
+            # On Azure the app is not a member of the role that owns the tables,
+            # so every ALTER/CREATE is refused. Say so once instead of logging
+            # the same privilege error for every file on every restart.
+            if "InsufficientPrivilege" in str(e):
+                logger.error(
+                    "Migrations skipped: %s cannot run DDL on schema %s (not a member of the "
+                    "owning role). Apply alter_aeo_*.sql out of band, or grant the role. First "
+                    "failure was %s: %s",
+                    settings.azure_pg_user or "this database user",
+                    settings.db_schema,
+                    sql_path.name,
+                    str(e).splitlines()[0],
+                )
+                return
             logger.error("Migration %s failed, continuing: %s", sql_path.name, e)
 
 

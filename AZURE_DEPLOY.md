@@ -115,6 +115,28 @@ service. Rows written on Azure after the flip would need a reverse copy — deci
   (step 2) covers them; otherwise the Azure app posts no notifications.
 - Cloud Shell runs Azure Linux with sudo blocked, and `$HOME` does not survive between
   sessions — re-fetch the scripts and re-run `cloudshell-pg-client.sh` each time.
+- **RLS blocks the app from the data (blocking, found 2026-09-21).** Supabase
+  enables Row-Level Security on the tables it exposes through PostgREST, and
+  `pg_dump` carried that across. On Supabase the app connected as the table
+  owner, so RLS never applied; on Azure it connects as `umi-marketing-functions`,
+  a non-owner, so RLS is enforced against it. The symptom is silent: `SELECT`
+  returns zero rows and `INSERT` is refused, while `/health` still reports the
+  database connected. It showed up as the startup seed trying to re-insert the
+  `axxiom` brand that demonstrably exists in the copy. `has_table_privilege`
+  reports `true` throughout, so the cutover script now checks RLS separately.
+
+  **Fix — one grant, from Zach:**
+  ```sql
+  GRANT dataservices TO "umi-marketing-functions";
+  ```
+  Membership in the owning role restores exactly the posture the app had on
+  Supabase (it ran as the owner), leaves every policy in place and enforced for
+  everyone else, and fixes the migration problem below at the same time. Nothing
+  in this codebase uses RLS for access control: no session roles, no `auth.uid()`,
+  and the FastAPI JWT check is the only gatekeeper. The alternative — disabling
+  RLS on the `aeo` tables — weakens a control that costs nothing to keep, so
+  prefer the grant.
+
 - **Migration ownership (blocking before cutover).** `alter_aeo_vN.sql` runs
   `ALTER TABLE aeo.*`, which requires ownership. The restore created the tables as
   Luke, so they belong to `dataservices`, and the app's identity is not a member.
