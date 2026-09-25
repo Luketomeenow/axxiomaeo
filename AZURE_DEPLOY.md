@@ -94,21 +94,37 @@ Supabase redirect (step 4), and section B.
    Reports show the same numbers as the Netlify site (both read the same snapshot — any
    difference is a hosting bug). Configuration blade: every vault ref shows a green check.
 
-### B. Cutover (~20 min quiet window; nothing approved in the UI meanwhile)
+### B. Cutover (~30 min quiet window; nothing approved in the dashboard meanwhile)
 
-1. **Stop Railway** (service → Settings → remove/replicas 0, or pause). Nothing writes to Supabase `aeo` now.
-2. **Cloud Shell:** `bash aeo-data-cutover.sh` (data mode) → `0 mismatches`.
-3. `./scripts/azure/sync-app-settings.sh --apply --live` → scheduler on; app restarts.
-4. Verify the next scheduled slot fires (`job_runs` / System Health page), publish one draft
-   by hand → appears on the brand site + Discord.
-5. Repoint consumers: Foundry `aeo-platform-api` connection base URL → Azure host; Netlify
-   site → `_redirects` `/* https://app-axxiom-aeo.azurewebsites.net/:splat 301`, then pause builds.
-6. Hub: switch its `aeo` readers (`src/server/aeo/queue.ts`, `brandReport.ts`, `aeo.adapter.ts`)
-   from Supabase `.schema("aeo")` to the Azure PG client — otherwise the hub's AEO tab reads
-   a frozen Supabase copy. Zach retires the `AEOData` Fabric notebook (it also reads Supabase).
+Prerequisites from section A: RLS dropped (`/health` shows `"data": "visible"`), secrets
+loaded, Azure login checked against Netlify.
 
-**Rollback** (any point after B.3): `SCHEDULER_ENABLED=false` on Azure, restart the Railway
-service. Rows written on Azure after the flip would need a reverse copy — decide inside the window.
+1. **Stop Railway** so nothing writes to Supabase `aeo`: Railway dashboard → the backend
+   service → **Settings → scale replicas to 0** (or `railway scale` / `railway down` from a
+   linked checkout). Confirm `https://axxiomaeo-production.up.railway.app/health` stops answering.
+2. **Cloud Shell:** `bash aeo-data-cutover.sh` (data mode) → `0 mismatches`, `t|t`, and
+   "no table enforces RLS".
+3. **Deploy the final build**, including any pending app changes (e.g. the state fact sheet
+   branch), with the scheduler still off: `./scripts/azure/package-app.sh --deploy`; if it
+   adds `alter_aeo_vN.sql` files, run `apply-migrations.sh <ref>` in Cloud Shell first.
+4. **Scheduler on:** `./scripts/azure/sync-app-settings.sh --apply --live`. Watch the next
+   job slot on System Health; publish one draft by hand → brand site + Discord.
+5. **Marketing hub reads aeo from Azure:** merge hub branch `feat/aeo-schema-on-azure`,
+   deploy the hub and `func-axxiom-mktg-node`, then set `AZURE_PG_SCHEMAS=aeo` on both:
+   `az webapp config appsettings set -g Axxiom-devs-foundry -n app-axxiom-mktg-hub --settings AZURE_PG_SCHEMAS=aeo`
+   (and the same for `func-axxiom-mktg-node`).
+6. **Foundry agent:** Foundry portal → project Axxiom-Dev → Connected resources →
+   `aeo-platform-api` → change the target from `https://axxiomaeo-production.up.railway.app`
+   to `https://app-axxiom-aeo.azurewebsites.net`. Its custom key must equal the app's
+   `AGENT_API_KEY` (vault `aeo-agent-api-key`, loaded from Railway in step A2).
+7. **Netlify:** add to `netlify.toml` on main, above the SPA fallback:
+   `[[redirects]] from = "/*"  to = "https://app-axxiom-aeo.azurewebsites.net/:splat"  status = 301  force = true`
+   Pause builds after it deploys; delete the site after a quiet week.
+8. **Zach:** retire the `AEOData` Fabric notebook (it reads Supabase `aeo`); the Postgres mirror
+   carries the data now.
+
+**Rollback** (any point after B.4): `SCHEDULER_ENABLED=false` on Azure, scale the Railway
+service back to 1 replica (or `railway redeploy`), unset `AZURE_PG_SCHEMAS` on the hub. Rows written on Azure after the flip would need a reverse copy — decide inside the window.
 
 ## Known gaps / follow-ups
 
