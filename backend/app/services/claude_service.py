@@ -58,15 +58,16 @@ class ClaudeService:
         previous_content: str,
         markets: list[str] | None = None,
     ) -> str:
-        from app.utils.geography import market_scope_rule
+        from app.prompts.content_prompts import shared_prompt_fields
 
         prompt = CORRECTION_PROMPT.format(
             failure_reason=failure_reason,
             target_query=target_query,
             brand_name=brand_name,
-            # The correction pass is what removes an out-of-market state, so
-            # it needs the same jurisdiction rule the first pass had.
-            market_scope=market_scope_rule(brand_name, markets or []),
+            # The correction pass is what removes an out-of-market state or a
+            # wrong regulator, so it needs the same jurisdiction rule and the
+            # same verified state facts the first pass had.
+            **shared_prompt_fields(brand_name, markets or []),
         )
         response = await create_and_record(
             self.client,
@@ -87,13 +88,17 @@ class ClaudeService:
         brand_name: str,
         content_type: str,
         previous_content: str,
+        markets: list[str] | None = None,
     ) -> str:
-        from app.prompts.content_prompts import REFRESH_CONTENT_PROMPT
+        from app.prompts.content_prompts import REFRESH_CONTENT_PROMPT, shared_prompt_fields
 
         prompt = REFRESH_CONTENT_PROMPT.format(
             brand_name=brand_name,
             target_query=target_query,
             content_type=content_type,
+            # Refresh rewrites live posts; with the verified facts it corrects
+            # wrong regulators instead of carrying them forward.
+            **shared_prompt_fields(brand_name, markets or []),
         )
         response = await create_and_record(
             self.client,

@@ -79,9 +79,27 @@ async def run_content_refresh():
                     brand_name=brand.name,
                     content_type=draft.content_type or p.content_type or "faq_hub",
                     previous_content=draft.html_content,
+                    markets=brand.markets or [],
                 )
-                draft.html_content = html
                 svc = ContentGenerationService(session)
+                # Refresh republishes with no human review, so it gets the
+                # same state-facts gate as new drafts. A refresh that still
+                # names a wrong regulator is not published; the live post is
+                # left as-is and the failure surfaces on System Health.
+                facts_ok, facts_reason, facts_details = svc._check_state_facts(
+                    html, brand.markets or []
+                )
+                if not facts_ok:
+                    await record_worker_error(
+                        session,
+                        "content_refresh",
+                        f"Refresh held for piece {p.id} ({p.brand_id}): {facts_reason}",
+                        error_details={"piece_id": p.id, "brand_id": p.brand_id, "state_facts": facts_details},
+                        notify=False,
+                    )
+                    await session.commit()
+                    continue
+                draft.html_content = html
                 await svc._publish_draft_to_brand(draft, p.brand_id)
                 await session.commit()
                 refreshed.append(f"{p.brand_id}: {p.title or p.slug}")

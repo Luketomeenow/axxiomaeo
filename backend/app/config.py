@@ -151,6 +151,12 @@ class Settings(BaseSettings):
     # state-specific regulators (Cal/OSHA, TDLR…) never.
     market_scope_guard_enabled: bool = True
     market_scope_max_foreign_mentions: int = 2
+    # State-facts gate (2026-09-25): fail drafts that name a known wrong
+    # regulator (e.g. the Texas Department of Insurance for elevators), use a
+    # known wrong rule citation, or state a requirement the verified fact sheet
+    # (app/data/state_facts.json) records as not in force. Also gates the
+    # Sunday refresh, which republishes without review.
+    state_facts_guard_enabled: bool = True
     # Publishing one brand's draft to another brand's site. Off by default:
     # drafts are written for one brand's markets (phone, schema, jurisdiction),
     # and the 2026-09 cleanup found the same article live on 6-7 sites. Queue

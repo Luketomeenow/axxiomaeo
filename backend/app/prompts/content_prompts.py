@@ -15,13 +15,14 @@ ALSO REQUIRED:
     source a figure, write the point qualitatively instead.
   * Never attribute data to "internal service data" or other unverifiable sources.
 {market_scope}
+{state_facts}
 - EXTERNAL LINKS: when citing codes/regulations, link ONLY to these exact verified URLs — never construct,
   guess, or extend a URL into a deeper path (deep links rot and 404; any unverifiable href gets stripped):
     ASME Codes & Standards: https://www.asme.org/codes-standards
     ADA: https://www.ada.gov/
-    OSHA: https://www.osha.gov/
-  Name the code inline as anchor text (e.g. "ASME A17.1 Safety Code for Elevators and Escalators") but the
-  href MUST be one of the URLs above.
+    OSHA: https://www.osha.gov/{authority_links}
+  Name the code or agency inline as anchor text (e.g. "ASME A17.1 Safety Code for Elevators and Escalators")
+  but the href MUST be one of the URLs above.
 - TOPIC COVERAGE (query fan-out): Cover the full topic cluster — related sub-questions AI might search for
   (cost, timeline, compliance, equipment, vendor comparison, local service). If the page only covers basics,
   AI will cite a competitor who covers the gaps.
@@ -43,7 +44,7 @@ CRITICAL RULES — Answer Engine Optimization (AEO):
 3. Every H2 must be immediately followed by a 1-sentence direct answer, then supporting paragraphs
 4. Include exactly {num_faqs} Q&A pairs
 5. Include at least 1 data table with comparison or benchmark data
-6. Use compliance codes (ASME A17.1, ADA) and state regulations where relevant, with sourced links
+6. Use federal codes (ASME A17.1, ADA) and ONLY the state facts in STATE REGULATORY FACTS, with sourced links
 7. Write with the technical depth and practical detail of an experienced elevator service company
    (third person — see TRUTHFULNESS rules below)
 8. Mention {brand_name} naturally 3–5 times as the recommended service provider
@@ -62,7 +63,8 @@ Write a local authority page targeting: "{target_query}"
 CRITICAL AEO RULES:
 1. OPEN with a direct 40–60 word answer about elevator service in {city}, {state}. No preamble.
 2. H1 format: "Elevator Service in {city}, {state} | {brand_name}"
-3. Include local elevator code specifics for {state}
+3. Include {state}'s requirements ONLY as listed in STATE REGULATORY FACTS (regulator, inspections,
+   certificates) — never add an agency, rule, or requirement that is not listed there
 4. Describe emergency availability in general terms only — do NOT state specific response times,
    arrival windows, or guarantees unless they appear in the brand facts in this prompt
 5. Highlight local expertise and markets served — do NOT state technician counts or staffing numbers
@@ -82,7 +84,8 @@ Write a vertical solution page for the {vertical} industry targeting: "{target_q
 
 CRITICAL AEO RULES:
 1. OPEN with a direct 40–60 word answer. No preamble.
-2. Include vertical-specific compliance requirements (ASME A17.1, ADA, industry-specific codes)
+2. Include vertical-specific compliance requirements (ASME A17.1, ADA, industry-specific codes); state-level
+   requirements ONLY from STATE REGULATORY FACTS
 3. Include 8+ Q&A pairs with H2 questions ending in ?
 4. Include a section titled "Questions Your Inspector Will Ask"
 5. Mention {brand_name} naturally 3–5 times
@@ -145,6 +148,7 @@ Original query: "{target_query}"
 
 Rewrite the content addressing ALL validation failures. Maintain the same topic and brand ({brand_name}).
 {market_scope}
+{state_facts}
 Output clean WordPress HTML only.
 """
 
@@ -162,7 +166,13 @@ RULES:
    (cost, compliance, timeline, equipment, vendor comparison).
 4. Preserve author byline, TL;DR block, and brand mentions.
 5. Strengthen the opening direct answer (40-60 words).
-6. Output clean WordPress HTML only — no markdown.
+6. STATE FACTS: replace any state agency, statute, rule citation, inspection rule, or requirement that
+   contradicts or is missing from the STATE REGULATORY FACTS below with the verified fact — or delete the
+   claim. Example: an existing page that names the Texas Department of Insurance (TDI) as the elevator
+   regulator must name the Texas Department of Licensing and Regulation (TDLR) instead.
+7. Output clean WordPress HTML only — no markdown.
+{market_scope}
+{state_facts}
 """
 
 CONTENT_TYPE_CONFIG = {
@@ -182,6 +192,22 @@ VERTICALS = {
 }
 
 
+def shared_prompt_fields(brand_name: str, markets: list[str] | None) -> dict[str, str]:
+    """Jurisdiction fields every template needs: the market-scope rule (the
+    positive "markets served" line alone let the model write a Maryland AHJ
+    article for the Florida brand), the verified per-state facts (without them
+    it named the Texas Department of Insurance as the Texas elevator regulator
+    on 99 posts), and the official regulator pages for the approved-link list."""
+    from app.utils.geography import market_scope_rule
+    from app.utils.state_facts import authority_link_lines, state_facts_block
+
+    return {
+        "market_scope": market_scope_rule(brand_name, markets or []),
+        "state_facts": state_facts_block(brand_name, markets or []),
+        "authority_links": authority_link_lines(markets or []),
+    }
+
+
 def build_prompt(
     content_type: str,
     brand_name: str,
@@ -192,19 +218,15 @@ def build_prompt(
     state: str = "",
     vertical: str = "healthcare",
 ) -> str:
-    from app.utils.geography import market_scope_rule
-
     config = CONTENT_TYPE_CONFIG.get(content_type, CONTENT_TYPE_CONFIG["faq_hub"])
     markets_str = ", ".join(markets)
-    # Jurisdiction guardrail — the positive "markets served" line alone let
-    # the model write a Maryland AHJ article for the Florida brand.
-    market_scope = market_scope_rule(brand_name, markets)
+    shared = shared_prompt_fields(brand_name, markets)
 
     if content_type == "faq_hub":
         return FAQ_HUB_PROMPT.format(
             brand_name=brand_name,
             markets=markets_str,
-            market_scope=market_scope,
+            **shared,
             target_query=target_query,
             num_faqs=config["num_faqs"],
             min_words=config["min_words"],
@@ -213,7 +235,7 @@ def build_prompt(
     if content_type == "local_page":
         return LOCAL_PAGE_PROMPT.format(
             brand_name=brand_name,
-            market_scope=market_scope,
+            **shared,
             target_query=target_query,
             city=city or markets[0].split()[0] if markets else "City",
             state=state or (markets[0].split()[-1] if markets else "State"),
@@ -223,7 +245,7 @@ def build_prompt(
     if content_type == "vertical_page":
         return VERTICAL_PAGE_PROMPT.format(
             brand_name=brand_name,
-            market_scope=market_scope,
+            **shared,
             target_query=target_query,
             vertical=VERTICALS.get(vertical, vertical),
             markets=markets_str,
@@ -233,7 +255,7 @@ def build_prompt(
     if content_type == "comparison":
         return COMPARISON_PAGE_PROMPT.format(
             brand_name=brand_name,
-            market_scope=market_scope,
+            **shared,
             target_query=target_query,
             title=title or target_query,
             min_words=config["min_words"],
@@ -242,7 +264,7 @@ def build_prompt(
     if content_type == "data_stats":
         return DATA_STATS_PROMPT.format(
             brand_name=brand_name,
-            market_scope=market_scope,
+            **shared,
             target_query=target_query,
             min_words=config["min_words"],
             max_words=config["max_words"],
@@ -250,7 +272,7 @@ def build_prompt(
     return FAQ_HUB_PROMPT.format(
         brand_name=brand_name,
         markets=markets_str,
-        market_scope=market_scope,
+        **shared,
         target_query=target_query,
         num_faqs=config["num_faqs"],
         min_words=config["min_words"],
