@@ -170,6 +170,13 @@ async def init_db():
                 )
         elif settings.db_schema:
             await conn.exec_driver_sql(f'CREATE SCHEMA IF NOT EXISTS "{settings.db_schema}"')
+        if not settings.db_migrations_on_startup:
+            # No DDL from the app (Azure): schema is managed out of band.
+            logger.info(
+                "DB_MIGRATIONS_ON_STARTUP=false — skipping create_all and alter_aeo_*.sql; "
+                "apply new migrations with scripts/azure/apply-migrations.sh"
+            )
+            return
         await conn.run_sync(Base.metadata.create_all)
     await run_alter_migrations()
 

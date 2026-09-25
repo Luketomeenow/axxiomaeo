@@ -130,9 +130,8 @@ PGPASSWORD="$(az_token)" psql "$AZ" -tA -F $'\t' -c "
 if [[ -s /tmp/aeo_rls.tsv ]]; then
   echo "BLOCKED: $(wc -l < /tmp/aeo_rls.tsv) table(s) enforce RLS against umi-marketing-functions:"
   cut -f1 /tmp/aeo_rls.tsv | paste -sd' ' -
-  echo "The app will read ZERO rows from these until it is a member of the owning"
-  echo "role. Ask Zach for:  GRANT dataservices TO \"umi-marketing-functions\";"
-  echo "(that also lets the app apply alter_aeo_vN.sql migrations)."
+  echo "The app reads ZERO rows from these while the Supabase policies are on."
+  echo "Fix (approved by Zach 2026-09-25): run drop-supabase-rls.sql in Cloud Shell."
 else
   echo "ok — no table enforces RLS against the app identity"
 fi

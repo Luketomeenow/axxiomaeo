@@ -83,6 +83,8 @@ settings=(
   "AZURE_PG_HOST=psql-axxiom-marketing.postgres.database.azure.com"
   "AZURE_PG_DATABASE=axxiom_hub"
   "DB_SCHEMA=aeo"
+  # the app never runs DDL on Azure; migrations go through apply-migrations.sh
+  "DB_MIGRATIONS_ON_STARTUP=false"
   # parallel run: API + dashboard up, NO jobs until Railway is stopped
   "SCHEDULER_ENABLED=$($LIVE && echo true || echo false)"
 )

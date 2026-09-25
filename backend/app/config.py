@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # The Azure app runs with this false until Railway is stopped at cutover —
     # two schedulers would double-publish to WordPress.
     scheduler_enabled: bool = True
+    # Schema changes at startup (create_all + migrations/alter_aeo_v*.sql).
+    # Railway/Supabase: true, as before. Azure: false — the database admin
+    # (Zach) decided the app identity never runs DDL there; new alter_aeo_vN.sql
+    # files are applied by hand as dataservices on each deploy with
+    # scripts/azure/apply-migrations.sh.
+    db_migrations_on_startup: bool = True
     # Serve the built React dashboard from this process (single origin, no
     # CORS). Path to the Vite `dist/` folder; empty/missing = API only.
     frontend_dist_dir: str = ""

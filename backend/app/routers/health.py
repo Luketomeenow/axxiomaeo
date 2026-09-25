@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.database import engine, get_db
 from app.models.approval import WorkerError
+from app.models.brand import Brand
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +25,25 @@ async def health_check():
         # Details stay in server logs — this endpoint is unauthenticated.
         logger.warning("Health check database failure: %s", e)
 
-    status = "ok" if db_ok else "degraded"
+    # Connected is not the same as usable: on Azure, Row-Level Security copied
+    # from Supabase made every aeo table read as empty while SELECT 1 still
+    # succeeded. Brands are seeded on every install, so "no brand visible"
+    # means the app cannot see its data (RLS, grants, or wrong schema).
+    data_visible = False
+    if db_ok:
+        try:
+            async with engine.connect() as conn:
+                row = (await conn.execute(select(Brand.id).limit(1))).first()
+            data_visible = row is not None
+        except Exception as e:
+            logger.warning("Health check data visibility failure: %s", e)
+
+    status = "ok" if db_ok and data_visible else "degraded"
     return {
         "status": status,
         "service": "axxiom-aeo-api",
         "database": "connected" if db_ok else "disconnected",
+        "data": "visible" if data_visible else "not visible",
     }
 
 

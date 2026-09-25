@@ -48,8 +48,8 @@ stay live until the cutover below.
 dashboard + API on one origin, `/health` reports `database: connected` through the
 managed identity. `SCHEDULER_ENABLED=false`, so Railway is still the only writer and
 nothing publishes twice. Data copied with `0 mismatches / 16 tables`. Steps 0–1 and 3
-below are done; what remains is the secret load (step 2), the Supabase redirect
-(step 4), and section B.
+below are done; what remains is the RLS drop (step 1b), the secret load (step 2), the
+Supabase redirect (step 4), and section B.
 
 ### A. Parallel run (no production impact)
 
@@ -76,6 +76,8 @@ below are done; what remains is the secret load (step 2), the Supabase redirect
    shows `f`, run as your login: `GRANT USAGE ON SCHEMA aeo TO "umi-marketing-functions"; GRANT
    SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA aeo TO "umi-marketing-functions"; GRANT
    USAGE,SELECT ON ALL SEQUENCES IN SCHEMA aeo TO "umi-marketing-functions";`
+1b. **Luke, Cloud Shell:** `psql … -f drop-supabase-rls.sql` (command in the file header).
+   Expect `0 | 0` and `t`; then `/health` shows `"data": "visible"`.
 2. **Secrets — Luke.** `./scripts/azure/sync-app-settings.sh --apply`. The
    non-secret half is already applied (`--no-secrets`); this adds the Key Vault
    secrets and their references. Prefer the live Railway values over the
@@ -109,6 +111,29 @@ below are done; what remains is the secret load (step 2), the Supabase redirect
 service. Rows written on Azure after the flip would need a reverse copy — decide inside the window.
 
 ## Known gaps / follow-ups
+
+- Alerts: `DISCORD_WEBHOOK_URL`, `DISCORD_SCHEMA_WEBHOOK_URL`, `SLACK_WEBHOOK_URL` live only in
+  Railway variables, not in `backend/.env` — sourcing `ENV_FILE` from `railway variables`
+  (step 2) covers them; otherwise the Azure app posts no notifications.
+- Cloud Shell runs Azure Linux with sudo blocked, and `$HOME` does not survive between
+  sessions — re-fetch the scripts and re-run `cloudshell-pg-client.sh` each time.
+- **Row-Level Security and migrations — decided by Zach, 2026-09-25.** The `aeo` tables
+  carried Supabase's RLS policies across in the dump. On Supabase the app ran as the table
+  owner so they never applied; on Azure it connects as `umi-marketing-functions`, a non-owner,
+  so every table read as empty (while `/health` said connected). Zach declined adding the UMI
+  to `dataservices` — the same identity runs the hub functions and would gain owner rights over
+  all of `axxiom_hub`. Instead:
+  1. **Drop the Supabase policies and disable RLS** on the `aeo` tables —
+     `scripts/azure/drop-supabase-rls.sql`, run once in Cloud Shell as Luke. The policies were
+     built for Supabase's anon/authenticated roles; grants do the protecting on Azure. Nothing
+     in AEO depends on RLS (single app role, no `SET ROLE`, no `auth.uid()`; the FastAPI JWT
+     check is the gatekeeper).
+  2. **The app never runs DDL on Azure**: `DB_MIGRATIONS_ON_STARTUP=false` skips `create_all`
+     and `alter_aeo_*.sql`. On each deploy that adds a migration, run
+     `scripts/azure/apply-migrations.sh [ref]` in Cloud Shell as Luke/Trey (dataservices), which
+     applies every idempotent `alter_aeo_v*.sql` in version order and checks RLS + grants.
+  `/health` now reports `"data": "visible"` only when the app can actually read a brand row, so
+  an RLS or grant problem shows up there instead of as empty pages.
 
 - Alerts: `DISCORD_WEBHOOK_URL`, `DISCORD_SCHEMA_WEBHOOK_URL`, `SLACK_WEBHOOK_URL` live only in
   Railway variables, not in `backend/.env` — sourcing `ENV_FILE` from `railway variables`
