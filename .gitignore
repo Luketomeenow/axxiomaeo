@@ -22,3 +22,6 @@ geo-aeo-tracker-app/
 # OS
 .DS_Store
 Thumbs.db
+
+# Railway variable export used by scripts/azure/sync-app-settings.sh (contains secrets)
+backend/.env.railway
