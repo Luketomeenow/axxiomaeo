@@ -61,6 +61,29 @@ def _norm_host(netloc: str) -> str:
     return (netloc or "").lower().removeprefix("www.")
 
 
+def _authority_fallbacks() -> dict[str, str]:
+    """Each state elevator regulator's official program page (from the
+    verified fact sheet), so a dead deep link to e.g. tdlr.texas.gov is
+    re-pointed at the elevator program rather than dropped."""
+    try:
+        from app.utils.state_facts import load_state_facts
+
+        states = load_state_facts().get("states", {})
+    except Exception:  # a broken fact sheet must never break link checks
+        logger.warning("state_facts unavailable for link fallbacks", exc_info=True)
+        return {}
+    out: dict[str, str] = {}
+    for entry in states.values():
+        url = (entry.get("authority") or {}).get("url")
+        if url:
+            out.setdefault(_norm_host(urlparse(url).netloc), url)
+    return out
+
+
+for _host, _url in _authority_fallbacks().items():
+    _DOMAIN_FALLBACKS.setdefault(_host, _url)
+
+
 def _fallback_for(url: str) -> str | None:
     host = _norm_host(urlparse(url).netloc)
     for domain, fallback in _DOMAIN_FALLBACKS.items():

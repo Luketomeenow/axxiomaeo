@@ -1,0 +1,2723 @@
+{
+  "verified_on": "2026-09-25",
+  "notes": "Verified per-state elevator regulatory facts. Every fact carries the official URL it came from and a verbatim quote. Anything not verifiable from an official page is omitted (see each state's `unverified`). Canonical copy: axxiomaeo backend/app/data/state_facts.json; the marketing hub vendors it via scripts/sync-state-facts.mjs. `match` specs are for the hub's social claims lint; `swaps` are correction guidance.",
+  "states": {
+    "TX": {
+      "name": "Texas",
+      "authority": {
+        "name": "Texas Department of Licensing and Regulation",
+        "short": "TDLR",
+        "program": "Elevator and Escalator Safety program",
+        "url": "https://www.tdlr.texas.gov/elevator/",
+        "aliases": [
+          "Texas Department of Licensing and Regulation",
+          "Texas Department of Licensing & Regulation"
+        ],
+        "source_quote": "TDLR regulates elevators, escalators and related equipment to ensure the safety of passengers. TDLR also regulates contractors and inspectors who work with elevators, escalators, and other related equipment."
+      },
+      "statute": {
+        "citation": "Texas Health and Safety Code Chapter 754",
+        "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+        "source_quote": "HEALTH AND SAFETY CODE CHAPTER 754. ELEVATORS, ESCALATORS, AND RELATED EQUIPMENT"
+      },
+      "rules": {
+        "citation": "16 Texas Administrative Code Chapter 74",
+        "url": "https://www.tdlr.texas.gov/news/rulemaking/2026/06/23/2274/",
+        "source_quote": "The Texas Department of Licensing and Regulation (Department) is reviewing the Elevators, Escalators, and Related Equipment rules located at Title 16, Texas Administrative Code, Chapter 74 for re-adoption, revision, or repeal."
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2016 edition, as amended by 16 TAC §74.100(b)",
+        "effective": "November 1, 2018",
+        "existing_installations": "ASME A17.3-2002 continues in effect (16 TAC §74.100); Health and Safety Code §754.014(d) requires all equipment, regardless of installation date, to meet ASME A17.3.",
+        "exceptions": [],
+        "amendments_detail": [
+          "Deletes requirement 1.2.1(c) and all references to ASME A17.7.",
+          "Deletes 2.12.7.2.1(c), hoistway access switch on sight guard.",
+          "Deletes 7.4.2.2 and all references to Type B material lifts.",
+          "Deletes 8.6.4.19.7 and 8.6.5.14.3(f), standby or emergency power operation.",
+          "Deletes 8.10.2.2.1(q), emergency or standby power operation.",
+          "Deletes 8.10.2.3.2(l) and 8.10.3.3.2(l), emergency or standby power alterations.",
+          "Deletes the reference to ASME A17.3 contained within 9.1.",
+          "Deletes Appendix E in its entirety."
+        ],
+        "url": "https://www.law.cornell.edu/regulations/texas/16-Tex-Admin-Code-SS-74-100",
+        "source_note": "Official SOS TAC viewer is JavaScript-only; rule text via Cornell LII, corroborated by TDLR's plan-review page (https://www.tdlr.texas.gov/elevator/plan-review.htm) citing ASME A17.1-2016.",
+        "source_quote": "(1) ASME Code A17.1-2016/CSA B44-16 as amended in subsection (b); ... (1) ASME Code A17.1-2016/CSA B44-16 and the amendments in subsection (b) shall be effective on November 1, 2018."
+      },
+      "requirements": [
+        {
+          "id": "annual_inspection_registered_inspector",
+          "claim": "Texas building owners must have elevators, escalators and related equipment inspected annually by a TDLR-registered elevator inspector.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "(1) have the equipment inspected annually by a registered elevator inspector, unless the equipment has been removed from service in accordance with commission rules;",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "\\bannual",
+              "every year",
+              "once a year",
+              "each year",
+              "yearly"
+            ],
+            "none": [
+              "semi-?annual",
+              "bi-?annual",
+              "every (six|6) months",
+              "twice a year",
+              "quarterly",
+              "monthly"
+            ]
+          }
+        },
+        {
+          "id": "inspectors_are_third_party",
+          "claim": "Texas elevator inspectors register with TDLR but are not TDLR employees.",
+          "url": "https://www.tdlr.texas.gov/elevator/elefaq.htm",
+          "source_quote": "Elevator inspectors are required to register with the Department, but they are not employees of the Department.",
+          "match": {
+            "all": [
+              "inspector"
+            ],
+            "any": [
+              "not (tdlr |state )?employees",
+              "third[- ]party",
+              "independent"
+            ]
+          }
+        },
+        {
+          "id": "owner_selects_inspector",
+          "claim": "In Texas, the building owner has the sole right to select the elevator inspector.",
+          "url": "https://www.tdlr.texas.gov/elevator/elefaq.htm",
+          "source_quote": "The owner has the sole right to select the inspector who enters upon the property.",
+          "match": {
+            "all": [
+              "owner",
+              "inspector"
+            ],
+            "any": [
+              "select",
+              "choose",
+              "pick"
+            ]
+          }
+        },
+        {
+          "id": "inspection_report_within_5_days",
+          "claim": "A Texas registered elevator inspector must give the owner the inspection report within five calendar days of the inspection.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "A registered elevator inspector shall issue an inspection report to the owner not later than the fifth calendar day after the date of inspection",
+          "match": {
+            "all": [
+              "report"
+            ],
+            "any": [
+              "\\bfive\\b",
+              "\\b5\\b",
+              "fifth"
+            ]
+          }
+        },
+        {
+          "id": "certificate_of_compliance_annual",
+          "claim": "Texas building owners must obtain a TDLR Certificate of Compliance for each unit of equipment, and the certificate is valid for one year.",
+          "url": "https://www.tdlr.texas.gov/elevator/elefaq.htm",
+          "source_quote": "The owner of the building is responsible for obtaining a Certificate of Compliance for each unit of equipment in the building. This certificate is good for one year and must be applied for annually.",
+          "match": {
+            "all": [
+              "certificate of compliance"
+            ],
+            "any": [
+              "annual",
+              "one year",
+              "every year",
+              "each year",
+              "renew"
+            ]
+          }
+        },
+        {
+          "id": "certificate_display",
+          "claim": "Texas owners must display the Certificate of Compliance in a publicly visible area of the building.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "(4) display the certificate of compliance for the equipment in a publicly visible area as defined by commission rule; and",
+          "match": {
+            "all": [
+              "certificate of compliance"
+            ],
+            "any": [
+              "display",
+              "\\bpost",
+              "visible"
+            ],
+            "none": [
+              "(inside|in) (every|each|the) (cab|car)"
+            ]
+          }
+        },
+        {
+          "id": "correct_violations_30_days",
+          "claim": "Texas owners must have cited violations corrected or under contract to be corrected within 30 days of the inspection, or obtain a waiver or delay from TDLR.",
+          "url": "https://www.tdlr.texas.gov/elevator/elefaq.htm",
+          "source_quote": "The Building’s owner is responsible for having cited violations corrected, or under contract to be corrected, within 30 days of the date of inspection, or must obtain a Waiver or Delay from the Department.",
+          "match": {
+            "all": [
+              "violation"
+            ],
+            "any": [
+              "\\b30\\b",
+              "thirty"
+            ]
+          }
+        },
+        {
+          "id": "accident_report_24_hours",
+          "claim": "Texas owners must report each accident involving elevator equipment to TDLR within 24 hours.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "(e) An owner shall report to the department each accident involving equipment not later than 24 hours following the accident.",
+          "match": {
+            "all": [
+              "accident"
+            ],
+            "any": [
+              "\\b24\\b",
+              "twenty-four"
+            ]
+          }
+        },
+        {
+          "id": "contractor_registration_required",
+          "claim": "In Texas, a person may not install, repair, alter, test or maintain elevator equipment without registering as a contractor with TDLR.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "A person may not install, repair, alter, test, or maintain equipment without registering as a contractor with the department as required by this chapter.",
+          "match": {
+            "all": [
+              "contractor"
+            ],
+            "any": [
+              "regist"
+            ]
+          }
+        },
+        {
+          "id": "contractor_definition_excludes_employees",
+          "claim": "Under Texas law, the term contractor does not include an employee of a contractor.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "\"Contractor\" means a person engaged in the installation, alteration, testing, repair, or maintenance of equipment. The term does not include an employee of a contractor",
+          "match": {
+            "all": [
+              "employee",
+              "contractor"
+            ]
+          }
+        },
+        {
+          "id": "registrations_expire_annually",
+          "claim": "Texas elevator contractor and inspector registrations expire one year after they are issued.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "A registration expires on the first anniversary of the date of issuance.",
+          "match": {
+            "all": [
+              "registration"
+            ],
+            "any": [
+              "expire",
+              "one year",
+              "annual"
+            ]
+          }
+        },
+        {
+          "id": "contractor_insurance",
+          "claim": "Texas elevator contractors must carry general liability insurance of at least $1,000,000 per occurrence for bodily injury or death and $500,000 per occurrence for property damage.",
+          "url": "https://www.tdlr.texas.gov/elevator/elefaq.htm",
+          "source_quote": "The required general liability insurance must be not less than: $1,000,000 for each single occurrence of bodily injury or death and; $500,000 for each single occurrence of property damage.",
+          "match": {
+            "all": [
+              "insurance|liability"
+            ],
+            "any": [
+              "1,000,000",
+              "\\$1 ?million",
+              "500,000"
+            ]
+          }
+        },
+        {
+          "id": "responsible_party",
+          "claim": "Each Texas elevator contractor must designate one or two responsible parties with at least three years of elevator contractor experience.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "(a) Each contractor who registers with the department must designate at least one but not more than two responsible parties. ... (1) have a minimum of three years of elevator contractor experience related to elevator installation, repair, and maintenance;",
+          "match": {
+            "all": [
+              "responsible part"
+            ],
+            "any": [
+              "three years",
+              "3 years"
+            ]
+          }
+        },
+        {
+          "id": "plan_review_before_installation",
+          "claim": "Before installing an elevator or escalator in Texas, the registered contractor must submit plans to TDLR and obtain approval.",
+          "url": "https://www.tdlr.texas.gov/media/pdf/ELE%20at%20a%20Glance.pdf",
+          "source_quote": "Before installing an elevator or escalator, the registered elevator contractor must submit detailed plans to TDLR and obtain approval of the plans.",
+          "match": {
+            "all": [
+              "plans?\\b",
+              "install"
+            ],
+            "any": [
+              "approv",
+              "submit",
+              "review"
+            ]
+          }
+        },
+        {
+          "id": "category_5_test_traction",
+          "claim": "Texas requires a Category 5 full-load test every five years on electric (traction) elevators.",
+          "url": "https://www.tdlr.texas.gov/media/pdf/ELE%20at%20a%20Glance.pdf",
+          "source_quote": "Every five years, a Category 5, full-load test must be performed. Category 5 testing is required only on Electric (a.k.a. traction) elevators",
+          "match": {
+            "all": [
+              "category 5|cat\\.? ?5|full[- ]load test"
+            ],
+            "any": [
+              "five years",
+              "5 years",
+              "every five"
+            ]
+          }
+        },
+        {
+          "id": "door_restrictors",
+          "claim": "In Texas, a passenger elevator without working door restrictors must be removed from service immediately.",
+          "url": "https://www.tdlr.texas.gov/elevator/elefaq.htm",
+          "source_quote": "For safety reasons, any passenger elevator in Texas without Door Restrictors OR found to have non-working Door Restrictors must be immediately removed from service.",
+          "match": {
+            "all": [
+              "door restrictor"
+            ]
+          }
+        },
+        {
+          "id": "firefighters_service",
+          "claim": "In Texas, a passenger elevator without firefighters' service or with non-working Phase One firefighters' service must be removed from service immediately.",
+          "url": "https://www.tdlr.texas.gov/elevator/elefaq.htm",
+          "source_quote": "In order to protect the public, any passenger elevator in Texas without Firefighters’ Service OR found to have non-working Phase One Firefighters’ Service must be immediately removed from service.",
+          "match": {
+            "all": [
+              "firefighter"
+            ],
+            "any": [
+              "phase (one|1|i)\\b",
+              "removed? from service",
+              "out of service"
+            ]
+          }
+        },
+        {
+          "id": "federal_buildings_exempt",
+          "claim": "The Texas elevator law does not apply to equipment in buildings owned and operated by the federal government.",
+          "url": "https://tcss.legis.texas.gov/resources/HS/htm/HS.754.htm",
+          "source_quote": "(c) This chapter does not apply to equipment located in a building owned and operated by the federal government.",
+          "match": {
+            "all": [
+              "federal"
+            ],
+            "any": [
+              "exempt",
+              "does not apply",
+              "not apply"
+            ]
+          }
+        },
+        {
+          "id": "single_family_dwellings",
+          "claim": "TDLR does not regulate elevators in single-family dwellings, except that state law requires an inspection by a TDLR-registered inspector after installation.",
+          "url": "https://www.tdlr.texas.gov/media/pdf/ELE%20at%20a%20Glance.pdf",
+          "source_quote": "Equipment installed in single-family dwellings is not regulated by TDLR except for provisions in Section 754.0141 that require an inspection by a registered TDLR inspector after it is installed.",
+          "match": {
+            "all": [
+              "single[- ]family"
+            ],
+            "any": [
+              "inspect",
+              "not regulat"
+            ]
+          }
+        }
+      ],
+      "local_authorities": [
+        {
+          "name": "City of Houston",
+          "scope": "TDLR does not regulate elevators or escalators inside Houston city limits; the City of Houston runs its own program. Its adopted code edition and rules are not verified — do not state them, and never say TDLR inspects or permits elevators in Houston.",
+          "url": "https://www.tdlr.texas.gov/media/pdf/ELE%20at%20a%20Glance.pdf",
+          "source_quote": "TDLR does not regulate elevators or escalators located inside the City of Houston city limits."
+        }
+      ],
+      "not_the_regulator": [
+        {
+          "name": "Texas Department of Insurance",
+          "aliases": [
+            "TDI",
+            "Texas Dept. of Insurance"
+          ],
+          "why": "TDI regulates insurance, runs workers' compensation and houses the State Fire Marshal's Office; it does not run the Texas elevator program.",
+          "url": "https://www.tdi.texas.gov/general/index.html",
+          "source_quote": "The Texas Department of Insurance regulates the state’s insurance industry, oversees the administration of the Texas workers’ compensation system, performs the duties of the State Fire Marshal’s Office"
+        }
+      ],
+      "wrong_citations": [
+        {
+          "wrong": "Texas Administrative Code Title 28 (Insurance) for elevator rules",
+          "pattern": "(Title\\s*28\\b[^.]{0,60}?Chapter\\s*74|\\b28\\s*T\\.?\\s?A\\.?\\s?C\\.?\\s*(§|Chapter|Ch\\.)?\\s*74)",
+          "correct": "16 Texas Administrative Code Chapter 74"
+        }
+      ],
+      "not_required": [
+        {
+          "id": "emergency_comms_video_text",
+          "claim": "TDLR's adopted state elevator code is ASME A17.1-2016; never present video or two-way text messaging as a Texas elevator requirement.",
+          "why": "Houston runs its own program and cities can adopt newer building codes, so never claim either way that they are not required anywhere in Texas.",
+          "url": "https://www.law.cornell.edu/regulations/texas/16-Tex-Admin-Code-SS-74-100",
+          "source_quote": "(1) ASME Code A17.1-2016/CSA B44-16 as amended in subsection (b);",
+          "pattern": "(video|visual (display|communication)|text[- ]based|two[- ]way (text|messag\\w*)|text messag\\w*|messaging display)[^.;:]{0,120}(requir\\w*|mandat\\w*|must|code (language|now|requires?))|(requir\\w*|mandat\\w*|must|code (language|now|requires?))[^.;:]{0,120}(video|visual (display|communication)|text[- ]based|two[- ]way (text|messag\\w*)|text messag\\w*|messaging display)"
+        }
+      ],
+      "swaps": [
+        {
+          "wrong": "TDI-licensed inspector",
+          "right": "registered elevator inspector (registered with TDLR, not a TDLR employee; the owner chooses the inspector)"
+        },
+        {
+          "wrong": "certificate of operation issued by TDI",
+          "right": "TDLR Certificate of Compliance, renewed every year and displayed in a publicly visible area"
+        },
+        {
+          "wrong": "Certificate posted inside every cab",
+          "right": "Certificate of Compliance displayed in a publicly visible area of the building"
+        },
+        {
+          "wrong": "Texas (TDI) Elevator Safety Program",
+          "right": "TDLR Elevator and Escalator Safety program"
+        },
+        {
+          "wrong": "Verify licensing through TDI",
+          "right": "Confirm the contractor is registered with TDLR"
+        },
+        {
+          "wrong": "TDI (or TDLR) in a Houston-only sentence",
+          "right": "the City of Houston's elevator program — TDLR does not regulate inside Houston city limits"
+        }
+      ],
+      "unverified": [
+        "Filing deadline for inspection reports: statute says 30 days, TDLR pages say 60 — left out.",
+        "Houston's own program: adopted code edition and rules not verified (site blocks automated fetches).",
+        "Individual mechanic licensing: none found in Texas; no claim either way.",
+        "TDLR's FAQ code chronology still lists A17.1-2007; the rule text (A17.1-2016, effective 2018-11-01) governs."
+      ],
+      "cautions": [
+        "The Texas State Fire Marshal's Office is part of TDI and does not run the elevator program — don't name it as the elevator regulator.",
+        "Texas individual elevator mechanic licensing was not verified — don't claim Texas licenses mechanics."
+      ]
+    },
+    "CA": {
+      "name": "California",
+      "authority": {
+        "name": "Division of Occupational Safety and Health (Cal/OSHA)",
+        "short": "Cal/OSHA",
+        "program": "Elevator Unit, California Department of Industrial Relations",
+        "url": "https://www.dir.ca.gov/dosh/Elevator.html",
+        "aliases": [
+          "Cal/OSHA Elevator Unit",
+          "DOSH Elevator Unit",
+          "Division of Occupational Safety and Health"
+        ],
+        "source_quote": "Mission of the Cal/OSHA Elevator Unit: To ensure the safety of the riding public and protect workers in the elevator industry, the Elevator Unit will maintain a vigilant system to meet our obligation to inspect and enforce code compliance for elevators and other conveyances."
+      },
+      "statute": {
+        "citation": "California Labor Code Sections 7300–7324.2",
+        "url": "https://leginfo.legislature.ca.gov/faces/codes_displayText.xhtml?lawCode=LAB&division=5.&title=&part=3.&chapter=2.&article=",
+        "source_quote": "CHAPTER 2. Elevators, Escalators, Platform and Stairway Chair Lifts, Dumbwaiters, Moving Walks, Automated People Movers, and Other Conveyances [7300 - 7324.2]"
+      },
+      "rules": {
+        "citation": "California Code of Regulations, Title 8, Elevator Safety Orders (Sections 3000–3146)",
+        "url": "https://www.dir.ca.gov/title8/sub6.html",
+        "source_quote": "Subchapter 6. Elevator Safety Orders ... GROUP 4. CONVEYANCE INSTALLATIONS FOR WHICH THE INSTALLATION CONTRACT WAS SIGNED ON OR AFTER MAY 1, 2008"
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2004 edition (Group IV Elevator Safety Orders)",
+        "effective": "May 1, 2008, for installation contracts signed on or after that date",
+        "existing_installations": "Older installations fall under Group II and Group III of the Elevator Safety Orders.",
+        "exceptions": [],
+        "amendments_detail": [
+          "ASME A17.1-2004 sections 1.1.3, 2.2.2.5, 2.7.6, 2.11.1.2, 2.11.1.4, 2.12.6, 2.14.2.2(f), and 2.14.2.6 are not incorporated (8 CCR §3141).",
+          "Where the Elevator Safety Orders differ from ASME A17.1-2004, the Elevator Safety Orders apply (8 CCR §3140(b)(4))."
+        ],
+        "url": "https://www.dir.ca.gov/title8/3141.html",
+        "source_quote": "Conveyances covered by ASME A17.1-2004, section 1.1, Scope, and Article 41 of Title 8 shall comply with ASME A17.1-2004, Safety Code for Elevators and Escalators, except sections 1.1.3, 2.2.2.5, 2.7.6, 2.11.1.2, 2.11.1.4, 2.12.6, 2.14.2.2(f), and 2.14.2.6"
+      },
+      "requirements": [
+        {
+          "id": "permit_to_operate",
+          "claim": "No elevator may be operated in California without a valid, current permit to operate issued by Cal/OSHA.",
+          "url": "https://www.dir.ca.gov/dosh/ElevatorPermits.html",
+          "source_quote": "No elevator shall be operated without a valid, current permit issued by the Division.",
+          "match": {
+            "all": [
+              "permit"
+            ],
+            "any": [
+              "operat"
+            ]
+          }
+        },
+        {
+          "id": "permit_posted_in_car",
+          "claim": "In California, the permit to operate for a passenger, freight or inclined elevator must be posted conspicuously in the elevator car.",
+          "url": "https://www.dir.ca.gov/dosh/ElevatorPermits.html",
+          "source_quote": "The permit, or a copy thereof, to operate a passenger elevator, freight elevator or incline elevator shall be posted conspicuously and securely in the elevator car.",
+          "match": {
+            "all": [
+              "permit",
+              "\\b(car|cab)\\b"
+            ],
+            "any": [
+              "\\bpost",
+              "display"
+            ]
+          }
+        },
+        {
+          "id": "annual_inspection",
+          "claim": "California law requires every conveyance to be inspected at least once a year, and a conveyance found safe receives a permit to operate for up to one year.",
+          "url": "https://leginfo.legislature.ca.gov/faces/codes_displayText.xhtml?lawCode=LAB&division=5.&title=&part=3.&chapter=2.&article=",
+          "source_quote": "(a) Except as provided in subdivision (b), the division shall cause all conveyances to be inspected at least once each year. If a conveyance is found upon inspection to be in a safe condition for operation, a permit for operation for not longer than one year shall be issued by the division.",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "\\bannual",
+              "every year",
+              "once a year",
+              "each year",
+              "yearly"
+            ],
+            "none": [
+              "semi-?annual",
+              "bi-?annual",
+              "every (six|6) months",
+              "twice a year",
+              "quarterly",
+              "monthly"
+            ]
+          }
+        },
+        {
+          "id": "two_year_permit",
+          "claim": "Cal/OSHA may issue a permit to operate for up to two years for an elevator in safe condition that is covered by a full maintenance contract with a C-11 licensed elevator company.",
+          "url": "https://www.dir.ca.gov/dosh/ElevatorPermits.html",
+          "source_quote": "will be covered during the entire term of the permit by a full maintenance contract with an elevator service company possessing a C-11 license issued by the California Contractors' State License Board, the Division may issue a permit for a period not exceeding two years.",
+          "match": {
+            "all": [
+              "permit"
+            ],
+            "any": [
+              "two[- ]year",
+              "2[- ]year",
+              "two years"
+            ]
+          }
+        },
+        {
+          "id": "owner_responsible_for_reinspection",
+          "claim": "In California, arranging the annual reinspection is the elevator owner's responsibility.",
+          "url": "https://www.dir.ca.gov/dosh/ElevatorOwners.html",
+          "source_quote": "Annual Inspections (Reinspections) Are the Responsibility of the Elevator Owner",
+          "match": {
+            "all": [
+              "owner",
+              "(reinspect|annual inspection)"
+            ],
+            "any": [
+              "responsib",
+              "arrang",
+              "schedul"
+            ]
+          }
+        },
+        {
+          "id": "who_may_inspect",
+          "claim": "Only State of California safety engineers and Certified Competent Conveyance Inspectors (CCCI) may perform elevator inspections in California.",
+          "url": "https://www.dir.ca.gov/dosh/ElevatorFaq.html",
+          "source_quote": "Only Safety Engineers employed by the State of California and Certified Competent Conveyance Inspectors (CCCI) are authorized to perform inspections in California.",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "\\bCCCI\\b",
+              "certified competent conveyance inspector",
+              "safety engineer"
+            ]
+          }
+        },
+        {
+          "id": "new_device_inspection",
+          "claim": "In California, each new elevator must be inspected by Cal/OSHA and receive a permit to operate before it is placed in service.",
+          "url": "https://www.dir.ca.gov/title8/3001.html",
+          "source_quote": "(1) Each new device shall be inspected by an authorized representative of the Division and a permit to operate issued before the device is placed in service.",
+          "match": {
+            "all": [
+              "\\bnew\\b",
+              "inspect",
+              "permit"
+            ]
+          }
+        },
+        {
+          "id": "installation_permit",
+          "claim": "In California, a permit from Cal/OSHA is required before a conveyance is erected, installed or materially altered.",
+          "url": "https://leginfo.legislature.ca.gov/faces/codes_displayText.xhtml?lawCode=LAB&division=5.&title=&part=3.&chapter=2.&article=",
+          "source_quote": "no conveyance may be erected, constructed, installed, or materially altered, as defined by regulation of the division, unless a permit has been obtained from the division before the work is commenced.",
+          "match": {
+            "all": [
+              "permit"
+            ],
+            "any": [
+              "install",
+              "materially alter",
+              "erect"
+            ]
+          }
+        },
+        {
+          "id": "company_certification_cqcc",
+          "claim": "Companies that install, alter, test, maintain, repair or service elevators in California must be certified by Cal/OSHA as a Certified Qualified Conveyance Company (CQCC).",
+          "url": "https://leginfo.legislature.ca.gov/faces/codes_displayText.xhtml?lawCode=LAB&division=5.&title=&part=3.&chapter=2.&article=",
+          "source_quote": "no conveyance subject to this chapter shall be erected, constructed, installed, materially altered, tested, maintained, repaired, or serviced by any person, firm, or corporation unless the person, firm, or corporation is certified by the division as a certified qualified conveyance company.",
+          "match": {
+            "any": [
+              "\\bCQCC\\b",
+              "certified qualified conveyance compan"
+            ]
+          }
+        },
+        {
+          "id": "cqcc_application_requirements",
+          "claim": "Applicants for CQCC certification in California must submit a current C-11 contractor license and certificates of workers' compensation and liability insurance.",
+          "url": "https://www.dir.ca.gov/dosh/ElevatorCertification.html",
+          "source_quote": "Submit a copy of a current and valid C-11 license ... Submit a copy of current Workers' Compensation insurance certificate ... Submit a copy of current Liability insurance certificate",
+          "match": {
+            "all": [
+              "C-11"
+            ],
+            "any": [
+              "\\bCQCC\\b",
+              "certif"
+            ]
+          }
+        },
+        {
+          "id": "cslb_issues_c11",
+          "claim": "The California Contractors State License Board (CSLB) issues the C-11 Elevator Contractor license; permits to operate, inspections and CQCC/CCCM certification are Cal/OSHA's.",
+          "url": "https://www.cslb.ca.gov/about_us/library/licensing_classifications/Licensing_Classifications_Detail.aspx?Class=C11",
+          "source_quote": "C-11 - Elevator Contractor ... An elevator contractor fabricates, erects, installs and repairs elevators",
+          "match": {
+            "all": [
+              "CSLB|Contractors'? State License Board"
+            ],
+            "any": [
+              "C-11",
+              "licens"
+            ]
+          }
+        },
+        {
+          "id": "mechanic_certification_cccm",
+          "claim": "Anyone who works on an elevator in California without supervision must be certified by Cal/OSHA as a Certified Competent Conveyance Mechanic (CCCM).",
+          "url": "https://leginfo.legislature.ca.gov/faces/codes_displayText.xhtml?lawCode=LAB&division=5.&title=&part=3.&chapter=2.&article=",
+          "source_quote": "any person who, without supervision, erects, constructs, installs, alters, tests, maintains, services or repairs, removes, or dismantles any conveyance covered by this chapter, shall be certified as a certified competent conveyance mechanic by the division.",
+          "match": {
+            "any": [
+              "\\bCCCM\\b",
+              "certified competent conveyance mechanic"
+            ]
+          }
+        },
+        {
+          "id": "cccm_employed_by_cqcc",
+          "claim": "In California, only a Certified Competent Conveyance Mechanic working for a Certified Qualified Conveyance Company may maintain, repair, alter or replace components on a conveyance.",
+          "url": "https://www.dir.ca.gov/dosh/ElevatorFaq.html",
+          "source_quote": "only a Certified Competent Conveyance Mechanic working for a Certified Qualified Conveyance Company is authorized to perform any maintenance, repairs, alterations, or replacements on any conveyance subject to those orders.",
+          "match": {
+            "all": [
+              "(CCCM|competent conveyance mechanic)",
+              "(CQCC|qualified conveyance compan)"
+            ]
+          }
+        },
+        {
+          "id": "certificate_term_and_ce",
+          "claim": "California CQCC, CCCM and conveyance inspector certificates last two years, and renewal requires at least eight hours of continuing education.",
+          "url": "https://leginfo.legislature.ca.gov/faces/codes_displayText.xhtml?lawCode=LAB&division=5.&title=&part=3.&chapter=2.&article=",
+          "source_quote": "shall have a term of two years ... This continuing education course shall consist of not less than eight hours of instruction",
+          "match": {
+            "any": [
+              "continuing education",
+              "eight hours",
+              "8 hours"
+            ]
+          }
+        },
+        {
+          "id": "exemptions",
+          "claim": "California's elevator law exempts conveyances under federal jurisdiction and conveyances in single-unit private homes that are not accessible to the public.",
+          "url": "https://leginfo.legislature.ca.gov/faces/codes_displayText.xhtml?lawCode=LAB&division=5.&title=&part=3.&chapter=2.&article=",
+          "source_quote": "(1) Conveyances under the jurisdiction of the United States government. (2) Conveyances located in a single-unit private home and not accessible to the public.",
+          "match": {
+            "all": [
+              "exempt|does not apply"
+            ],
+            "any": [
+              "federal",
+              "private home"
+            ]
+          }
+        },
+        {
+          "id": "group_v_update_pending",
+          "claim": "California has proposed a Group V update to its Elevator Safety Orders that would incorporate ASME A17.1-2019 in part; the Standards Board held the public hearing on June 18, 2026, and no effective date has been posted.",
+          "url": "https://www.dir.ca.gov/OSHSB/ESO-Group-V.html",
+          "source_quote": "Elevator Safety Orders - Group V ELEVATOR SAFETY ORDERS, Subchapter 6 Status Public hearing: Jun. 18, 2026 ... Filed with Secretary of State: Effective date: Rulemaking Documents",
+          "match": {
+            "any": [
+              "group v\\b"
+            ]
+          }
+        }
+      ],
+      "local_authorities": [
+        {
+          "name": "City of Los Angeles, Department of Building and Safety (LADBS)",
+          "scope": "Los Angeles runs its own elevator and conveyance inspection program (per a 2018 City Controller audit; current details not re-verified). Say only that Los Angeles has its own program.",
+          "url": "https://controller.lacity.gov/audits/elevating-safety-audit-of-the-department-of-building-safetys-elevator-inspection-program",
+          "source_quote": "The City of Los Angeles is unique in that no other local jurisdiction within the State has it own elevator and conveyance inspection program."
+        }
+      ],
+      "not_the_regulator": [],
+      "wrong_citations": [],
+      "not_required": [],
+      "unverified": [
+        "Video / text-based emergency communication: UNSETTLED. Group IV adopts A17.1-2004, but the 2025 California Building Code §3001.2 (effective 2026-01-01) appears to require visual and audible two-way communication; final text and scope not fetched. Never claim California does NOT require it.",
+        "Los Angeles program: only a 2018 audit could be fetched (LADBS blocks automated fetches).",
+        "ASME A17.3 for existing installations: referenced in the Labor Code but no incorporating Elevator Safety Orders section found."
+      ],
+      "cautions": [
+        "Whether California requires visual or text-based elevator emergency communication is unsettled: the Elevator Safety Orders adopt ASME A17.1-2004, but the 2025 California Building Code appears to add visual and audible two-way communication (not verified). Never claim California does or does not require it."
+      ]
+    },
+    "MD": {
+      "name": "Maryland",
+      "authority": {
+        "name": "Maryland Department of Labor, Division of Labor and Industry",
+        "short": "",
+        "program": "Elevator and Escalator Safety (Safety Inspection Unit); mechanics and contractors are licensed by the Maryland Elevator Safety Review Board",
+        "aliases": [
+          "Maryland Department of Labor",
+          "Maryland Elevator Safety Review Board"
+        ],
+        "url": "https://labor.maryland.gov/labor/safety/elev.shtml",
+        "source_quote": "Division of Labor and Industry Elevator and Escalator Safety 10946 Golden West Drive, Suite 160 Hunt Valley, MD 21031."
+      },
+      "statute": {
+        "citation": "Annotated Code of Maryland, Public Safety Article, Title 12, Subtitle 8 (§§ 12-801 to 12-842)",
+        "url": "https://labor.maryland.gov/labor/safety/elevlaw.shtml",
+        "source_quote": "Elevator Safety Law Public Safety Article, Title 12, Subtitle 8, Annotated Code of Maryland"
+      },
+      "rules": {
+        "citation": "COMAR 09.12.81 (Elevator, Escalator, and Chairlift Safety)",
+        "url": "https://regs.maryland.gov/us/md/exec/comar/09.12.81",
+        "source_quote": "Chapter 81 Elevator, Escalator, and Chairlift Safety"
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2022 edition (ASME A17.1-2022/CSA B44:22), with Maryland changes; the edition that applies depends on when the installation contract was signed",
+        "effective": "June 17, 2026",
+        "existing_installations": "No Maryland adoption of ASME A17.3 was found. Requirements in effect at a unit's first certification stay in effect, and units installed before July 1, 1955 may keep operating without being rebuilt to the current Safety Code, with some exceptions (see requirements initial_certification_requirements_remain and pre_1955_units).",
+        "exceptions": [],
+        "amendments_detail": [
+          "2.2.4.2.2: in alterations where obstructions are encountered, pit ladder rungs may be narrower than 400 mm (16 in.), but not less than 304.8 mm (12 in.) (COMAR 09.12.81.01EE(1))",
+          "2.2.5.1: requirement prefaced with 'Where access is necessary to service or access elevator equipment,' (COMAR 09.12.81.01EE(2))",
+          "Section 5.8 (Marine Elevators) deleted (COMAR 09.12.81.01EE(3))",
+          "Section 5.9 (Mine Elevators) deleted (COMAR 09.12.81.01EE(4))",
+          "5.10.1.21.3: 'Article 305 of NFPA 70' replaced with 'Article 590 of NFPA 70' (COMAR 09.12.81.01EE(5))",
+          "Requirement 8.6.4.24 deleted (COMAR 09.12.81.01EE(6))",
+          "8.11.1.4(b)(1) and (b)(2): hoistway sealing to be done by bolting, welding, or dry walling; the lowest landing may be sealed from outside the hoistway (COMAR 09.12.81.01EE(7)-(8))"
+        ],
+        "url": "https://labor.maryland.gov/labor/safety/elevlaw.shtml",
+        "source_quote": "ASME A17.1 2022: Safety Code for Elevators, Escalators, Moving Walks, and Dumbwaiters Adopted 6/17/2026"
+      },
+      "requirements": [
+        {
+          "id": "certificate_required",
+          "claim": "In Maryland, an elevator unit may not be operated unless the Commissioner of Labor and Industry has issued a certificate for it.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-807&enactments=false",
+          "source_quote": "(a) An elevator unit may not be operated in a building, structure, or place of employment in the State unless a certificate is issued by the Commissioner.",
+          "match": {
+            "all": [
+              "certificate"
+            ],
+            "any": [
+              "operat",
+              "may not",
+              "issued"
+            ]
+          }
+        },
+        {
+          "id": "certificate_posted",
+          "claim": "The certificate must be posted conspicuously in or on the elevator unit.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-811&enactments=false",
+          "source_quote": "(b) The certificate shall be posted conspicuously in or on the elevator unit.",
+          "match": {
+            "all": [
+              "certificate"
+            ],
+            "any": [
+              "\\bpost",
+              "display"
+            ]
+          }
+        },
+        {
+          "id": "annual_inspection",
+          "claim": "Each elevator unit in Maryland must have a periodic annual inspection by a State inspector or a third-party qualified elevator inspector.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-812&enactments=false",
+          "source_quote": "(b) (1) Except as provided in paragraph (2) of this subsection, each elevator unit in the State shall have a periodic annual inspection by a State inspector as provided for in § 12–809(a)(6) of this subtitle or by a third–party qualified elevator inspector",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "\\bannual",
+              "every year",
+              "once a year",
+              "each year",
+              "yearly",
+              "every 12 months"
+            ],
+            "none": [
+              "semi-?annual",
+              "bi-?annual",
+              "every (six|6) months",
+              "twice a year",
+              "quarterly",
+              "monthly"
+            ]
+          }
+        },
+        {
+          "id": "owner_hires_third_party_inspector",
+          "claim": "The owner must hire a third-party qualified elevator inspector to conduct the periodic inspections required by the Safety Code.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-809&enactments=false",
+          "source_quote": "(d) (1) An owner shall hire a third–party qualified elevator inspector to conduct all periodic inspections that are required by the Safety Code.",
+          "match": {
+            "all": [
+              "third[- ]party",
+              "inspector"
+            ]
+          }
+        },
+        {
+          "id": "state_final_acceptance_inspection",
+          "claim": "The State conducts a final acceptance inspection after an elevator unit is installed, modified, or altered and before it is placed in service.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-810&enactments=false",
+          "source_quote": "The Commissioner shall conduct a final acceptance inspection on completion of the installation, modification, or alteration of an elevator unit before it is placed in service.",
+          "match": {
+            "all": [
+              "acceptance inspection"
+            ]
+          }
+        },
+        {
+          "id": "tests_by_licensed_mechanic",
+          "claim": "Tests performed for a required inspection must be performed by a licensed elevator mechanic.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-806&enactments=false",
+          "source_quote": "(d) (1) A test on an elevator unit performed in connection with an inspection required by this subtitle, the Safety Code, or a regulation adopted by the Commissioner shall be performed by a licensed elevator mechanic.",
+          "match": {
+            "all": [
+              "test",
+              "licensed (elevator )?mechanic"
+            ]
+          }
+        },
+        {
+          "id": "inspector_present_for_witnessed_tests",
+          "claim": "When a third-party qualified elevator inspector is required to witness a test, the inspector must be physically present for the entire test.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-806&enactments=false",
+          "source_quote": "(2) A third–party qualified elevator inspector required to witness a test performed on an elevator unit in accordance with this subtitle, the Safety Code, or a regulation adopted by the Commissioner shall be physically present during the entire test"
+        },
+        {
+          "id": "five_year_inspection",
+          "claim": "Owners must ensure that elevators suspended by wire ropes, belts, chains, or similar means, and rack and pinion elevators, receive a comprehensive five-year inspection.",
+          "url": "https://regs.maryland.gov/us/md/exec/comar/09.12.81.07",
+          "source_quote": "D. An owner shall ensure that an elevator unit suspended by wire ropes, belts, chains, or a similar suspension or an elevator with rack and pinion drive has a comprehensive 5-year inspection.",
+          "match": {
+            "all": [
+              "five[- ]year|5[- ]year"
+            ],
+            "any": [
+              "inspect"
+            ]
+          }
+        },
+        {
+          "id": "registration_before_service",
+          "claim": "Each elevator unit must be registered with the Commissioner at least 60 days before its planned completion and before it is placed in service.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-808&enactments=false",
+          "source_quote": "(a) Except as otherwise provided in this section, each elevator unit owned or to be operated shall be registered with the Commissioner at least 60 days before its planned completion and before it is placed in service.",
+          "match": {
+            "all": [
+              "regist"
+            ],
+            "any": [
+              "60 days",
+              "sixty days"
+            ]
+          }
+        },
+        {
+          "id": "annual_reregistration",
+          "claim": "Owners must re-register their elevator units with the Commissioner every year, at the time of the periodic annual inspection.",
+          "url": "https://labor.maryland.gov/labor/safety/elevlaw.shtml",
+          "source_quote": "State law requires that the owner re-register their elevator units with the Commissioner annually. The annual re-registration will coincide with the periodic annual inspection.",
+          "match": {
+            "all": [
+              "re-?regist"
+            ]
+          }
+        },
+        {
+          "id": "mechanic_license",
+          "claim": "A person must be licensed by the Maryland Elevator Safety Review Board as an elevator mechanic before working on elevator units in Maryland.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-826&enactments=false",
+          "source_quote": "(a) Except as otherwise provided in Part III of this subtitle, a person shall be licensed by the Board as an elevator mechanic before the person erects, constructs, wires, alters, replaces, maintains, repairs, dismantles, or services elevator units in the State.",
+          "match": {
+            "all": [
+              "mechanic"
+            ],
+            "any": [
+              "licens"
+            ]
+          }
+        },
+        {
+          "id": "contractor_license",
+          "claim": "A business must be licensed by the Board as an elevator contractor before engaging in the business of installing, altering, maintaining, repairing, or servicing elevator units in Maryland.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-826&enactments=false",
+          "source_quote": "(b) Except as otherwise provided in Part III of this subtitle, a person shall be licensed by the Board as an elevator contractor before the person engages in the business of erecting, constructing, wiring, altering, replacing, maintaining, repairing, dismantling, or servicing",
+          "match": {
+            "all": [
+              "contractor"
+            ],
+            "any": [
+              "licens"
+            ]
+          }
+        },
+        {
+          "id": "contractor_insurance",
+          "claim": "Elevator contractors must carry at least $1,000,000 in general liability insurance and at least $500,000 in property damage insurance.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-836&enactments=false",
+          "source_quote": "covered by: (1) general liability insurance in the amount of at least $1,000,000; and (2) property damage insurance in the amount of at least $500,000.",
+          "match": {
+            "all": [
+              "insurance|liability"
+            ],
+            "any": [
+              "1,000,000",
+              "\\$1 ?million",
+              "500,000"
+            ]
+          }
+        },
+        {
+          "id": "licensing_board",
+          "claim": "The Maryland Elevator Safety Review Board, within the Maryland Department of Labor, licenses and regulates elevator mechanics and contractors.",
+          "url": "https://labor.maryland.gov/license/elev/",
+          "source_quote": "The Maryland Elevator Safety Review Board licenses and regulates individuals who engage in the business of erecting, constructing, wiring, altering, replacing, maintaining, repairing, dismantling, or servicing elevators, dumbwaiters, escalators, and moving walks.",
+          "match": {
+            "all": [
+              "Elevator Safety Review Board"
+            ]
+          }
+        },
+        {
+          "id": "records_kept_in_building",
+          "claim": "Maintenance, repair, test, and inspection records must be kept at a readily accessible central location in the building where the elevator is located.",
+          "url": "https://regs.maryland.gov/us/md/exec/comar/09.12.81.06",
+          "source_quote": "A. Record Keeping. At a readily accessible central location in the building where the elevator unit is located, a contractor, owner, or lessee shall maintain:",
+          "match": {
+            "all": [
+              "records"
+            ],
+            "any": [
+              "kept",
+              "keep",
+              "on[- ]site",
+              "in the building"
+            ]
+          }
+        },
+        {
+          "id": "code_edition_by_contract_date",
+          "claim": "In Maryland, the safety code edition that applies to a new elevator depends on the date the installation contract is signed.",
+          "url": "https://regs.maryland.gov/us/md/exec/comar/09.12.81.01",
+          "source_quote": "(2) The applicable adopted safety code will be contingent upon the date the contract to install an elevator unit is signed."
+        },
+        {
+          "id": "prior_edition_a17_1_2019",
+          "claim": "Before adopting the 2022 edition, Maryland adopted ASME A17.1-2019/CSA B44-19 (COMAR 09.12.81.01DD), effective October 22, 2022.",
+          "url": "https://regs.maryland.gov/us/md/exec/comar/09.12.81",
+          "source_quote": "Regulation .01DD adopted effective October 22, 2022 (49:9 Md. R. 531)"
+        },
+        {
+          "id": "initial_certification_requirements_remain",
+          "claim": "Requirements in effect when an elevator was first certified remain in effect for that elevator.",
+          "url": "https://regs.maryland.gov/us/md/exec/comar/09.12.81.01",
+          "source_quote": "(5) Requirements prescribed at the time of the initial elevator certification remain in effect."
+        },
+        {
+          "id": "pre_1955_units",
+          "claim": "Elevators installed before July 1, 1955, may be used without being rebuilt to the current Safety Code, but each elevator must still have standard hoistway entrance protection.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-806&enactments=false",
+          "source_quote": "an elevator unit installed before July 1, 1955, may be used without being altered or rebuilt to comply with the requirements of the Safety Code. (ii) Each elevator shall be equipped with standard hoistway entrance protection"
+        },
+        {
+          "id": "single_family_and_federal_exemption",
+          "claim": "Maryland's elevator inspection and certificate law generally does not apply to units in privately owned single-family homes or in buildings under federal control.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-804&enactments=false",
+          "source_quote": "(a) (1) Part II of this subtitle does not apply to an elevator unit that is: (i) except as provided in paragraphs (2) and (3) of this subsection, installed in a privately owned single–family residential dwelling; or (ii) installed in a building or structure under federal control or regulation."
+        },
+        {
+          "id": "rescue_litter_new_buildings",
+          "claim": "Each new Maryland building constructed after July 1, 1985, with at least one planned elevator must have a passenger elevator that can carry a 6-foot-8-inch rescue litter horizontally.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gps&section=12-816&enactments=false",
+          "source_quote": "(b) Each new building constructed after July 1, 1985, in which at least one elevator is planned, shall have a passenger elevator that can accommodate a horizontally carried and positioned 6 foot 8 inch rescue litter.",
+          "match": {
+            "all": [
+              "rescue litter|stretcher"
+            ]
+          }
+        }
+      ],
+      "local_authorities": [],
+      "not_the_regulator": [
+        {
+          "name": "Maryland Department of Labor, Licensing and Regulation",
+          "aliases": [
+            "DLLR",
+            "Maryland DLLR",
+            "Maryland Department of Labor, Licensing, and Regulation"
+          ],
+          "why": "Former name — renamed the Maryland Department of Labor in 2019. Use the current name.",
+          "url": "https://mgaleg.maryland.gov/mgawebsite/Legislation/Details/HB0060?ys=2019RS",
+          "source_quote": "Renaming the Department of Labor, Licensing, and Regulation to be the Maryland Department of Labor"
+        }
+      ],
+      "wrong_citations": [],
+      "not_required": [],
+      "unverified": [
+        "Text-based and video emergency communication: Maryland adopted ASME A17.1-2019/CSA B44-19 (effective Oct 22, 2022) and ASME A17.1-2022/CSA B44:22 (effective June 17, 2026). None of Maryland's changes to the 2022 edition touch Section 2.27, so no 'not required' entry is recorded. No official Maryland page describes what Section 2.27 requires, so the exact communication requirements were not confirmed from a state source.",
+        "Local elevator programs: Public Safety § 12-807(b) directs the Commissioner to accept certificates of inspection from a political subdivision or municipal corporation. No official source was found showing that any Maryland county or city (including Baltimore City) currently runs its own elevator certificate program.",
+        "ASME A17.3 (existing installations): no reference to A17.3 was found in COMAR 09.12.81.01 or on the Department's code page. That it is not adopted is inferred from its absence, not stated by the State.",
+        "The Department's elevator law page also lists COMAR 09.12.61, which regs.maryland.gov titles 'Amusement Attractions'. It does not appear to be an elevator chapter and is left out."
+      ]
+    },
+    "DC": {
+      "name": "District of Columbia",
+      "authority": {
+        "name": "District of Columbia Department of Buildings",
+        "short": "DOB",
+        "program": "Elevator and conveyance inspections and certificates (inspections by DOB-approved third-party agencies)",
+        "aliases": [
+          "DC Department of Buildings",
+          "D.C. Department of Buildings"
+        ],
+        "url": "https://dob.dc.gov/elevators-conveyances",
+        "source_quote": "Effective October 1, 2025, the Department of Buildings (DOB) has oversight for inspections and certifications of conveyances."
+      },
+      "statute": {
+        "citation": "D.C. Official Code § 6-1409 (Construction Codes Approval and Amendments Act of 1986)",
+        "url": "https://code.dccouncil.gov/us/dc/council/code/sections/6-1409",
+        "source_quote": "The Mayor may issue rules to amend the Construction Codes and to adopt new supplements and editions of the Model Codes in whole or in part pursuant to subchapter I of Chapter 5 of Title 2."
+      },
+      "rules": {
+        "citation": "12-A DCMR Chapter 30 (Elevators and Conveying Systems), 2017 DC Building Code",
+        "url": "https://dcregs.dc.gov/Common/DCMR/SectionList.aspx?SectionNumber=2017-12-A3009",
+        "source_quote": "The District of Columbia Building Code (2017), referred to as the “Building Code,” consists of the 2015 edition of the International Building Code (International Building Code), published by the International Code Council (ICC), as amended by the Building Code Supplement of 2017 (12-A DCMR)."
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2013 edition (ASME A17.1-2013/CSA B44-13), as referenced by the 2017 DC Building Code with District amendments",
+        "effective": "May 29, 2020",
+        "existing_installations": "Alterations and repairs of existing elevators follow the DC Existing Building Code, and maintenance also follows the Property Maintenance Code (see requirement existing_elevators_codes). No DC adoption of ASME A17.3 was found.",
+        "exceptions": [],
+        "amendments_detail": [
+          "1.2.1 replaced: compliance may be met through alternative materials, equipment, or methods approved under 12-A DCMR Section 104.11 (Section 3011.1)",
+          "2.2.2.7 added: the pit sump pump must be connected to a non-GFCI dedicated single receptacle or outlet rated NEMA 4 'Wet Duty' (Section 3011.2)",
+          "2.2.4.2.2: pit ladder rungs at least 400 mm (16 in.) wide; where obstructions exist they may be narrower, but not less than 304.8 mm (12 in.) (Section 3011.2)",
+          "2.27.1.1.1 replaced: two-way communications to a location staffed by authorized personnel, plus an audible signaling device rated 80-90 dBA at 3 m, duplicated on the car and at the designated level for travel over 30 m (100 ft) (Section 3011.3)",
+          "2.27.1.1.5 replaced: communications and the visual indication must transfer to standby or emergency power for at least 4 hours, and the audible signaling device for at least 1 hour (Section 3011.3)",
+          "3.26.10 replaced: auxiliary power lowering operation is required for hydraulic elevators without an emergency power supply (Section 3011.4)",
+          "8.6.4.19.7 and 8.6.5.14.3(f): standby or emergency power operation must be tested, with no load in the car (Section 3011.5)"
+        ],
+        "url": "https://dob.dc.gov/sites/default/files/dc/sites/dob/publication/attachments/2017%20District%20of%20Columbia%20Building%20Code_Part3.pdf",
+        "source_quote": "ASME/A17.1—13 CSA B44—2013 Safety Code for Elevators and Escalators"
+      },
+      "requirements": [
+        {
+          "id": "certificate_required",
+          "claim": "All elevators and escalators in the District must be inspected and certified for operation.",
+          "url": "https://dob.dc.gov/elevators-conveyances",
+          "source_quote": "All conveyances such as elevators and escalators must be inspected and certified for operation under District regulations.",
+          "match": {
+            "all": [
+              "certif"
+            ],
+            "any": [
+              "inspect"
+            ]
+          }
+        },
+        {
+          "id": "third_party_inspection_agency",
+          "claim": "Owners must use a DOB-approved third-party elevator inspection agency, which inspects elevators on DOB's behalf.",
+          "url": "https://dob.dc.gov/elevators-conveyances",
+          "source_quote": "The owner must connect with a DOB approved Third-party Elevator Inspection Agency (find one using this link), which conducts inspections of all elevators and conveyances in the District on DOB’s behalf.",
+          "match": {
+            "all": [
+              "third[- ]party"
+            ],
+            "any": [
+              "agenc",
+              "inspect"
+            ]
+          }
+        },
+        {
+          "id": "inspection_frequency",
+          "claim": "DC requires a periodic inspection and a Category 1 inspection every 12 months and a Category 5 inspection every 60 months, each by an ASME QEI-certified inspector.",
+          "url": "https://dob.dc.gov/elevators-conveyances",
+          "source_quote": "Required inspections by an ASME QEI certified inspector are: Periodic Inspection: every 12 months Category 1 Inspection: every 12 months (alternating with the Periodic Inspection) Category 5 Inspection: every 60 months",
+          "match": {
+            "all": [
+              "(inspect|category)"
+            ],
+            "any": [
+              "12 months",
+              "every year",
+              "annual",
+              "60 months",
+              "category 5"
+            ]
+          }
+        },
+        {
+          "id": "certificate_valid_two_years",
+          "claim": "A DC elevator certificate of inspection is valid for two years, and periodic inspections and tests continue during that time.",
+          "url": "https://dob.dc.gov/elevators-conveyances",
+          "source_quote": "The certificate is valid for two years; during that period the conveyance must undergo periodic inspections and testing (DCMR 12A, 3009.5).",
+          "match": {
+            "all": [
+              "certificate"
+            ],
+            "any": [
+              "two years",
+              "2 years",
+              "two-year"
+            ]
+          }
+        },
+        {
+          "id": "certificate_application",
+          "claim": "To get a certificate of inspection, owners submit the third-party inspection reports for the past two years to DOB through the Citizen Access Portal.",
+          "url": "https://dob.dc.gov/elevators-conveyances",
+          "source_quote": "To obtain your elevator Certificate of Inspection, submit the Third-Party Inspection Reports for the past two years (expected four passed inspection reports) to DOB through the Citizen Access Portal."
+        },
+        {
+          "id": "certificate_display",
+          "claim": "A copy of the current certificate must be conspicuously displayed in the elevator car or attached to the conveyance unless exempted.",
+          "url": "https://dob.dc.gov/elevators-conveyances",
+          "source_quote": "A copy of the current certificate must be conspicuously displayed within the elevator car or attached to the conveying system unless exempted.",
+          "match": {
+            "all": [
+              "certificate"
+            ],
+            "any": [
+              "display",
+              "\\bpost"
+            ]
+          }
+        },
+        {
+          "id": "certificate_in_building_office",
+          "claim": "If the building operator has an office in the same building, the certificate may be kept available for public inspection there instead of in the elevator.",
+          "url": "https://dob.dc.gov/elevators-conveyances",
+          "source_quote": "If the building operator has an office in the same building, the certificate can be made available for public inspection in the office rather within the elevator (DCMR 12A, 3009.4.1)."
+        },
+        {
+          "id": "certificate_suspended_during_permit_work",
+          "claim": "An elevator's certificate may be temporarily suspended while it is under permit for alteration or modernization.",
+          "url": "https://dob.dc.gov/elevators-conveyances",
+          "source_quote": "Conveyances under permit for alteration or modernization may have the certificate temporarily suspended during construction."
+        },
+        {
+          "id": "elevator_permit_requires_licenses",
+          "claim": "DOB elevator permits require a copy of the master electrician license and the elevator contracting license.",
+          "url": "https://dob.dc.gov/node/1616451",
+          "source_quote": "A copy of the master electrician license and elevator contracting license is required for approval."
+        },
+        {
+          "id": "elevator_trade_licensing",
+          "claim": "The DC Board of Industrial Trades licenses the elevator trades, including elevator contractors, elevator mechanics, and elevator inspectors.",
+          "url": "https://dlcp.dc.gov/page/board-industrial-trades1",
+          "source_quote": "steam and operating engineers, and those in the elevator trades (with the exception of District of Columbia and Washington Metropolitan Area Transit Authority employees).",
+          "match": {
+            "all": [
+              "Board of Industrial Trades"
+            ]
+          }
+        },
+        {
+          "id": "elevator_inspector_license_qei",
+          "claim": "Applicants for a DC elevator inspector license must meet ASME QEI-1 or an equivalent standard.",
+          "url": "https://code.dccouncil.gov/us/dc/council/code/sections/47-2853.96",
+          "source_quote": "(2) Meets the current ASME QEI-1, Standards for the Qualifications of Elevator Inspectors, or equivalent; and"
+        },
+        {
+          "id": "one_elevator_in_operation",
+          "claim": "In DC buildings with passenger elevators, at least one elevator must be kept in operation whenever the building is occupied, except in buildings with only one elevator.",
+          "url": "https://dob.dc.gov/sites/default/files/dc/sites/dob/publication/attachments/2017%20District%20of%20Columbia%20Building%20Code_Part3.pdf",
+          "source_quote": "3009.8 Equipment in operation. In buildings equipped with passenger elevators, at least one elevator shall be maintained in operation at all times when the building is occupied.",
+          "match": {
+            "all": [
+              "at least one elevator"
+            ],
+            "any": [
+              "operat",
+              "service"
+            ]
+          }
+        },
+        {
+          "id": "permit_to_take_out_of_service",
+          "claim": "A DOB permit is required to take an elevator out of service under ASME A17.1 Section 8.11.1.4 or to place it in temporarily dormant status.",
+          "url": "https://dob.dc.gov/sites/default/files/dc/sites/dob/publication/attachments/2017%20District%20of%20Columbia%20Building%20Code_Part3.pdf",
+          "source_quote": "A permit from the Department shall be required: to take an elevator or conveying system out of service pursuant to ASME A17.1, Section 8.11.1.4; or to place an elevator or conveying system in temporarily dormant status as set forth in Section 3009.7.1."
+        },
+        {
+          "id": "existing_elevators_codes",
+          "claim": "Alterations and repairs of existing DC elevators follow the Existing Building Code, and maintenance also follows the Property Maintenance Code.",
+          "url": "https://dob.dc.gov/sites/default/files/dc/sites/dob/publication/attachments/2017%20District%20of%20Columbia%20Building%20Code_Part3.pdf",
+          "source_quote": "Alteration and repair of existing elevators and conveying systems shall comply with the Existing Building Code. Maintenance of existing elevators and conveying systems shall also comply with the requirements of the Property Maintenance Code."
+        },
+        {
+          "id": "construction_codes_effective",
+          "claim": "The 2017 DC Construction Codes, which include the elevator provisions, took effect on May 29, 2020.",
+          "url": "https://dob.dc.gov/page/dc-construction-codes",
+          "source_quote": "The 2017 DC Construction Code takes effect on May 29, 2020."
+        },
+        {
+          "id": "code_update_planned",
+          "claim": "DOB plans to adopt new construction codes, based on the 2024 model codes, by the end of 2027.",
+          "url": "https://dob.dc.gov/release/dc-department-buildings-quicken-pace-dc-construction-code-development-under-organizational",
+          "source_quote": "One of DOB’s first actions will be to accelerate, by the end of 2027, the adoption of new construction and energy codes."
+        }
+      ],
+      "local_authorities": [],
+      "not_the_regulator": [
+        {
+          "name": "Department of Consumer and Regulatory Affairs",
+          "aliases": [
+            "DCRA",
+            "DC DCRA"
+          ],
+          "why": "DCRA stopped operating on September 30, 2022; elevator certificates are issued by the DC Department of Buildings (DOB).",
+          "url": "https://dcratransition.dc.gov/",
+          "source_quote": "the Department of Buildings (DOB) and the Department of Licensing and Consumer Protection (DLCP), will serve residents, businesses, and visitors of the District of Columbia, taking on responsibilities previously under the Department of Consumer and Regulatory Affairs’ (DCRA) purview."
+        }
+      ],
+      "wrong_citations": [],
+      "not_required": [
+        {
+          "id": "emergency_comms_video_text",
+          "claim": "DC's building code references ASME A17.1-2013; never present video or two-way text messaging as a DC elevator requirement.",
+          "why": "",
+          "url": "https://dob.dc.gov/sites/default/files/dc/sites/dob/publication/attachments/2017%20District%20of%20Columbia%20Building%20Code_Part3.pdf",
+          "source_quote": "ASME/A17.1—13 CSA B44—2013 Safety Code for Elevators and Escalators",
+          "pattern": "(video|visual (display|communication)|text[- ]based|two[- ]way (text|messag\\w*)|text messag\\w*|messaging display)[^.;:]{0,120}(requir\\w*|mandat\\w*|must|code (language|now|requires?))|(requir\\w*|mandat\\w*|must|code (language|now|requires?))[^.;:]{0,120}(video|visual (display|communication)|text[- ]based|two[- ]way (text|messag\\w*)|text messag\\w*|messaging display)"
+        }
+      ],
+      "unverified": [
+        "The ASME A17.1-2013 edition was confirmed from the DOB-hosted integrated 2017 DC Building Code PDF (Part 3, Chapter 35, printed page 687). DOB notes that PDF does not show amendments adopted after May 29, 2020. dcregs.dc.gov lists the 12-A Chapter 30 and Chapter 35 sections with a latest version effective 5/29/2020, which suggests no later changes. The DCMR section text itself could not be opened on dcregs (it is behind ASP.NET postbacks).",
+        "Editions of the DC Existing Building Code and Property Maintenance Code provisions that apply to existing elevators were not checked. No DC adoption of ASME A17.3 was found.",
+        "The detailed rules for DC elevator mechanic licensing (examination, bonding, insurance) set by the Board of Industrial Trades were not reviewed beyond D.C. Official Code § 47-2853.96."
+      ],
+      "cautions": [
+        "DC's Department of Licensing and Consumer Protection (DLCP) Board of Industrial Trades licenses the elevator trades; elevator certificates now come from the Department of Buildings (DOB), not DLCP."
+      ]
+    },
+    "PA": {
+      "name": "Pennsylvania",
+      "authority": {
+        "name": "Pennsylvania Department of Labor and Industry",
+        "short": "L&I",
+        "program": "Bureau of Occupational and Industrial Safety, Elevator Section (statewide, including Philadelphia)",
+        "aliases": [
+          "Pennsylvania Department of Labor and Industry",
+          "Pennsylvania L&I",
+          "PA L&I"
+        ],
+        "url": "https://www.pa.gov/agencies/dli/programs-services/labor-management-relations/bureau-of-occupational-and-industrial-safety/tpa-elevators",
+        "source_quote": "Under Pennsylvania’s Uniform Construction Code, the Department of Labor and Industry has sole jurisdiction to approve the construction and use of all elevators and other lifting devices (as specified in Section 405.2 of the UCC regulation), no matter where they are located in Pennsylvania."
+      },
+      "statute": {
+        "citation": "Pennsylvania Construction Code Act, 35 P.S. § 7210.101 et seq.",
+        "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+        "source_quote": "The provisions of this Chapter 405 issued under sections 105(c) and 301 of the Pennsylvania Construction Code Act (35 P.S. § § 7210.105(c) and 7210.301), unless otherwise noted."
+      },
+      "rules": {
+        "citation": "34 Pa. Code Chapter 405 (Elevators and Other Lifting Devices), part of the Uniform Construction Code",
+        "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+        "source_quote": "This chapter constitutes the Uniform Construction Code technical requirements for elevators and other lifting devices."
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2000 edition with the A17.1a-2002 addenda; ASME A17.1-2016 (with Pennsylvania modifications) applies to permit applications made on or after December 20, 2026",
+        "effective": "A17.1-2016 takes effect December 20, 2026 for new permit applications",
+        "existing_installations": "No Pennsylvania adoption of ASME A17.3 was found. Devices with a certificate of operation issued before December 20, 2026 may stay in use if they are maintained and inspected as required (requirement existing_certificates_remain_valid). Repairs, replacements, and alterations must meet ASME A17.1-2016 Sections 8.6.2, 8.6.3, and 8.7 (34 Pa. Code § 405.10(a)).",
+        "exceptions": [],
+        "amendments_detail": [
+          "ASME A17.1-2016 sections not adopted (34 Pa. Code § 405.2(a.2)): 5.3, 5.4 (private residence elevators), 5.8 (shipboard), 5.9 (mine), 7.7-7.10 (automatic transfer devices), 8.6.7.3, 8.6.7.4, 8.6.7.8, 8.6.7.9, 8.6.10.2, 8.7.5.3, 8.7.5.4, 8.7.5.8, 8.7.5.9, 8.7.7.3, 8.10.5.2, 8.10.5.5, 8.10.5.8, 8.10.5.16, 8.11.5.2, 8.11.5.5, 8.11.5.8",
+          "Preface, 1.2.1 and 1.2.2.1 modified: alternative arrangements and ASME A17.7/CSA B44.7 require approval by the Department and the Elevator Safety Board, obtained through the variance process",
+          "2.7.6.3.2(f): 'Accessible to General Public' signage is also required on the outside of the controller",
+          "2.12.7.2 and 2.12.7.3.3(c): hoistway access switches may not be placed on the sight guard, and car travel limits when using the lowest-landing access switch are set",
+          "3.4.1.5: where less than 600 mm (24 in.) of pit clearance remains under a hydraulic car, a permanently installed mechanical stop device is required",
+          "5.10: construction and demolition elevators must be run by a trained operator who performs and documents daily safety checks",
+          "5.12: outside emergency elevators require prior approval by the Department and the Elevator Safety Board",
+          "6.1.6.3.6, 6.1.6.3.9, 6.1.6.3.12, 6.1.6.4, 6.2.6.3.10, 6.2.6.4: escalator and moving walk safety devices must be manual-reset type, and handrail speed monitoring is set at 15%",
+          "8.6.1.3: when a defective part affecting safe operation is found, the equipment must be taken out of service and the Department notified",
+          "8.6.11.10.1: Category 5 tests of safeties, oil buffers, brakes, and traction must use test weights; alternative test methods are not permitted"
+        ],
+        "url": "https://www.pacodeandbulletin.gov/Display/pabull?file=/secure/pabulletin/data/vol56/56-25/862.html",
+        "source_quote": "The American Society of Mechanical Engineers (ASME) A17.1-2016 is the National standard for elevators and other lifting devices. The first paragraph of subsection (a.1) addresses all modifications, additions and deletions that the department is making to ASME A17.1-2016 as part of its adoption."
+      },
+      "requirements": [
+        {
+          "id": "current_edition_before_2026_12_20",
+          "claim": "Until the new rules take effect on December 20, 2026, Pennsylvania elevator construction, repair, replacement, and alteration must comply with ASME A17.1-2000, including the A17.1a-2002 addenda.",
+          "url": "https://www.pa.gov/agencies/dli/programs-services/labor-management-relations/bureau-of-occupational-and-industrial-safety/tpa-elevators",
+          "source_quote": "The construction, repair, replacement, and alteration of all passenger, freight, dumbwaiter, and LULA elevators shall comply with the ASME A17.1-2000 standard (including the A17.1a-2002 addenda)."
+        },
+        {
+          "id": "new_rules_effective_date",
+          "claim": "Pennsylvania's updated elevator regulation, Regulation #12-123, takes effect on December 20, 2026.",
+          "url": "https://www.pa.gov/agencies/dli/programs-services/labor-management-relations/bureau-of-occupational-and-industrial-safety/tpa-elevators",
+          "source_quote": "On Saturday, June 20th, Regulation #12-123, which addresses elevator safety standards under the UCC, was published in the Pennsylvania Bulletin. A copy of the final-form regulation is available here. These amendments will become effective on December 20, 2026.",
+          "match": {
+            "any": [
+              "December 20, 2026",
+              "Dec\\.? 20, 2026",
+              "Regulation #?12-123"
+            ]
+          }
+        },
+        {
+          "id": "edition_applies_by_permit_date",
+          "claim": "Elevators whose permit application was made before December 20, 2026, remain under the prior standards, including ASME A17.1-2000.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(a.5) The following standards apply to the listed type of elevator or lifting device if a permit application was made to the Department before December 20, 2026."
+        },
+        {
+          "id": "certificate_of_operation_required",
+          "claim": "In Pennsylvania, an elevator may not be operated unless the Department of Labor and Industry has issued a certificate of operation for it.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(a) An elevator or lifting device may not be operated unless the Department issues a certificate of operation for the designated classification of the elevator or other lifting device.",
+          "match": {
+            "all": [
+              "certificate of operation"
+            ]
+          }
+        },
+        {
+          "id": "certificate_posting",
+          "claim": "For equipment with a machine room, the certificate of operation or a copy must be posted in the elevator car or attached to the controller in the machine room.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(d) The certificate of operation or a copy of the certificate of operation for equipment with a machine room shall be posted in the elevator car or other lifting device enclosure, or attached to the controller in the machine room.",
+          "match": {
+            "all": [
+              "certificate"
+            ],
+            "any": [
+              "\\bpost",
+              "machine room"
+            ]
+          }
+        },
+        {
+          "id": "certificate_validity",
+          "claim": "A certificate of operation is valid for 24 months for equipment on a 6-month inspection cycle and 48 months for equipment on a 12-month cycle.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "valid for 24 months from the issue date for equipment that requires a 6-month periodic inspection under § 405.7 (relating to periodic inspections). A certificate of operation is valid for 48 months from the issue date for equipment requiring a 12-month periodic inspection cycle"
+        },
+        {
+          "id": "periodic_inspection_six_months",
+          "claim": "Electric elevators, hydraulic elevators, and escalators in Pennsylvania must have periodic inspections at intervals of no more than 6 months.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(a) A construction code official of the Department or a third-party agency shall conduct periodic inspections and document compliance with the Uniform Construction Code at intervals that do not exceed 6 months for the following equipment: (1) Electric elevator. (2) Hydraulic elevator. (3) Escalator.",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "six months",
+              "6 months",
+              "6-month",
+              "six-month",
+              "semi-?annual",
+              "twice a year"
+            ]
+          }
+        },
+        {
+          "id": "who_inspects",
+          "claim": "Any UCC-certified elevator inspector may conduct a periodic inspection in Pennsylvania.",
+          "url": "https://www.pa.gov/agencies/dli/programs-services/labor-management-relations/bureau-of-occupational-and-industrial-safety/tpa-elevators",
+          "source_quote": "Any UCC-certified elevator inspector may conduct a periodic inspection.",
+          "match": {
+            "all": [
+              "\\bUCC\\b"
+            ],
+            "any": [
+              "inspector"
+            ]
+          }
+        },
+        {
+          "id": "third_party_agencies_certified",
+          "claim": "Third-party agencies that inspect elevators under the Uniform Construction Code must be certified by the Department.",
+          "url": "https://www.pa.gov/agencies/dli/programs-services/labor-management-relations/bureau-of-occupational-and-industrial-safety/tpa-elevators",
+          "source_quote": "All third party agencies that inspect elevators and other lifting devices for compliance with the requirements of the Uniform Construction Code (UCC) services must be certified by the Department."
+        },
+        {
+          "id": "permit_required",
+          "claim": "Construction, alteration, replacement, or repair of an elevator requires a permit application to the Department of Labor and Industry.",
+          "url": "https://www.pa.gov/agencies/dli/programs-services/labor-management-relations/bureau-of-occupational-and-industrial-safety/tpa-elevators",
+          "source_quote": "An application package (see sections below for what constitutes a complete application package) for construction, alteration, replacement or repair of an elevator or lifting device must be mailed to the Department.",
+          "match": {
+            "all": [
+              "permit"
+            ],
+            "any": [
+              "construct",
+              "alter",
+              "replace",
+              "repair"
+            ]
+          }
+        },
+        {
+          "id": "acceptance_inspection",
+          "claim": "The Department conducts an acceptance inspection before a new, repaired, altered, or modified elevator is put into service.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "The Department will conduct an acceptance inspection to confirm compliance with the Uniform Construction Code before a new elevator or lifting device or an elevator or lifting device under repair, alteration or modification is put into service.",
+          "match": {
+            "all": [
+              "acceptance inspection"
+            ]
+          }
+        },
+        {
+          "id": "no_return_after_major_work_without_inspection",
+          "claim": "After a major repair, replacement, or alteration, an elevator may not return to service until the Department inspects and passes it.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "The elevator or lifting device may not be returned to service until the Department conducts an inspection and passes the elevator or lifting device."
+        },
+        {
+          "id": "category1_annual_from_2026",
+          "claim": "Starting December 20, 2026, Category 1 tests must be performed every year as a stand-alone requirement; previously they were done together with the 3-year and 5-year tests.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pabull?file=/secure/pabulletin/data/vol56/56-25/862.html",
+          "source_quote": "the department and ESB determine that Category 1 testing should be performed annually as a stand-alone requirement to ensure additional safety",
+          "match": {
+            "all": [
+              "category 1"
+            ],
+            "any": [
+              "annual",
+              "every year"
+            ]
+          }
+        },
+        {
+          "id": "tests_witnessed",
+          "claim": "Under the rules effective December 20, 2026, periodic tests follow ASME A17.1-2016 Table N-1 intervals and must be witnessed by a construction code official.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(a) Periodic testing under ‘‘ASME A17.1-2016’’ as referenced in Table N-1 is required to be performed at the intervals listed in Table N-1 for Category 1, Category 3 and Category 5 testing. A construction code official shall witness all of the testing."
+        },
+        {
+          "id": "accident_report",
+          "claim": "Owners must submit an accident report to the Department when an elevator accident causes a fatality or requires professional medical care.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(a) An owner of an elevator or lifting device or an authorized agent shall submit an accident report to the Department if the elevator or lifting device is involved in an accident resulting in any of the following: (1) Fatal injury or the necessity for professional medical care to a person.",
+          "match": {
+            "all": [
+              "accident"
+            ],
+            "any": [
+              "report"
+            ]
+          }
+        },
+        {
+          "id": "existing_certificates_remain_valid",
+          "claim": "Elevators certified before December 20, 2026, may stay in use if they are maintained under their prior permit and continue to meet inspection and testing requirements.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(3) An elevator or lifting device that was issued a certificate of operation by the Department before December 20, 2026, may remain in use if the owner maintains the elevator or lifting device in accordance with a previous Department permit or approval"
+        },
+        {
+          "id": "private_dwelling_exemption",
+          "claim": "The UCC elevator rules do not apply to lifting devices used only by the occupants of a single dwelling unit.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(3) Elevators and lifting devices solely in residential buildings used by the occupants of a dwelling unit except where the lifting device is used or accessible by the occupants of more than 1 dwelling unit.",
+          "match": {
+            "all": [
+              "single dwelling|private (home|dwelling)"
+            ]
+          }
+        },
+        {
+          "id": "appeals_elevator_safety_board",
+          "claim": "Owners may appeal a code official's decision, or request a variance or extension of time, by petitioning the Elevator Safety Board within 30 days of the decision.",
+          "url": "https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/034/chapter405/chap405toc.html",
+          "source_quote": "(a) An owner or owner’s agent may seek a variance or extension of time or appeal a building code official’s decision by filing a petition with the Elevator Safety Board on a form provided by the Department within 30 days of the date of the decision.",
+          "match": {
+            "all": [
+              "Elevator Safety Board"
+            ]
+          }
+        }
+      ],
+      "local_authorities": [],
+      "not_the_regulator": [
+        {
+          "name": "Philadelphia Department of Licenses and Inspections",
+          "aliases": [
+            "Philadelphia L&I"
+          ],
+          "why": "Elevator inspection and certification in Philadelphia is done by the Pennsylvania Department of Labor and Industry, which has statewide jurisdiction.",
+          "url": "https://www.phila.gov/press-releases/kenney/city-statement-on-cjc-elevators/",
+          "source_quote": "Because the Pennsylvania Department of Labor and Industry oversees elevator safety and is responsible for elevator inspections throughout the state, questions regarding inspection history should be referred to them."
+        }
+      ],
+      "wrong_citations": [],
+      "not_required": [
+        {
+          "id": "emergency_comms_video_text",
+          "claim": "Pennsylvania's adopted editions are ASME A17.1-2000 (and A17.1-2016 for permit applications from December 20, 2026); never present video or two-way text messaging as a Pennsylvania elevator requirement.",
+          "why": "",
+          "url": "https://www.pacodeandbulletin.gov/Display/pabull?file=/secure/pabulletin/data/vol56/56-25/862.html",
+          "source_quote": "The American Society of Mechanical Engineers (ASME) A17.1-2016 is the National standard for elevators and other lifting devices.",
+          "pattern": "(video|visual (display|communication)|text[- ]based|two[- ]way (text|messag\\w*)|text messag\\w*|messaging display)[^.;:]{0,120}(requir\\w*|mandat\\w*|must|code (language|now|requires?))|(requir\\w*|mandat\\w*|must|code (language|now|requires?))[^.;:]{0,120}(video|visual (display|communication)|text[- ]based|two[- ]way (text|messag\\w*)|text messag\\w*|messaging display)"
+        }
+      ],
+      "unverified": [
+        "Elevator mechanic and elevator contractor licensing: no official source was found showing that Pennsylvania has an enacted statewide license. Bills proposing one (e.g., HB 990 of 2007-2008 and SB 639 of 2015-2016) appear on the legislature's site, but no enacted law was confirmed. Do not say Pennsylvania licenses elevator mechanics, and do not say it does not.",
+        "ASME A17.3 (existing installations): no Pennsylvania adoption was found in 34 Pa. Code Chapter 405.",
+        "The certificate-posting and certificate-validity text is quoted from 34 Pa. Code § 405.6 as amended effective December 20, 2026. The Pennsylvania Bulletin preamble says the only change to § 405.6 was adding 'designated classification', so these provisions appear to be in force now as well.",
+        "L&I says it is preparing guidance on the December 20, 2026 changes. That guidance was not yet available to review."
+      ],
+      "cautions": [
+        "No statewide Pennsylvania elevator mechanic or contractor license was found — don't state either way.",
+        "Philadelphia elevators are regulated by the Pennsylvania Department of Labor and Industry; don't confuse it with Philadelphia's own Department of Licenses and Inspections."
+      ]
+    },
+    "VA": {
+      "name": "Virginia",
+      "authority": {
+        "name": "the local building department (Virginia Uniform Statewide Building Code)",
+        "short": "",
+        "program": "Each city or county enforces the USBC and inspects elevators; elevator mechanics are certified and contractors licensed by the Virginia Board for Contractors (DPOR)",
+        "aliases": [
+          "Virginia Uniform Statewide Building Code",
+          "Virginia USBC"
+        ],
+        "url": "https://law.lis.virginia.gov/admincode/title13/agency5/chapter63/section40/",
+        "source_quote": "The local governing body shall, however, inspect and enforce the provisions of the VMC for elevators, escalators, and related conveyances, except for elevators in single-family and two-family homes and townhouses."
+      },
+      "statute": {
+        "citation": "Code of Virginia § 36-97 et seq. (Uniform Statewide Building Code law)",
+        "url": "https://law.lis.virginia.gov/vacode/36-105/",
+        "source_quote": "5. Elevator, escalator, or related conveyance inspections. The local governing body shall, however, inspect and enforce the Building Code for elevators, escalators, or related conveyances, except for elevators in single- and two-family homes and townhouses."
+      },
+      "rules": {
+        "citation": "13VAC5-63, Virginia Uniform Statewide Building Code (Part III, Virginia Maintenance Code, covers elevator inspections)",
+        "url": "https://law.lis.virginia.gov/admincode/title13/agency5/chapter63/section540/",
+        "source_quote": "Section 606.1 General. Elevators, dumbwaiters, and escalators shall be maintained in compliance with ASME A17.1."
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2019 edition (ASME A17.1/CSA B44-19), incorporated by the 2021 USBC",
+        "effective": "January 18, 2024",
+        "existing_installations": "The Virginia Maintenance Code requires existing elevators to be maintained in compliance with ASME A17.1, without naming an edition. The Virginia Existing Building Code's referenced-standards table lists ASME A17.1/CSA B44-2016 (requirement vebc_references_a17_1_2016). ASME A17.3 2008 appears in the 13VAC5-63 list of documents incorporated by reference, but the provision that applies it was not located.",
+        "exceptions": [],
+        "amendments_detail": [
+          "Virginia amendments to IBC Chapter 30 (13VAC5-63-330): an exception to 3002.4 for elevators in multistory dwelling units or guest rooms",
+          "3003.3: elevators may use either a standardized or non-standardized fire service elevator key, in accordance with the IFC",
+          "3005.7 added: machine-room-less elevators must comply with ASME A17.1 and have permanent car-top guards where the car top is a work platform, permanently installed lifting points where the manufacturer's procedures require them, and hoistway sprinkler protection and detectors in fully sprinklered buildings",
+          "3008.1: occupant self-evacuation elevator provisions apply to buildings more than 420 feet in height"
+        ],
+        "url": "https://law.lis.virginia.gov/admincodefull/title13/agency5/chapter63/",
+        "source_quote": "ASME A17.1/CSA B44-19, Safety Code for Elevators and Escalators"
+      },
+      "requirements": [
+        {
+          "id": "local_enforcement",
+          "claim": "In Virginia, the local government inspects elevators and enforces the building code for them, except for elevators in single-family homes, two-family homes, and townhouses.",
+          "url": "https://law.lis.virginia.gov/vacode/36-105/",
+          "source_quote": "The local governing body shall, however, inspect and enforce the Building Code for elevators, escalators, or related conveyances, except for elevators in single- and two-family homes and townhouses.",
+          "match": {
+            "all": [
+              "local"
+            ],
+            "any": [
+              "inspect",
+              "enforc"
+            ]
+          }
+        },
+        {
+          "id": "code_adopted_by_state_board",
+          "claim": "The Virginia Board of Housing and Community Development adopts and amends the Uniform Statewide Building Code.",
+          "url": "https://www.dhcd.virginia.gov/virginia-uniform-statewide-building-code-usbc",
+          "source_quote": "The Board of Housing and Community Development adopts and amends the USBC.",
+          "match": {
+            "all": [
+              "Board of Housing and Community Development"
+            ]
+          }
+        },
+        {
+          "id": "annual_inspection",
+          "claim": "All elevators and escalators in Virginia require an annual periodic inspection, and a locality may require a six-month periodic inspection.",
+          "url": "https://law.lis.virginia.gov/admincode/title13/agency5/chapter63/section540/",
+          "source_quote": "An annual periodic inspection is required of all elevators and escalators. A locality shall be permitted to require a six-month periodic inspection.",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "\\bannual",
+              "every year",
+              "once a year",
+              "each year",
+              "yearly",
+              "every 12 months"
+            ],
+            "none": [
+              "quarterly",
+              "monthly"
+            ]
+          }
+        },
+        {
+          "id": "periodic_tests",
+          "claim": "Periodic tests are required at the intervals in ASME A17.1 Appendix N and must be witnessed by the code official.",
+          "url": "https://law.lis.virginia.gov/admincode/title13/agency5/chapter63/section540/",
+          "source_quote": "Periodic tests are required of all elevators and escalators at the intervals listed in ASME A17.1 Appendix N. Periodic tests shall be witnessed by the code official.",
+          "match": {
+            "all": [
+              "test"
+            ],
+            "any": [
+              "witness",
+              "appendix n"
+            ]
+          }
+        },
+        {
+          "id": "approved_agency_inspections",
+          "claim": "The local code official may have inspections and test witnessing done by an approved agency or by other local certified elevator inspectors.",
+          "url": "https://law.lis.virginia.gov/admincode/title13/agency5/chapter63/section540/",
+          "source_quote": "The code official may provide for such inspections and test witnessing by an approved agency or through agreement with other local certified elevator inspectors."
+        },
+        {
+          "id": "certificate_display",
+          "claim": "The current certificate of inspection must be displayed in the elevator, attached to the escalator, kept available in the building operator's office, or posted in an approved conspicuous location.",
+          "url": "https://law.lis.virginia.gov/admincode/title13/agency5/chapter63/section540/",
+          "source_quote": "The most current certificate of inspection shall be on display at all times within the elevator or attached to the escalator, be available for public inspection in the office of the building operator or be posted in a publicly conspicuous location approved by the code official.",
+          "match": {
+            "all": [
+              "certificate"
+            ],
+            "any": [
+              "display",
+              "\\bpost"
+            ]
+          }
+        },
+        {
+          "id": "inspection_report_names_mechanic",
+          "claim": "Third-party elevator inspection reports must include the name and certification number of the elevator mechanic who performed the witnessed tests.",
+          "url": "https://law.lis.virginia.gov/admincode/title13/agency5/chapter63/section130/",
+          "source_quote": "Reports of inspections conducted for the purpose of verifying compliance with the requirements of the USBC for elevators, escalators, and related conveyances shall include the name and certification number of the elevator mechanic performing the tests witnessed by the third-party inspector"
+        },
+        {
+          "id": "mechanic_certification_required",
+          "claim": "No one may work as an elevator mechanic in Virginia without state certification, unless working under the direct and immediate supervision of a certified mechanic.",
+          "url": "https://law.lis.virginia.gov/vacode/54.1-1141/",
+          "source_quote": "A. No person shall engage in, or offer to engage in, work as an elevator mechanic or accessibility mechanic in the Commonwealth unless he has been certified under the provisions of this article.",
+          "match": {
+            "all": [
+              "mechanic"
+            ],
+            "any": [
+              "certif"
+            ]
+          }
+        },
+        {
+          "id": "mechanic_qualifications",
+          "claim": "Virginia elevator mechanic certification requires at least three years of experience in the elevator industry and passing an examination offered or approved by the Board.",
+          "url": "https://law.lis.virginia.gov/vacode/54.1-1142/",
+          "source_quote": "2. Completed the experience requirements as required by the Board, which shall at a minimum consist of at least three years in the elevator industry; and 3. Passed an examination offered or approved by the Board.",
+          "match": {
+            "all": [
+              "mechanic"
+            ],
+            "any": [
+              "three years",
+              "3 years",
+              "exam"
+            ]
+          }
+        },
+        {
+          "id": "mechanic_continuing_education",
+          "claim": "Certified elevator mechanics must complete at least eight hours of Board-approved continuing education to renew certification.",
+          "url": "https://law.lis.virginia.gov/vacode/54.1-1143/",
+          "source_quote": "shall attest to the Board that he has completed at least eight hours of continuing education, approved by the Board, in the specialty of elevator/escalator contracting.",
+          "match": {
+            "any": [
+              "continuing education",
+              "eight hours",
+              "8 hours"
+            ]
+          }
+        },
+        {
+          "id": "contractor_license_eec",
+          "claim": "Installing, repairing, improving, or removing elevators or escalators in Virginia requires a contractor license with the Elevator/Escalator Contracting (EEC) specialty.",
+          "url": "https://law.lis.virginia.gov/admincode/title18/agency50/chapter22/section30/",
+          "source_quote": "\"Elevator/escalator contracting\" (Abbr: EEC) means the service that provides for the installation, repair, improvement, or removal of elevators or escalators permanently annexed to real property. No other classification or specialty service provides for this function.",
+          "match": {
+            "any": [
+              "\\bEEC\\b",
+              "Elevator/Escalator Contracting"
+            ]
+          }
+        },
+        {
+          "id": "usbc_2021_effective",
+          "claim": "The 2021 Virginia Uniform Statewide Building Code took effect on January 18, 2024.",
+          "url": "https://www.dhcd.virginia.gov/codes",
+          "source_quote": "The effective date of the 2021 Uniform Statewide Building Code, 2021 Statewide Fire Prevention Code, 2021 Industrialized Building Safety Regulations and the 2021 Amusement Device Regulations is Jan. 18, 2024.",
+          "match": {
+            "all": [
+              "USBC|Uniform Statewide Building Code"
+            ],
+            "any": [
+              "2021",
+              "January 18, 2024"
+            ]
+          }
+        },
+        {
+          "id": "vebc_references_a17_1_2016",
+          "claim": "The Virginia Existing Building Code's referenced-standards table lists ASME A17.1/CSA B44-2016.",
+          "url": "https://law.lis.virginia.gov/admincode/title13/agency5/chapter63/section439/",
+          "source_quote": "ASME A17.1/CSA B44-2016 American Society of Mechanical Engineers"
+        }
+      ],
+      "local_authorities": [
+        {
+          "name": "City of Richmond Department of Planning and Development Review, Bureau of Permits and Inspections",
+          "scope": "Runs Richmond's elevator program: final acceptance inspections of new or modernized elevators, annual elevator inspections with test, and elevator certificates within the City of Richmond. Staff are listed for 'Elevator Annuals and Certs' in the May 2026 directory.",
+          "url": "https://www.rva.gov/sites/default/files/2024-08/PermitsFeeSchedule.pdf",
+          "source_quote": "Final Acceptance of New Elevators or Elevator Modernizations $230.00 Elevator Accidents, complaints and Emergencies $63.00 per hour Billing of Administrative Support Time $50.00 per hour Annual Elevator Inspection with Test:"
+        }
+      ],
+      "not_the_regulator": [
+        {
+          "name": "Virginia Department of Labor and Industry",
+          "aliases": [
+            "Virginia DOLI"
+          ],
+          "why": "Virginia law assigns elevator inspection to local building departments, not the state labor department.",
+          "url": "https://law.lis.virginia.gov/vacode/36-105/",
+          "source_quote": "5. Elevator, escalator, or related conveyance inspections. The local governing body shall, however, inspect and enforce the Building Code for elevators, escalators, or related conveyances"
+        }
+      ],
+      "wrong_citations": [],
+      "not_required": [],
+      "unverified": [
+        "Text-based and video emergency communication: the 2021 USBC incorporates ASME A17.1/CSA B44-19, so no 'not required' entry is recorded. No official Virginia page describes the content of ASME Section 2.27, so the exact communication requirements were not confirmed from a state source. For alterations to existing buildings, the Virginia Existing Building Code's table lists ASME A17.1/CSA B44-2016, and it was not determined which edition governs communication equipment in an alteration.",
+        "ASME A17.3 2008 is listed among the 13VAC5-63 documents incorporated by reference, but no USBC provision applying A17.3 to existing elevators was located.",
+        "The 2024 USBC code development cycle is under way at DHCD. No adoption or effective date for a 2024 USBC was found as of 2026-09-25.",
+        "The Richmond elevator fees are from the City fee schedule revision dated 07-01-2024. A newer schedule may exist. Whether Richmond requires the optional six-month inspection was not confirmed; the schedule lists a 'Mid-Year Inspection Without Test' fee.",
+        "Local elevator programs in other Virginia localities were not surveyed."
+      ],
+      "cautions": [
+        "Virginia's Board for Contractors (DPOR) certifies elevator mechanics and licenses contractors, and DHCD supports the board that writes the building code; neither inspects elevators — local building departments do."
+      ]
+    },
+    "FL": {
+      "name": "Florida",
+      "authority": {
+        "name": "Florida Department of Business and Professional Regulation (DBPR), Division of Hotels and Restaurants, Bureau of Elevator Safety",
+        "short": "DBPR",
+        "program": "Bureau of Elevator Safety",
+        "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+        "aliases": [
+          "Florida Bureau of Elevator Safety",
+          "DBPR Bureau of Elevator Safety",
+          "Florida Department of Business and Professional Regulation"
+        ],
+        "source_quote": "The department is empowered to carry out all of the provisions of this chapter relating to the inspection and regulation of elevators and to enforce the provisions of the Florida Building Code.",
+        "name_source": {
+          "url": "https://flrules.org/gateway/readRefFile.asp?refId=9064&filename=DBPR+HR-7025+%E2%80%93+Application+for+Elevator+Change+of+Owner+and+Certificate+of+Operation.doc",
+          "source_quote": "STATE OF FLORIDA, DEPARTMENT OF BUSINESS AND PROFESSIONAL REGULATION Division of Hotels and Restaurants, Bureau of Elevator Safety"
+        }
+      },
+      "statute": {
+        "citation": "Chapter 399, Florida Statutes (Elevator Safety Act)",
+        "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+        "source_quote": "This chapter may be cited as the \"Elevator Safety Act.\""
+      },
+      "rules": {
+        "citation": "Chapter 61C-5, Florida Administrative Code (Florida Elevator Safety Code)",
+        "url": "https://www.flrules.org/gateway/ChapterHome.asp?Chapter=61C-5",
+        "source_quote": "Rule Chapter: 61C-5 Chapter Title: FLORIDA ELEVATOR SAFETY CODE"
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2019 edition (ASME A17.1-2019), with exclusions for equipment types such as private residence and marine elevators",
+        "effective": "December 31, 2023",
+        "existing_installations": "ASME A17.3-2020 with exclusions; ASME A18.1-2020 for stairway chairlifts and wheelchair lifts.",
+        "exceptions": [],
+        "amendments_detail": [
+          "A17.1-2019 exclusions: private residence elevators (5.3 and related Part 8 sections), private residence inclined elevators (5.4), marine elevators (5.8), mine elevators (5.9), wind turbine tower elevators (5.11), outside emergency elevators (5.12).",
+          "A17.3-2020 Section 3.10.12 (monitoring of faulty door contact circuits): compliance may not be enforced until August 1, 2029.",
+          "New installations, alterations, relocations and classification changes follow the code edition in effect when the permit application was received."
+        ],
+        "url": "https://www.flrules.org/gateway/readFile.asp?sid=0&tid=30865611&type=1&file=61C-5.001.doc",
+        "source_quote": "The following safety standards are hereby adopted and incorporated by reference, effective December 31, 2023: (a) For elevators, escalators, dumbwaiters, and moving walks: 1. ASME A17.1-2019, Safety Code for Elevators and Escalators, with the following exclusions:"
+      },
+      "requirements": [
+        {
+          "id": "annual_inspection",
+          "claim": "Florida requires every elevator or other conveyance covered by Chapter 399 to be inspected annually by a certified elevator inspector, or by a county or municipality under contract with the state.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "All elevators or other conveyances subject to this chapter must be annually inspected by a certified elevator inspector or by a municipality or county under contract with the division pursuant to s. 399.13.",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "\\bannual",
+              "every year",
+              "once a year",
+              "each year",
+              "yearly",
+              "every 12 months"
+            ],
+            "none": [
+              "semi-?annual",
+              "bi-?annual",
+              "every (six|6) months",
+              "twice a year",
+              "quarterly",
+              "monthly"
+            ]
+          }
+        },
+        {
+          "id": "two_stop_exemption",
+          "claim": "An elevator that is not an escalator or dumbwaiter, serves only two adjacent floors, and is covered by a service maintenance contract is exempt from the annual inspection while the contract remains in effect.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "If the elevator is not an escalator or a dumbwaiter, serves only two adjacent floors, and is covered by a service maintenance contract, an inspection is not required so long as the service contract remains in effect.",
+          "match": {
+            "all": [
+              "two (adjacent )?floors|two-stop|2-stop"
+            ]
+          }
+        },
+        {
+          "id": "certificate_of_operation_term",
+          "claim": "A Florida certificate of operation is valid for no more than 2 years.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "The certificate of operation is valid for a period not to exceed 2 years and shall expire at the end of the period unless revoked.",
+          "match": {
+            "all": [
+              "certificate of operation"
+            ],
+            "any": [
+              "2 years",
+              "two years",
+              "two-year"
+            ]
+          }
+        },
+        {
+          "id": "certificate_renewal",
+          "claim": "A Florida certificate of operation can be renewed only for a conveyance with a current satisfactory inspection, and operating on an expired certificate violates state law.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Certificates of operation may be renewed only for vertical conveyances having a current satisfactory inspection. The owner of an elevator operating with an expired certificate of operation is in violation of this chapter.",
+          "match": {
+            "all": [
+              "certificate of operation"
+            ],
+            "any": [
+              "expired",
+              "renew"
+            ]
+          }
+        },
+        {
+          "id": "certificate_posting",
+          "claim": "In Florida, the certificate of operation must be posted in a conspicuous location on the elevator in a frame with a transparent cover.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "The certificate of operation must be posted in a conspicuous location on the elevator and must be framed with a transparent cover.",
+          "match": {
+            "all": [
+              "certificate of operation"
+            ],
+            "any": [
+              "\\bpost",
+              "display",
+              "framed",
+              "conspicuous"
+            ]
+          }
+        },
+        {
+          "id": "construction_permit",
+          "claim": "In Florida, a state permit, applied for by a registered elevator company, is required before a conveyance is installed or altered.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "A conveyance covered by this chapter may not be erected, constructed, installed, or altered within buildings or structures until a permit has been obtained from the department. Permits must be applied for by a registered elevator company",
+          "match": {
+            "all": [
+              "permit"
+            ],
+            "any": [
+              "install",
+              "alter",
+              "erect",
+              "construct"
+            ]
+          }
+        },
+        {
+          "id": "independent_acceptance_inspection",
+          "claim": "In Florida, before a new conveyance is used, it must be inspected by a certified elevator inspector with no employment, association or conflict of interest with the permitholder or the owner.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Before any vertical conveyance is used, except those in a private residence, it must be inspected by a certified elevator inspector not employed, associated, or having a conflict of interest with the elevator construction permitholder or elevator owner",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "conflict of interest",
+              "independent",
+              "not employed"
+            ]
+          }
+        },
+        {
+          "id": "owner_responsibility",
+          "claim": "In Florida, once a certificate of operation is issued, the elevator owner is responsible for safe operation, proper maintenance, inspection, and correction of code deficiencies.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "The elevator owner is responsible for the safe operation, proper maintenance, and inspection and correction of code deficiencies of the elevator after a certificate of operation has been issued by the department.",
+          "match": {
+            "all": [
+              "owner"
+            ],
+            "any": [
+              "responsib"
+            ]
+          }
+        },
+        {
+          "id": "elevator_company_registration",
+          "claim": "Florida registered elevator companies must register with the state every year and maintain general liability insurance.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Each registered elevator company must annually register with the division and maintain general liability insurance coverage in the minimum amounts set by rule.",
+          "match": {
+            "all": [
+              "elevator compan"
+            ],
+            "any": [
+              "regist"
+            ]
+          }
+        },
+        {
+          "id": "new_installations_by_registered_company",
+          "claim": "All new conveyance installations in Florida must be performed by a registered elevator company.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "All new conveyance installations must be performed by a registered elevator company.",
+          "match": {
+            "all": [
+              "registered elevator compan"
+            ],
+            "any": [
+              "install"
+            ]
+          }
+        },
+        {
+          "id": "mechanic_certification",
+          "claim": "In Florida, a certified elevator technician is authorized to construct, install, maintain or repair conveyances after the state issues them an elevator certificate of competency.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "\"Certified elevator technician\" means a natural person authorized by the division to construct, install, maintain, or repair any vertical conveyance, after having been issued an elevator certificate of competency by the division.",
+          "match": {
+            "any": [
+              "certificate of competency",
+              "certified elevator technician"
+            ]
+          }
+        },
+        {
+          "id": "mechanic_annual_registration",
+          "claim": "Florida certified elevator technicians must register with the state every year and carry general liability insurance.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Each certified elevator technician must annually register with the division and be covered by general liability insurance coverage in the minimum amounts set by the division.",
+          "match": {
+            "all": [
+              "technician"
+            ],
+            "any": [
+              "regist",
+              "insurance"
+            ]
+          }
+        },
+        {
+          "id": "certificate_of_competency_renewal",
+          "claim": "A Florida elevator certificate of competency expires after 1 year and is renewed with proof of 8 hours of continuing education.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Such credential shall be valid for and expire at the end of 1 year, and may be renewed by the division when the division receives proof of the elevator certificate of competency holder's completion of 8 hours of continuing education",
+          "match": {
+            "all": [
+              "competency"
+            ],
+            "any": [
+              "continuing education",
+              "8 hours",
+              "eight hours"
+            ]
+          }
+        },
+        {
+          "id": "inspector_credential",
+          "claim": "Florida certified elevator inspectors must keep their qualified elevator inspector credential in good standing.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Failure by a certified elevator inspector to maintain his or her qualified elevator inspector credential in good standing.",
+          "match": {
+            "any": [
+              "qualified elevator inspector",
+              "\\bQEI\\b"
+            ]
+          }
+        },
+        {
+          "id": "inspector_registration",
+          "claim": "Florida certified elevator inspectors must register with the state every year and show 8 hours of continuing education, good standing, and general liability insurance.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Each certified elevator inspector must annually register with the division and provide proof of completion of 8 hours of continuing education, proof of good standing, and proof of general liability insurance coverage",
+          "match": {
+            "all": [
+              "inspector"
+            ],
+            "any": [
+              "continuing education",
+              "8 hours",
+              "eight hours"
+            ]
+          }
+        },
+        {
+          "id": "accident_reporting",
+          "claim": "In Florida, the certificate of operation holder must report any elevator accident to the state within 5 working days.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Within 5 working days after any accident occurring in or upon any elevator, the certificate of operation holder shall report the accident to the division on a form prescribed by the division.",
+          "match": {
+            "all": [
+              "accident"
+            ],
+            "any": [
+              "5 working days",
+              "five working days"
+            ]
+          }
+        },
+        {
+          "id": "private_residence_exemption",
+          "claim": "Elevators, stairway chairlifts and wheelchair lifts in private residences do not need a Florida certificate of operation.",
+          "url": "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0300-0399/0399/0399.html",
+          "source_quote": "Vertical conveyances, including stairway chairlifts, and inclined or vertical wheelchair lifts located in private residences are not required to obtain a certificate of operation under this chapter.",
+          "match": {
+            "all": [
+              "private residence"
+            ]
+          }
+        }
+      ],
+      "local_authorities": [
+        {
+          "name": "Broward County Building Code Division",
+          "scope": "Enforces Florida's elevator law (Chapter 399) through its own elevator inspectors in Broward County, which includes Pompano Beach; the page does not list the cities covered.",
+          "url": "https://www.broward.org/Building/Elevators/Pages/Default.aspx",
+          "source_quote": "Mandates in Chapter 399 of the Florida State Statutes regarding elevator safety are monitored and strictly enforced by Broward County Building Code elevator inspectors."
+        },
+        {
+          "name": "Miami-Dade County Office of Elevator Safety",
+          "scope": "Covers all Miami-Dade municipalities except the City of Miami and the City of Miami Beach, which run their own elevator offices.",
+          "url": "https://www.miamidade.gov/global/business/facilitiesandfueling/elevators.page",
+          "source_quote": "located within buildings throughout Miami-Dade County as regulated by the State of Florida Statutes Chapter 399, the Florida Building Code Chapter 30, and Florida Administrative Code 61c-5 in all municipalities, except the City of Miami and City of Miami Beach."
+        },
+        {
+          "name": "City of Miami Beach Elevator Safety Division",
+          "scope": "Holds delegated authority under s. 399.13 for elevator permits, inspections and certificates in Miami Beach.",
+          "url": "https://www.miamibeachfl.gov/city-hall/public-works/elevator-division/",
+          "source_quote": "Under Florida Statutes, Elevator Safety Act, Chapter 399, Rule 399.13, The Elevator Safety Division has been delegated the Jurisdictional Authority over elevators, escalators, moving walks, wheelchair lifts and related equipment in the City of Miami Beach."
+        },
+        {
+          "name": "City of Miami Building Department Elevator Division",
+          "scope": "Reviews annual inspection reports and issues the Annual Elevator Certificate in the City of Miami.",
+          "url": "https://www.miami.gov/Permits-Construction/Elevators/Obtain-an-Annual-Elevator-Certificate",
+          "source_quote": "The Building Department Elevator Division will review your Elevator Inspection Report. If the inspection passed, you will receive your Elevator Certificate via mail to the address listed under the customer account."
+        }
+      ],
+      "not_the_regulator": [],
+      "wrong_citations": [],
+      "not_required": [],
+      "cautions": [
+        "Don't call the Florida State Fire Marshal or the Florida Building Commission the elevator regulator: the Fire Marshal only has access to DBPR's emergency elevator access registry, and the Commission adopts the Florida Building Code."
+      ],
+      "unverified": [
+        "DBPR's Bureau of Elevator Safety website blocks automated fetches; authority sourced to Chapter 399 and DBPR form HR-7025.",
+        "Full list of DBPR-contracted local jurisdictions not fetched; Broward, Miami-Dade, Miami Beach and City of Miami confirmed by their own .gov pages.",
+        "Florida Building Code edition and Chapter 30 amendments not verified."
+      ]
+    },
+    "AZ": {
+      "name": "Arizona",
+      "authority": {
+        "name": "Industrial Commission of Arizona (ICA), Elevator Division",
+        "short": "ICA",
+        "program": "Elevator Division (called the ADOSH Elevator Safety Section until September 12, 2026)",
+        "url": "https://www.azleg.gov/ars/23/00491.htm",
+        "aliases": [
+          "Industrial Commission of Arizona",
+          "ICA Elevator Division",
+          "Arizona Industrial Commission"
+        ],
+        "source_quote": "\"Division\" means the elevator division of the commission."
+      },
+      "statute": {
+        "citation": "A.R.S. §§ 23-491 through 23-491.16 (Safety Conditions for Elevators and Similar Conveyances), as amended by Laws 2026, Ch. 73",
+        "url": "https://www.azleg.gov/ars/23/00491-04.htm",
+        "source_quote": "The commission shall: 1. Administer this article through the division."
+      },
+      "rules": {
+        "citation": "Arizona Administrative Code R20-5-502 through R20-5-515 (Elevator and Conveyance Safety)",
+        "url": "https://www.law.cornell.edu/regulations/arizona/title-20/chapter-05/article-5",
+        "source_quote": "R20-5-507 - Safety Code for Elevators, Escalators, Dumbwaiters, Moving Walks, Material Lifts, Special Purpose Personnel Elevators, and Dumbwaiters with Automatic Transfer Devices"
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2019 edition (ASME A17.1-2019), for equipment installed, repaired or altered on or after January 1, 2023",
+        "effective": "January 9, 2023",
+        "existing_installations": "No ASME A17.3 adoption found; older equipment may comply with the edition in effect at installation.",
+        "exceptions": [],
+        "amendments_detail": [
+          "For repairs or alterations, compliance applies to the extent possible to the scope of the work.",
+          "Later amendments or editions of ASME A17.1 are not incorporated."
+        ],
+        "url": "https://www.law.cornell.edu/regulations/arizona/Ariz-Admin-Code-SS-R20-5-507",
+        "source_quote": "installed, repaired, or altered on or after January 1, 2023, shall comply with the ASME A17.1-2019 (Safety Code for Elevators and Escalators) or ASME A17.7-2007 (Performance-Based Safety Code for Elevators and Escalators) as referenced in ASME A17.1-2019, which are incorporated by reference."
+      },
+      "requirements": [
+        {
+          "id": "inspection_schedule",
+          "claim": "Arizona owners must have each conveyance inspected before it first goes into service, after any modification or alteration, and annually after that.",
+          "url": "https://www.azleg.gov/ars/23/00491-02.htm",
+          "source_quote": "(a) Before placing a conveyance in operation after the initial installation of the conveyance. (b) After modification or alteration of a conveyance. (c) After the inspection pursuant to subdivision (a), annually or as otherwise directed by the commission.",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "\\bannual",
+              "every year",
+              "once a year",
+              "each year",
+              "yearly",
+              "every 12 months"
+            ],
+            "none": [
+              "semi-?annual",
+              "bi-?annual",
+              "every (six|6) months",
+              "twice a year",
+              "quarterly",
+              "monthly"
+            ]
+          }
+        },
+        {
+          "id": "annual_certificate_of_inspection",
+          "claim": "No conveyance may operate in Arizona without an annual certificate of inspection issued by the state.",
+          "url": "https://www.azleg.gov/ars/23/00491-07.htm",
+          "source_quote": "No conveyance shall be operated in this state without an annual certificate of inspection issued by the division.",
+          "match": {
+            "all": [
+              "certificate of inspection"
+            ]
+          }
+        },
+        {
+          "id": "certificate_on_site",
+          "claim": "In Arizona, the owner must keep the state certificate at the same location as the conveyance and make it available for inspection on request.",
+          "url": "https://www.law.cornell.edu/regulations/arizona/Ariz-Admin-Code-SS-R20-5-505",
+          "source_quote": "The owner or operator of a conveyance shall maintain the Commission's certificate at the same location as the conveyance or related equipment and make the certificate available for inspection and copying upon request.",
+          "match": {
+            "all": [
+              "certificate"
+            ],
+            "any": [
+              "same location",
+              "on[- ]site",
+              "available"
+            ]
+          }
+        },
+        {
+          "id": "certificate_display",
+          "claim": "In Arizona, the state serial number or the certificate must be posted in or close to the conveyance in an easily accessible location.",
+          "url": "https://www.law.cornell.edu/regulations/arizona/Ariz-Admin-Code-SS-R20-5-505",
+          "source_quote": "The State Serial Number or certificate shall be posted or displayed in or within close proximity to the conveyance in a location that is easily accessible.",
+          "match": {
+            "all": [
+              "(serial number|certificate)"
+            ],
+            "any": [
+              "\\bpost",
+              "display"
+            ]
+          }
+        },
+        {
+          "id": "private_elevator_inspectors",
+          "claim": "Arizona owners may hire a private elevator inspector authorized by the Industrial Commission of Arizona to perform initial or annual inspections.",
+          "url": "https://www.azleg.gov/ars/23/00491-16.htm",
+          "source_quote": "The commission shall compile a list of private elevator inspectors that are currently authorized pursuant to subsection A. An owner or an operator may hire a private elevator inspector.",
+          "match": {
+            "all": [
+              "private (elevator )?inspector"
+            ]
+          }
+        },
+        {
+          "id": "private_inspector_qualifications",
+          "claim": "Arizona private elevator inspectors must register with the commission every year and show at least eight hours of approved continuing education.",
+          "url": "https://www.azleg.gov/ars/23/00491-16.htm",
+          "source_quote": "A private elevator inspector shall register with the commission annually and provide proof of all of the following with the registration: 1. Completion of at least eight hours of continuing education approved by the commission.",
+          "match": {
+            "all": [
+              "inspector"
+            ],
+            "any": [
+              "continuing education",
+              "eight hours",
+              "8 hours"
+            ]
+          }
+        },
+        {
+          "id": "inspector_independence",
+          "claim": "An Arizona private elevator inspector may not inspect a conveyance owned, operated or last serviced by the inspector, a company the inspector owns, or the inspector's employer.",
+          "url": "https://www.azleg.gov/ars/23/00491-16.htm",
+          "source_quote": "Inspect a conveyance owned, operated or last serviced by any of the following: (a) The private elevator inspector. (b) A company owned by the private elevator inspector. (c) A company for which the private elevator inspector is an employee at the time of the inspection.",
+          "match": {
+            "all": [
+              "inspector"
+            ],
+            "any": [
+              "last serviced",
+              "conflict",
+              "independen"
+            ]
+          }
+        },
+        {
+          "id": "owner_stays_responsible",
+          "claim": "In Arizona, using a private elevator inspector does not relieve the owner or operator of their legal obligations.",
+          "url": "https://www.azleg.gov/ars/23/00491-16.htm",
+          "source_quote": "An owner or operator is not relieved of the obligations under this article by the use of a private elevator inspector.",
+          "match": {
+            "all": [
+              "owner"
+            ],
+            "any": [
+              "not relieved",
+              "still responsible",
+              "remains responsible"
+            ]
+          }
+        },
+        {
+          "id": "advance_notice",
+          "claim": "Arizona owners must notify the state at least 90 days before installing, relocating, or altering a conveyance.",
+          "url": "https://www.law.cornell.edu/regulations/arizona/Ariz-Admin-Code-SS-R20-5-506",
+          "source_quote": "The owner or operator of a conveyance shall notify the Elevator Safety Section at least 90 days before installation, relocation, or alteration of a conveyance.",
+          "match": {
+            "any": [
+              "90 days",
+              "ninety days"
+            ]
+          }
+        },
+        {
+          "id": "accident_reporting",
+          "claim": "Arizona owners must notify the state within 24 hours of any accident that injures a person or disables a conveyance.",
+          "url": "https://www.law.cornell.edu/regulations/arizona/Ariz-Admin-Code-SS-R20-5-506",
+          "source_quote": "The owner or operator of a conveyance shall notify the Elevator Safety Section within 24 hours of every accident resulting in injury to a person or disabling damage to a conveyance.",
+          "match": {
+            "all": [
+              "accident"
+            ],
+            "any": [
+              "24 hours",
+              "twenty-four"
+            ]
+          }
+        },
+        {
+          "id": "state_serial_number",
+          "claim": "Every Arizona conveyance is assigned a state serial number on a tag fixed to the controller or mainline disconnect.",
+          "url": "https://www.law.cornell.edu/regulations/arizona/Ariz-Admin-Code-SS-R20-5-506",
+          "source_quote": "The Elevator Safety Section shall assign a State Serial Number to every conveyance for recordkeeping purposes. The State Serial Number shall be on a tag that is affixed to the controller or mainline disconnect of the conveyance.",
+          "match": {
+            "all": [
+              "serial number"
+            ]
+          }
+        },
+        {
+          "id": "azfs_key",
+          "claim": "Arizona conveyances with firefighters' emergency operation must use the Arizona Firefighters Service (AZFS) key.",
+          "url": "https://www.law.cornell.edu/regulations/arizona/Ariz-Admin-Code-SS-R20-5-513",
+          "source_quote": "All conveyances equipped with firefighters' emergency operation shall utilize the AZFS key.",
+          "match": {
+            "any": [
+              "\\bAZFS\\b"
+            ]
+          }
+        },
+        {
+          "id": "existing_conveyances",
+          "claim": "In Arizona, lawfully installed older conveyances may stay in use unless the state's elevator chief considers the use a hazard to life, health or property.",
+          "url": "https://www.azleg.gov/ars/23/00491-03.htm",
+          "source_quote": "Existing conveyances lawfully installed before the effective date of this article may continue in use if the use is, in the opinion of the chief, not a hazard to life, health or property.",
+          "match": {
+            "all": [
+              "existing|older"
+            ],
+            "any": [
+              "hazard"
+            ]
+          }
+        },
+        {
+          "id": "platform_lift_standard",
+          "claim": "Arizona platform lifts and stairway chairlifts installed, repaired, or altered on or after January 1, 2023 must comply with ASME A18.1-2020.",
+          "url": "https://www.law.cornell.edu/regulations/arizona/Ariz-Admin-Code-SS-R20-5-504",
+          "source_quote": "Every owner or operator of a platform lift or stairway chairlift installed, repaired, or altered on or after January 1, 2023, shall comply with ASME A18.1-2020 (Safety Standard for Platform Lifts and Stairway Chairlifts)",
+          "match": {
+            "all": [
+              "A18\\.1"
+            ]
+          }
+        },
+        {
+          "id": "roc_elevator_classifications",
+          "claim": "The Arizona Registrar of Contractors has R-12 and C-12 elevator license classifications that allow the licensee to install and repair elevators, dumbwaiters, escalators, and moving walks.",
+          "url": "https://www.azleg.gov/legtext/57leg/1R/summary/H.HB2233_013025_COM.DOCX.htm",
+          "source_quote": "The Elevators Classification R-12 and C-12 allows the licensee to install and repair elevators, dumbwaiters, escalators, moving walks and ramps and stage and orchestra lifts.",
+          "match": {
+            "any": [
+              "\\bR-12\\b",
+              "\\bC-12\\b"
+            ]
+          }
+        }
+      ],
+      "local_authorities": [
+        {
+          "name": "City of Phoenix Elevator Section (Planning and Development Department)",
+          "scope": "Inspects elevators, escalators, moving walks, dumbwaiters and chair lifts inside the City of Phoenix; the state handles equipment outside Phoenix.",
+          "url": "https://www.phoenix.gov/administration/departments/pdd/commercial-multifamily-building/commercial-plan-reviews-permits/elevators-escalators.html",
+          "source_quote": "The City of Phoenix Elevator Section inspects elevators, escalators, moving walks, dumbwaiters and chair lifts located within Phoenix's jurisdiction."
+        }
+      ],
+      "not_the_regulator": [],
+      "wrong_citations": [],
+      "not_required": [],
+      "cautions": [
+        "Since September 12, 2026 (Laws 2026, Ch. 73), Arizona elevator safety is administered by the Industrial Commission of Arizona's Elevator Division, formerly the ADOSH Elevator Safety Section. Name the Elevator Division as the regulator; mention ADOSH only as the former name.",
+        "The Arizona Registrar of Contractors (ROC) licenses R-12/C-12 elevator contractors but does not issue the annual certificate of inspection.",
+        "Arizona elevator mechanic licensing was not verified — don't state that Arizona licenses or doesn't license mechanics."
+      ],
+      "unverified": [
+        "Official AZ SOS code publisher and ICA pages block automated fetches; rule text via Cornell LII.",
+        "Other Arizona local elevator programs (e.g. Tucson) not confirmed.",
+        "Elevator mechanic licensing not found either way."
+      ],
+      "former_names": [
+        {
+          "name": "Arizona Division of Occupational Safety and Health",
+          "aliases": [
+            "ADOSH",
+            "ADOSH Elevator Safety Section"
+          ],
+          "until": "2026-09-12",
+          "url": "https://www.azleg.gov/legtext/57leg/2R/summary/H.SB1254_071426_SIGNED.DOCX.htm",
+          "source_quote": "Requires the ICA to administer elevator safety regulations through the elevator division rather than through ADOSH."
+        }
+      ]
+    },
+    "SC": {
+      "name": "South Carolina",
+      "authority": {
+        "name": "South Carolina Department of Labor, Licensing and Regulation (LLR), Office of Elevators and Amusement Rides",
+        "short": "LLR",
+        "program": "Office of Elevators and Amusement Rides",
+        "url": "https://www.scstatehouse.gov/code/t41c016.php",
+        "aliases": [
+          "South Carolina Department of Labor, Licensing and Regulation",
+          "SC LLR",
+          "SC LLR Office of Elevators and Amusement Rides"
+        ],
+        "source_quote": "The South Carolina Department of Labor, Licensing and Regulation, Office of Elevators and Amusement Rides, proposes to amend its regulations, appearing in Chapter 71 of the South Carolina Code of Regulations",
+        "source_url": "https://www.scstatehouse.gov/state_register.php?first=FILE&pdf=1&file=Sr48-5.pdf"
+      },
+      "statute": {
+        "citation": "S.C. Code Title 41, Chapter 16 (South Carolina Elevator Code)",
+        "url": "https://www.scstatehouse.gov/code/t41c016.php",
+        "source_quote": "This chapter is known and may be cited as the \"South Carolina Elevator Code\"."
+      },
+      "rules": {
+        "citation": "S.C. Code of Regulations Chapter 71, Article 5 (Safety Standards for Elevator Facilities), Regulations 71-5000 through 71-5700",
+        "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+        "source_quote": "ARTICLE 5 SAFETY STANDARDS FOR ELEVATOR FACILITIES 71-5000. Purpose and Definitions."
+      },
+      "code_adoption": {
+        "standard": "ASME A17.1/CSA B44",
+        "edition": "2019 edition (ASME A17.1-2019/CSA B44:19), adopted without amendment",
+        "effective": "adopted by notice in the S.C. State Register on July 23, 2021",
+        "existing_installations": "Facilities in operation before July 1, 1986 follow the 1986 edition of ANSI A17.3.",
+        "exceptions": [],
+        "amendments_detail": [],
+        "url": "https://www.scstatehouse.gov/state_register.php?first=FILE&pdf=1&file=Sr45-7.pdf",
+        "source_quote": "the Department of Labor, Licensing and Regulation hereby adopts the latest edition of the following nationally recognized code as set forth herein below: 1. Safety Code for Elevators and Escalators, (ASME) A17.1-2019/CSA B44:19, 2019 edition."
+      },
+      "requirements": [
+        {
+          "id": "annual_inspection",
+          "claim": "South Carolina requires elevators to be inspected at installation, registration, alteration or repair, and at least once a year after that before the operating certificate is renewed.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "shall be inspected upon initial installation or registration, or at the time of alteration or repair prior to issuing an operating certificate and a minimum of one (1) time per year thereafter, prior to renewing an operating certificate.",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "\\bannual",
+              "every year",
+              "once a year",
+              "each year",
+              "yearly",
+              "every 12 months",
+              "one time per year"
+            ],
+            "none": [
+              "semi-?annual",
+              "bi-?annual",
+              "every (six|6) months",
+              "twice a year",
+              "quarterly",
+              "monthly"
+            ]
+          }
+        },
+        {
+          "id": "inspection_intervals_other_equipment",
+          "claim": "In South Carolina, handicap lifts are inspected every five years; manlifts, television tower elevators and special purpose elevators every seven years; dumbwaiters when installed or altered.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "b) Dumbwaiters shall be inspected each time they are installed or altered. c) Handicap lifts shall be inspected every five (5) years. d) Manlifts, television tower elevators and special purpose elevators shall be inspected every seven (7) years.",
+          "match": {
+            "all": [
+              "inspect"
+            ],
+            "any": [
+              "handicap lift",
+              "wheelchair lift",
+              "manlift",
+              "dumbwaiter"
+            ]
+          }
+        },
+        {
+          "id": "who_inspects",
+          "claim": "In South Carolina, required inspections may be made only by state inspectors or special inspectors, and a special inspector's inspection may be accepted in place of a state inspection.",
+          "url": "https://www.scstatehouse.gov/code/t41c016.php",
+          "source_quote": "The inspections required by items 1 to 3 of this section must be made only by inspectors or special inspectors. An inspection by a special inspector may be accepted by the Director in lieu of a required inspection by an inspector.",
+          "match": {
+            "any": [
+              "special inspector",
+              "state inspector"
+            ]
+          }
+        },
+        {
+          "id": "operating_certificate_required",
+          "claim": "In South Carolina, no elevator facility may be operated without a certificate of registration and an operating certificate from the state.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "A person, firm, or corporation shall not operate any facility serving any building or structure without a certificate of registration and an operating certificate issued by the Director.",
+          "match": {
+            "all": [
+              "operating certificate"
+            ]
+          }
+        },
+        {
+          "id": "certificate_display",
+          "claim": "In South Carolina, the operating certificate, or a copy, must be displayed conspicuously inside each elevator car.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "An operating certificate shall be displayed in a conspicuous location within each elevator car, or on a permanent object adjacent to all other types of facilities. In the alternative, a facsimile copy of the original operating certificate may be posted within each elevator car",
+          "match": {
+            "all": [
+              "operating certificate"
+            ],
+            "any": [
+              "display",
+              "\\bpost"
+            ]
+          }
+        },
+        {
+          "id": "construction_permit",
+          "claim": "In South Carolina, a state construction permit is required before any elevator facility is erected, constructed, altered or installed.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "A person, firm or corporation shall not erect, construct, alter or install after July 1, 1986, any facility without first obtaining from the Director a construction permit for such work.",
+          "match": {
+            "all": [
+              "permit"
+            ],
+            "any": [
+              "install",
+              "alter",
+              "erect",
+              "construct"
+            ]
+          }
+        },
+        {
+          "id": "special_inspector_license",
+          "claim": "South Carolina special inspectors must be licensed and show the qualifications in the 2018 edition of QEI-1, the American National Standard for Qualification of Elevator Inspectors.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "Any applicant for a license as a special inspector shall present evidence of all qualifications as stated in the 2018 edition of QEI-1, The American National Standard for Qualification of Elevator Inspectors",
+          "match": {
+            "all": [
+              "special inspector"
+            ],
+            "any": [
+              "licens",
+              "QEI"
+            ]
+          }
+        },
+        {
+          "id": "inspector_independence",
+          "claim": "In South Carolina, a special inspector may not inspect an elevator on which the inspector or the inspector's employer has a current service or warranty contract.",
+          "url": "https://www.scstatehouse.gov/code/t41c016.php",
+          "source_quote": "It is unlawful for a special inspector to perform elevator inspections under this chapter or regulations promulgated pursuant to it on an elevator on which he or his employer has a current service or warranty contract.",
+          "match": {
+            "all": [
+              "special inspector"
+            ],
+            "any": [
+              "service (or warranty )?contract",
+              "warranty"
+            ]
+          }
+        },
+        {
+          "id": "owner_maintenance_duty",
+          "claim": "In South Carolina, the owner must keep every elevator facility in safe operating condition and in line with state regulations.",
+          "url": "https://www.scstatehouse.gov/code/t41c016.php",
+          "source_quote": "Every facility must be maintained by the owner in a safe operating condition and in conformity with the regulations promulgated by the Director.",
+          "match": {
+            "all": [
+              "owner"
+            ],
+            "any": [
+              "maintain",
+              "safe operating"
+            ]
+          }
+        },
+        {
+          "id": "accident_reporting",
+          "claim": "In South Carolina, an accident that seriously injures anyone other than an employee must be reported to the state before the end of the next working day.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "is involved in an accident which results in a serious injury to any person other than an employee shall report the injury to the Director before the end of the next working day.",
+          "match": {
+            "all": [
+              "accident"
+            ],
+            "any": [
+              "next working day"
+            ]
+          }
+        },
+        {
+          "id": "private_residence_exemption",
+          "claim": "The South Carolina Elevator Code does not apply to equipment in a single private dwelling.",
+          "url": "https://www.scstatehouse.gov/code/t41c016.php",
+          "source_quote": "The provisions of this chapter do not apply to any facility installed in any single private dwelling residence or to facilities over which an agency of the federal government is asserting similar enforcement jurisdiction.",
+          "match": {
+            "any": [
+              "private dwelling",
+              "private residence"
+            ]
+          }
+        },
+        {
+          "id": "state_preemption",
+          "claim": "Local ordinances that conflict with the South Carolina Elevator Code or its regulations are void.",
+          "url": "https://www.scstatehouse.gov/code/t41c016.php",
+          "source_quote": "Any ordinance, bylaw, or resolution relating to the inspection, construction, installation, alteration, maintenance, or operation of facilities within the limits of the political subdivision, which conflicts with this chapter or with regulations promulgated by the Director, is void.",
+          "match": {
+            "all": [
+              "ordinance"
+            ]
+          }
+        },
+        {
+          "id": "new_installation_code_edition",
+          "claim": "In South Carolina, new elevator facilities must comply with the officially adopted edition of ASME A17.1 in effect when the permit is issued.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "All facilities installed after July 1, 1986, shall comply with the officially adopted editions of the ASME A17.1 Elevator Code and all supplements thereto, at the time the permit is issued.",
+          "match": {
+            "all": [
+              "A17\\.1",
+              "permit"
+            ]
+          }
+        },
+        {
+          "id": "existing_facilities_standard",
+          "claim": "South Carolina elevator facilities in operation before July 1, 1986 must comply with the 1986 edition of ANSI A17.3, the safety code for existing elevators and escalators.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "All facilities for which construction or relocation was begun or which were in operation prior to July 1, 1986, in South Carolina shall comply with the requirements of the 1986 edition of the ANSI A17.3, the American National Standard Safety Code for Existing Elevators and Escalators.",
+          "match": {
+            "all": [
+              "A17\\.3",
+              "1986"
+            ]
+          }
+        },
+        {
+          "id": "hydraulic_cylinder_casing",
+          "claim": "In South Carolina, newly installed underground hydraulic elevator cylinders must be encased in plastic outer containment to limit electrolytic corrosion.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "All newly installed underground hydraulic pressure cylinders shall be encased in an outer plastic containment to minimize electrolytic corrosion.",
+          "match": {
+            "all": [
+              "hydraulic",
+              "cylinder"
+            ],
+            "any": [
+              "plastic",
+              "encase",
+              "containment"
+            ]
+          }
+        },
+        {
+          "id": "firefighter_key",
+          "claim": "In South Carolina, firefighters' service on new installations must use the five-pin S.C. #1000 key.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "The key switches required to operate firefighters' service on Phase I and II shall use a five pin key, S.C. #1000.",
+          "match": {
+            "any": [
+              "#1000",
+              "1000 key",
+              "five[- ]pin"
+            ]
+          }
+        },
+        {
+          "id": "standby_power_existing",
+          "claim": "South Carolina passenger elevators must have standby power that runs emergency lighting and the alarm bell for at least four hours if normal power fails.",
+          "url": "https://www.scstatehouse.gov/coderegs/Chapter%2071.pdf",
+          "source_quote": "All passenger elevators shall be equipped with a standby power source capable of operating emergency lighting and the alarm bell for a period of at least four (4) hours in the event the normal power source fails.",
+          "match": {
+            "all": [
+              "standby power|emergency lighting"
+            ],
+            "any": [
+              "four hours",
+              "4 hours"
+            ]
+          }
+        }
+      ],
+      "local_authorities": [],
+      "not_the_regulator": [],
+      "wrong_citations": [],
+      "not_required": [],
+      "cautions": [
+        "Name the South Carolina Department of Labor, Licensing and Regulation (LLR) in full — there is no separate South Carolina 'Department of Labor' for elevators.",
+        "South Carolina elevator mechanic and contractor licensing was not verified — don't state either way."
+      ],
+      "unverified": [
+        "LLR's elevator website did not respond; authority and code adoption sourced to the S.C. State Register and statute.",
+        "No adoption of ASME A17.1-2022 or later found through September 2026.",
+        "Mechanic and contractor licensing not found either way."
+      ]
+    }
+  }
+}

@@ -27,6 +27,7 @@ from app.services.notification_service import NotificationService
 from app.services.schema_service import build_combined_schema
 from app.services.wordpress_service import WordPressService
 from app.utils.geography import validate_market_scope
+from app.utils.state_facts import validate_state_facts
 from app.utils.helpers import count_words, h2_question_ratio
 
 logger = logging.getLogger(__name__)
@@ -189,6 +190,11 @@ class ContentGenerationService:
             brand_name=brand_name,
             max_body_mentions=max(0, self.settings.market_scope_max_foreign_mentions),
         )
+
+    def _check_state_facts(self, html: str, markets: list[str]) -> tuple[bool, str, dict]:
+        if not self.settings.state_facts_guard_enabled:
+            return True, "", {"checked": False, "reason": "guard disabled"}
+        return validate_state_facts(html, markets)
 
     def _resolve_publish_targets(
         self,
@@ -397,6 +403,7 @@ class ContentGenerationService:
         failure_reason = ""
         validation_attempts = 0
         scope_details: dict = {}
+        facts_details: dict = {}
 
         try:
             for attempt in range(2):
@@ -429,6 +436,13 @@ class ContentGenerationService:
                     # the exact reason, then needs_review. Never auto-publishes.
                     is_valid, failure_reason, scope_details = self._check_market_scope(
                         html_content, draft_title, target_query, brand_markets, brand_name
+                    )
+                if is_valid:
+                    # State-facts gate: a wrong regulator (the TDI-for-Texas
+                    # error), a wrong rule citation, or a requirement the fact
+                    # sheet says is not in force → correction, then needs_review.
+                    is_valid, failure_reason, facts_details = self._check_state_facts(
+                        html_content, brand_markets
                     )
                 if is_valid:
                     break
@@ -517,6 +531,8 @@ class ContentGenerationService:
             "phone_missing": phone_missing,
             # Which out-of-market states (if any) the jurisdiction gate saw.
             "market_scope": scope_details,
+            # Wrong regulators / citations / requirements the facts gate saw.
+            "state_facts": facts_details,
         }
 
         if is_valid:
@@ -720,6 +736,7 @@ class ContentGenerationService:
             html_content, draft.target_query or "", draft.content_type or "faq_hub"
         )
         scope_details: dict = {}
+        facts_details: dict = {}
         if is_valid:
             is_valid, failure_reason, scope_details = self._check_market_scope(
                 html_content,
@@ -727,6 +744,10 @@ class ContentGenerationService:
                 draft.target_query or "",
                 brand.markets or [],
                 brand.name,
+            )
+        if is_valid:
+            is_valid, failure_reason, facts_details = self._check_state_facts(
+                html_content, brand.markets or []
             )
         schema_json, schema_types = build_combined_schema(
             html_content, brand, draft.title or "", draft.content_type or "faq_hub"
@@ -743,6 +764,7 @@ class ContentGenerationService:
             "h2_questions": h2_questions,
             "h2_total": h2_total,
             "market_scope": scope_details,
+            "state_facts": facts_details,
         }
         draft.status = "pending_review" if is_valid else "needs_review"
         await self.db.flush()
