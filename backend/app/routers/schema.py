@@ -338,7 +338,7 @@ async def approve_deployment(
             status_code=400,
             detail=(
                 f"WordPress credentials not configured for {brand.id} — set "
-                f"WP_APP_PASSWORD_{brand.id.upper()} in Railway, then retry."
+                f"WP_APP_PASSWORD_{brand.id.upper()} in the Azure app settings (Key Vault), then retry."
             ),
         )
     async def _update_carrier(post_id: int) -> dict:

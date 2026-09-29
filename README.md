@@ -4,19 +4,24 @@ Answer Engine Optimization automation for Axxiom Elevator's 5-brand network. Gen
 
 ## Architecture
 
-| Layer | Stack | Hosting |
+| Layer | Stack | Hosting (Azure, resource group `Axxiom-devs-foundry`) |
 |---|---|---|
-| Backend API + Workers | Python 3.12, FastAPI, APScheduler, SQLAlchemy | Railway |
-| Frontend Dashboard | React, TypeScript, Tailwind, TanStack Query | Netlify |
-| Auth | Supabase Auth (JWT) | Supabase |
-| Database | PostgreSQL (`aeo` schema) | Supabase (same project as auth) |
+| Backend API + Workers | Python 3.12, FastAPI, APScheduler, SQLAlchemy | App Service `app-axxiom-aeo` on plan `asp-axxiom-mktg-hub` |
+| Frontend Dashboard | React, TypeScript, Tailwind, TanStack Query | Served by the same App Service |
+| Auth | Dashboard password (Key Vault) + signed session cookie | App Service |
+| Database | PostgreSQL (`aeo` schema) | Azure Database for PostgreSQL `psql-axxiom-marketing`, database `axxiom_hub` |
+| Secrets | App settings as Key Vault references | `kv-axxiom-marketing` |
+
+Deploys, settings, migrations and the cutover history: [AZURE_DEPLOY.md](AZURE_DEPLOY.md).
+Railway, Netlify and Supabase were retired in the 2026-09 move to Azure.
 
 ## Repository Structure
 
 ```
 axxiomaeo/
-├── backend/          # FastAPI + cron workers (Railway)
-├── frontend/         # React dashboard (Netlify)
+├── backend/          # FastAPI + cron workers
+├── frontend/         # React dashboard (built into the backend's App Service)
+├── scripts/azure/    # package/deploy, settings sync, migrations, data scripts
 └── README.md
 ```
 
@@ -33,8 +38,8 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your API keys
 
-# Requires PostgreSQL — use Supabase (recommended) or local Postgres
-# See backend/.env.example for DATABASE_URL format (Supabase Session pooler or direct)
+# Requires PostgreSQL: a local Postgres via DATABASE_URL, or the Azure database with
+# `az login` + AZURE_PG_USER (Entra token auth; the server firewall must allow you)
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -53,7 +58,7 @@ cd frontend
 npm install
 cp .env.example .env
 # Set VITE_API_URL=http://localhost:8000
-# Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+# Set VITE_AUTH_PROVIDER=password (and run the API with AUTH_PROVIDER=password)
 
 npm run dev
 ```
@@ -62,7 +67,7 @@ Open http://localhost:5173
 
 ### Development Auth
 
-Local no-auth mode requires an explicit opt-in: set `AUTH_DEV_BYPASS=true` together with `ENVIRONMENT=development` and empty `SUPABASE_URL`/`SUPABASE_JWT_SECRET`. Without the flag the API always requires a valid Supabase JWT — a misconfigured deploy fails closed instead of open.
+Production sign-in is `AUTH_PROVIDER=password`: the dashboard password (`DASHBOARD_PASSWORD`) is checked by the API, which sets a signed HttpOnly session cookie (`DASHBOARD_SESSION_SECRET`). Local no-auth mode requires an explicit opt-in: `AUTH_DEV_BYPASS=true` with `ENVIRONMENT=development` and the legacy Supabase settings empty — a misconfigured deploy fails closed instead of open.
 
 ## Environment Variables
 
@@ -71,7 +76,7 @@ See [backend/.env.example](backend/.env.example) and [frontend/.env.example](fro
 Key backend variables:
 
 - `ANTHROPIC_API_KEY` — Claude content generation
-- `DATABASE_URL` — Supabase PostgreSQL connection string (see `backend/.env.example`)
+- `AZURE_PG_USER` / `AZURE_PG_CLIENT_ID` / `AZURE_PG_HOST` / `AZURE_PG_DATABASE` — Azure Postgres via managed identity (no password); `DATABASE_URL` for a local database
 - `DB_SCHEMA` — `aeo` (default)
 - `WP_APP_PASSWORD_*` / `WP_USERNAME_*` — WordPress Application Password + login per brand
 - `WP_AUTHOR_ID_*` — WordPress user ID to set as the post author/byline per brand (optional; 0/unset = posts belong to the application-password account)
@@ -80,12 +85,12 @@ Key backend variables:
 - `GEO_AEO_TRACKER_URL` / `GEO_AEO_PROVIDERS` — only for the self-hosted [GEO/AEO Tracker](geo-aeo-tracker/README.md) path ([deployment runbook](geo-aeo-tracker/DEPLOYMENT.md))
 - `PEEC_API_KEY` — Legacy Peec.ai citation monitoring (optional; use `CITATION_PROVIDER=peec`)
 - `GOOGLE_SERVICE_ACCOUNT_JSON` — Base64-encoded service account for GSC + GA4
-- `SUPABASE_JWT_SECRET` — JWT validation for dashboard API calls
+- `AUTH_PROVIDER`, `DASHBOARD_PASSWORD`, `DASHBOARD_SESSION_SECRET` — dashboard sign-in
 - `SLACK_WEBHOOK_URL` — Worker notifications (optional)
 - `DISCORD_WEBHOOK_URL` — Published-post notifications with live links (optional; Discord channel → Integrations → Webhooks)
 - `AUTO_PUBLISH_ENABLED` — `true` (default) publishes validated drafts automatically; `false` restores the approval gate
 - `FRONTEND_URL` — Deep links in Slack messages
-- `CORS_ORIGINS` — Netlify URL + localhost
+- `CORS_ORIGINS` — only needed for a dashboard served from another origin (local dev); production serves the dashboard and API from one origin
 
 ## WordPress Integration
 
@@ -127,29 +132,14 @@ Rollout: [wordpress/ROLLOUT_VERIFICATION.md](wordpress/ROLLOUT_VERIFICATION.md) 
 4. **Monitoring/undo:** the **Published Content** page lists everything live; **Return to Review** sets the WordPress post back to draft and pulls the item back into Content Review
 5. Manually-triggered generations (dashboard Generate/Regenerate buttons) still land in **Content Review** for manual approval; schema-only deployments still require approval in **Schema Review**
 
-Kill switch: set `AUTO_PUBLISH_ENABLED=false` in Railway to restore the approve-before-publish gate for the daily worker.
+Kill switch: set `AUTO_PUBLISH_ENABLED=false` in the Azure app settings to restore the approve-before-publish gate for the daily worker.
 
-## Deploy to Railway (Backend)
+## Deploy (Azure)
 
-See [DEPLOY.md](DEPLOY.md) for the full checklist, [backend/RAILWAY_DEPLOY.md](backend/RAILWAY_DEPLOY.md) for Railway details, [frontend/NETLIFY_DEPLOY.md](frontend/NETLIFY_DEPLOY.md) for Netlify, and [wordpress/README.md](wordpress/README.md) for WordPress schema output.
-
-1. Create Railway project, connect GitHub repo
-2. Set root directory to `backend/`
-3. Set env vars from `backend/.env.example` (use Supabase `DATABASE_URL`, not Railway Postgres)
-4. Deploy — health check at `/health` (includes database connectivity)
-5. Set Netlify `VITE_API_URL` to the Railway public URL
-
-## Deploy to Netlify (Frontend)
-
-1. Connect GitHub repo
-2. Base directory: `frontend`
-3. Build command: `npm run build`
-4. Publish directory: `frontend/dist`
-5. Set environment variables:
-   - `VITE_API_URL` — Railway public URL
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-6. In Supabase: add Netlify URL to Auth redirect allowlist
+See [AZURE_DEPLOY.md](AZURE_DEPLOY.md). In short: `./scripts/azure/package-app.sh --deploy`
+builds the dashboard and ships backend + dashboard to `app-axxiom-aeo`; settings and secrets
+come from `./scripts/azure/sync-app-settings.sh`; new `alter_aeo_vN.sql` files are applied by
+hand with `scripts/azure/apply-migrations.sh` (the app never runs DDL on Azure).
 
 ## API Endpoints
 

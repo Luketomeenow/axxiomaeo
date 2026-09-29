@@ -10,6 +10,14 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Retired: the dashboard runs on Azure App Service now (same app as the API).
+# Every old URL forwards there, keeping its path.
+[[redirects]]
+  from = "/*"
+  to = "https://app-axxiom-aeo.azurewebsites.net/:splat"
+  status = 301
+  force = true
+
 # SPA fallback: let React Router handle client-side routes.
 [[redirects]]
   from = "/*"
