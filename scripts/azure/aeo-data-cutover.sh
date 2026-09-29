@@ -86,7 +86,12 @@ else
   ls -lh "$DUMP"
 
   echo "== 2/4 wipe Azure aeo rows (reverse dependency order, one transaction) =="
-  pg_restore -l "$DUMP" | grep "TABLE DATA" | awk '{print $6}' | tac > /tmp/aeo_tables_rev.txt
+  # TOC lines read "ID; ARCHIVE OID TABLE DATA <schema> <table> <owner>" — take the
+  # field after the schema (it was reading the schema, "aeo", as the table name).
+  pg_restore -l "$DUMP" | grep " TABLE DATA aeo " \
+    | awk '{for (i = 1; i <= NF; i++) if ($i == "DATA") { print $(i + 2); break }}' \
+    | tac > /tmp/aeo_tables_rev.txt
+  [[ -s /tmp/aeo_tables_rev.txt ]] || { echo "STOP: no aeo tables found in the dump"; exit 1; }
   { echo "begin;"; awk '{printf "delete from aeo.\"%s\";\n", $1}' /tmp/aeo_tables_rev.txt; echo "commit;"; } > /tmp/aeo_wipe.sql
   if PGPASSWORD="$(az_token)" psql "$AZ" -q -v ON_ERROR_STOP=1 -f /tmp/aeo_wipe.sql >/dev/null 2>/tmp/aeo_wipe.err; then
     echo "wiped $(wc -l < /tmp/aeo_tables_rev.txt) tables"
