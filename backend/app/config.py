@@ -89,6 +89,15 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str = ""
     supabase_jwks_url: str = ""
 
+    # Dashboard sign-in. "supabase" (Railway/Netlify): the dashboard signs in
+    # with Supabase Auth and the API verifies its JWTs. "password" (Azure): the
+    # same model the marketing hub uses — one dashboard password checked by the
+    # API, then a signed HttpOnly session cookie. No Supabase involved.
+    auth_provider: str = "supabase"
+    dashboard_password: str = ""
+    dashboard_session_secret: str = ""
+    dashboard_session_hours: int = 12
+
     slack_webhook_url: str = ""
     # Discord channel webhook — receives published-post notifications with links.
     discord_webhook_url: str = ""

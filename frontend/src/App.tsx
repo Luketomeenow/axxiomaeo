@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { authEnabled } from "./lib/authMode";
 import { AdvisorPage } from "./pages/AdvisorPage";
 import { BrandSettingsPage } from "./pages/BrandSettingsPage";
 import { CitationsPage } from "./pages/CitationsPage";
@@ -19,7 +20,6 @@ import { ReportsPage } from "./pages/ReportsPage";
 import { SchemaHealthPage } from "./pages/SchemaHealthPage";
 import { PublishedSchemaPage } from "./pages/PublishedSchemaPage";
 import { SchemaReviewPage } from "./pages/SchemaReviewPage";
-import { supabase } from "./lib/supabase";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
@@ -36,7 +36,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!supabase) {
+  if (!authEnabled) {
     return <>{children}</>;
   }
 

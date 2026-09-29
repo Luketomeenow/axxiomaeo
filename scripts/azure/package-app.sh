@@ -13,19 +13,14 @@ cd "$(dirname "$0")/../.."
 APP="${APP:-app-axxiom-aeo}"
 RG="${RG:-Axxiom-devs-foundry}"
 STAGE=".azure-stage"
-FRONTEND_ENV="${FRONTEND_ENV:-frontend/.env}"
 
-envval() {
-  [[ -f "$FRONTEND_ENV" ]] || return 0
-  awk -F= -v key="$1" '$0 ~ "^"key"=" {print substr($0, index($0,"=")+1); exit}' "$FRONTEND_ENV" |
-    sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
-}
-
-echo "== building dashboard (same-origin API) =="
+echo "== building dashboard (same-origin API, password sign-in, no Supabase) =="
+# Values set here win over frontend/.env (Vite gives process env priority), so
+# the Azure bundle carries no Supabase URL or key even if a local .env does.
 export VITE_API_URL=""
-export VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-$(envval VITE_SUPABASE_URL)}"
-export VITE_SUPABASE_ANON_KEY="${VITE_SUPABASE_ANON_KEY:-$(envval VITE_SUPABASE_ANON_KEY)}"
-[[ -n "$VITE_SUPABASE_URL" && -n "$VITE_SUPABASE_ANON_KEY" ]] || { echo "STOP: VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing (login would be disabled)"; exit 1; }
+export VITE_AUTH_PROVIDER="password"
+export VITE_SUPABASE_URL=""
+export VITE_SUPABASE_ANON_KEY=""
 (cd frontend && [[ -d node_modules ]] || npm install --no-audit --no-fund --loglevel=error)
 (cd frontend && npm run build >/dev/null)
 

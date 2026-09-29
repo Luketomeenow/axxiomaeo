@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { passwordAuth } from "../lib/authMode";
 
 export function LoginPage() {
   const { user, signIn, loading } = useAuth();
@@ -17,7 +18,7 @@ export function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      if (!supabase) {
+      if (!passwordAuth && !supabase) {
         setError("Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
         return;
       }
@@ -26,7 +27,9 @@ export function LoginPage() {
       const message =
         err instanceof Error
           ? err.message === "Failed to fetch"
-            ? "Cannot reach Supabase. Check VITE_SUPABASE_URL in frontend/.env and restart the dev server."
+            ? passwordAuth
+              ? "Cannot reach the AEO server. Check your connection and try again."
+              : "Cannot reach Supabase. Check VITE_SUPABASE_URL in frontend/.env and restart the dev server."
             : err.message
           : "Login failed";
       setError(message);
@@ -46,18 +49,22 @@ export function LoginPage() {
           <p className="text-sm text-muted mt-2">Sign in to the automation command center</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!passwordAuth && (
+            <div>
+              <label className="block text-sm font-medium text-ink/80 mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="aeo-input"
+                required
+              />
+            </div>
+          )}
           <div>
-            <label className="block text-sm font-medium text-ink/80 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="aeo-input"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-ink/80 mb-1">Password</label>
+            <label className="block text-sm font-medium text-ink/80 mb-1">
+              {passwordAuth ? "Dashboard password" : "Password"}
+            </label>
             <input
               type="password"
               value={password}

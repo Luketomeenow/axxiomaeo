@@ -33,7 +33,8 @@ HOST="https://$(az webapp show -g "$RG" -n "$APP" --query defaultHostName -o tsv
 
 SECRETS=(
   ANTHROPIC_API_KEY AZURE_IMAGE_API_KEY OPENAI_API_KEY BRIGHT_DATA_API_KEY PEEC_API_KEY BING_API_KEY
-  GOOGLE_SERVICE_ACCOUNT_JSON SUPABASE_JWT_SECRET SECRET_KEY AGENT_API_KEY
+  GOOGLE_SERVICE_ACCOUNT_JSON SECRET_KEY AGENT_API_KEY
+  DASHBOARD_PASSWORD DASHBOARD_SESSION_SECRET
   SLACK_WEBHOOK_URL DISCORD_WEBHOOK_URL DISCORD_SCHEMA_WEBHOOK_URL
   WP_APP_PASSWORD_AXXIOM WP_APP_PASSWORD_AMERITEX WP_APP_PASSWORD_ARIZONA_ES
   WP_APP_PASSWORD_LIFTECH WP_APP_PASSWORD_QUALITY WP_APP_PASSWORD_CAROLINA
@@ -46,7 +47,11 @@ SECRETS=(
 typeset -A VAULT_NAME_OVERRIDE
 # ANTHROPIC_API_KEY is the Azure Foundry key (ANTHROPIC_BASE_URL points at Axxiom-AI), which may
 # differ from the hub's anthropic-api-key — keep AEO's own copy rather than guess.
+# DASHBOARD_PASSWORD reuses the marketing hub's dashboard password (same team,
+# one password); the session secret is AEO's own.
 VAULT_NAME_OVERRIDE=(ANTHROPIC_API_KEY aeo-anthropic-api-key
+                     DASHBOARD_PASSWORD dashboard-password
+                     DASHBOARD_SESSION_SECRET aeo-dashboard-session-secret
                      WP_APP_PASSWORD_AXXIOM aeo-wp-app-password-axxiom
                      WP_APP_PASSWORD_AMERITEX aeo-wp-app-password-ameritex
                      WP_APP_PASSWORD_ARIZONA_ES aeo-wp-app-password-arizona-es
@@ -56,7 +61,7 @@ VAULT_NAME_OVERRIDE=(ANTHROPIC_API_KEY aeo-anthropic-api-key
                      DISCORD_WEBHOOK_URL aeo-discord-webhook-url DISCORD_SCHEMA_WEBHOOK_URL aeo-discord-schema-webhook-url
                      SECRET_KEY aeo-secret-key AGENT_API_KEY aeo-agent-api-key SLACK_WEBHOOK_URL aeo-slack-webhook-url)
 CONFIG=(
-  ANTHROPIC_BASE_URL CLAUDE_MODEL SUPABASE_URL SUPABASE_JWKS_URL
+  ANTHROPIC_BASE_URL CLAUDE_MODEL
   IMAGE_PROVIDER AZURE_IMAGE_ENDPOINT AZURE_IMAGE_DEPLOYMENT AZURE_IMAGE_SIZE AZURE_IMAGE_QUALITY COST_PER_IMAGE_USD
   CITATION_PROVIDER BRIGHT_DATA_PROVIDERS
   WP_USERNAME_AXXIOM WP_USERNAME_AMERITEX WP_USERNAME_ARIZONA_ES WP_USERNAME_LIFTECH WP_USERNAME_QUALITY WP_USERNAME_CAROLINA
@@ -85,6 +90,8 @@ settings=(
   "DB_SCHEMA=aeo"
   # the app never runs DDL on Azure; migrations go through apply-migrations.sh
   "DB_MIGRATIONS_ON_STARTUP=false"
+  # dashboard sign-in: password + session cookie, no Supabase Auth
+  "AUTH_PROVIDER=password"
   # parallel run: API + dashboard up, NO jobs until Railway is stopped
   "SCHEDULER_ENABLED=$($LIVE && echo true || echo false)"
 )

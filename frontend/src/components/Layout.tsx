@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { authEnabled } from "../lib/authMode";
 import { NotificationBell } from "./NotificationBell";
 
 const navSections = [
@@ -53,7 +54,7 @@ export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL);
+  const supabaseConfigured = authEnabled;
 
   const handleSignOut = async () => {
     await signOut();
@@ -118,7 +119,7 @@ export function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
         {!supabaseConfigured && (
           <div className="bg-warning/10 border-b border-warning/20 px-6 py-2 text-xs text-warning">
-            Dev mode: Supabase not configured — authentication is bypassed.
+            Dev mode: sign-in is not configured — authentication is bypassed.
           </div>
         )}
         <header className="bg-panel border-b border-border px-6 py-3.5 flex items-center justify-between gap-4 shrink-0">

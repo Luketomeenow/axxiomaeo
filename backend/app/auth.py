@@ -1,5 +1,5 @@
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWKClient
 
@@ -88,20 +88,67 @@ def verify_token(token: str) -> dict:
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {detail}")
 
 
+# --- password sign-in (AUTH_PROVIDER=password, the Azure deploy) -----------
+
+SESSION_COOKIE = "aeo_session"
+_SESSION_AUDIENCE = "aeo-dashboard"
+DASHBOARD_USER = {"sub": "dashboard", "email": "Dashboard login", "provider": "password"}
+
+
+def password_auth_enabled() -> bool:
+    return get_settings().auth_provider.strip().lower() == "password"
+
+
+def _session_secret() -> str:
+    secret = get_settings().dashboard_session_secret
+    if len(secret) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Dashboard sign-in is not configured (DASHBOARD_SESSION_SECRET missing)",
+        )
+    return secret
+
+
+def issue_session() -> tuple[str, int]:
+    """Signed session token and its lifetime in seconds."""
+    import time
+
+    ttl = max(1, get_settings().dashboard_session_hours) * 3600
+    now = int(time.time())
+    token = jwt.encode(
+        {"sub": DASHBOARD_USER["sub"], "aud": _SESSION_AUDIENCE, "iat": now, "exp": now + ttl},
+        _session_secret(),
+        algorithm="HS256",
+    )
+    return token, ttl
+
+
+def verify_session(token: str | None) -> dict:
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not signed in")
+    try:
+        jwt.decode(token, _session_secret(), algorithms=["HS256"], audience=_SESSION_AUDIENCE)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired — sign in again")
+    return dict(DASHBOARD_USER)
+
+
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict:
+    if password_auth_enabled():
+        return verify_session(request.cookies.get(SESSION_COOKIE))
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authorization header")
     return verify_token(credentials.credentials)
 
 
 async def get_optional_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict | None:
-    if credentials is None:
-        return None
     try:
-        return verify_token(credentials.credentials)
+        return await get_current_user(request, credentials)
     except HTTPException:
         return None

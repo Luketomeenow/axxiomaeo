@@ -14,6 +14,7 @@ from app.database import init_db
 from app.routers import (
     advisor,
     agent_api,
+    auth_session,
     brands,
     citations,
     content,
@@ -123,6 +124,7 @@ def create_app() -> FastAPI:
     app.include_router(recommendations.router)
     app.include_router(advisor.router)
     app.include_router(agent_api.router)
+    app.include_router(auth_session.router)
 
     _mount_frontend(app, settings.frontend_dist_dir)
 
