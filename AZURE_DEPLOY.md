@@ -3,8 +3,9 @@
 The AEO platform runs on the marketing hub's Azure footprint (same pattern as
 `axxiom-insight-hub`): one Linux App Service serving the FastAPI API **and** the
 built React dashboard, Microsoft Entra managed-identity auth to Azure Database
-for PostgreSQL, secrets as Key Vault references. Railway + Netlify + Supabase
-stay live until the cutover below.
+for PostgreSQL, secrets as Key Vault references. **Cut over on 2026-09-29**:
+Railway, Netlify and Supabase are retired. The dashboard's Documentation page has an
+**Azure Setup** tab with the operator's view of everything below.
 
 | Piece | Azure resource |
 |---|---|
@@ -13,7 +14,7 @@ stay live until the cutover below.
 | Identity | `umi-marketing-functions` (client `d66356a2-e306-45a9-abc1-947002ff321c`) — PG role + vault Secrets User |
 | Database | `psql-axxiom-marketing` (PG 18, eastus2), database `axxiom_hub`, **schema `aeo`** — same DB as the hub because the hub reads/writes `aeo.*` |
 | Secrets | `kv-axxiom-marketing`; name = env var lowercased with `_`→`-`; AEO-only ones prefixed `aeo-` |
-| Auth | Supabase Auth (unchanged) — the dashboard still logs in against project `cdlssoeqqfrgckpxewhn`; the API verifies its JWTs via JWKS |
+| Auth | Shared dashboard password (`AUTH_PROVIDER=password`): vault `dashboard-password`, the same secret the hub uses; 12-hour HttpOnly `aeo_session` cookie signed with `aeo-dashboard-session-secret`; 8 wrong passwords in 15 min lock that client out for 15 min |
 | AI | already Azure: Foundry Anthropic endpoint (`ANTHROPIC_BASE_URL`) + Azure OpenAI gpt-image-2 |
 
 ## How the app differs on Azure
@@ -22,21 +23,27 @@ stay live until the cutover below.
   `AZURE_PG_HOST`/`AZURE_PG_DATABASE` as that role with an Entra token as the password
   (`app/database.py::_entra_token`, refreshed per new connection, cached ~55 min). Managed
   identity in Azure, `az login` locally.
-- `SCHEDULER_ENABLED=false` → API + dashboard only, no APScheduler jobs. **This is the
-  parallel-run state.** Flip to `true` only after Railway is stopped — two schedulers would
-  publish every draft twice.
+- `SCHEDULER_ENABLED=true` since the cutover (2026-09-29 15:00 UTC); `false` → API +
+  dashboard only, no APScheduler jobs — the kill switch. Never run a second scheduler (a
+  second instance or worker, or a laptop pointed at this database): every draft would
+  publish twice.
 - `FRONTEND_DIST_DIR` → FastAPI serves the Vite build (`frontend_dist/` in the zip) with an
   SPA fallback; API routes win. The dashboard is built with `VITE_API_URL=""` = same origin,
-  so there is no CORS hop.
+  so there is no CORS hop. Swagger and ReDoc move to `/api/docs` and `/api/redoc`, because
+  the dashboard's Documentation page owns `/docs`.
 - Startup command `bash startup.sh` → one uvicorn worker on `$PORT` (8000).
 
 ## Scripts (`scripts/azure/`)
 
 | Script | What |
 |---|---|
-| `sync-app-settings.sh [--apply] [--live]` | Vault secrets (from `backend/.env`, only if missing) + app settings + startup command + health check path. `--live` sets `SCHEDULER_ENABLED=true`. Dry-run by default. |
+| `sync-app-settings.sh [--apply] [--no-secrets] [--live]` | Vault secrets (from `backend/.env`, only if missing) + app settings + startup command + health check path. `--live` sets `SCHEDULER_ENABLED=true`. Dry-run by default. **Always pass `--live` now**: without it the script writes `SCHEDULER_ENABLED=false` and every job stops. |
 | `package-app.sh [--deploy]` | Builds the dashboard, stages `backend/` + `frontend_dist/`, zips, `az webapp deploy` (Oryx runs `pip install` server-side). |
 | `aeo-data-cutover.sh [--init]` | **Azure Cloud Shell.** `--init` = first copy (schema + data, tables created under your login → owned by `dataservices`, mirrored to Fabric). Default = data-only wipe + reload + exact-count verification + identity-privilege check. |
+| `apply-migrations.sh [ref]` | **Azure Cloud Shell, as dataservices.** Applies every idempotent `alter_aeo_v*.sql` from `ref` (default `main`) in version order, then checks RLS and the app's grants (both expect 0). `AZ_USER=` for anyone but Luke. |
+| `drop-supabase-rls.sql` | **Azure Cloud Shell.** Drops the Supabase RLS policies and disables RLS on `aeo` tables. Idempotent. |
+| `cloudshell-pg-client.sh [major]` | **Azure Cloud Shell.** Rootless modern `psql`/`pg_dump` into `~/pgclient` (no sudo there). |
+| `aeo-value-check.sql` | **Azure Cloud Shell.** Read-only report: published articles, citations, AEO traffic, calls, cost. |
 
 `az` on this Mac lives at `/opt/homebrew/bin/az`; npm at `~/.nvm/versions/node/v24.16.0/bin`.
 
@@ -44,12 +51,14 @@ stay live until the cutover below.
 
 ### Status
 
-**Parallel run is LIVE (2026-09-21).** https://app-axxiom-aeo.azurewebsites.net —
-dashboard + API on one origin, `/health` reports `database: connected` through the
-managed identity. `SCHEDULER_ENABLED=false`, so Railway is still the only writer and
-nothing publishes twice. Data copied with `0 mismatches / 16 tables`. Steps 0–1 and 3
-below are done; what remains is the RLS drop (step 1b), the secret load (step 2), the
-Supabase redirect (step 4), and section B.
+**Cut over 2026-09-29 — Azure is the only runtime.** https://app-axxiom-aeo.azurewebsites.net
+serves the dashboard + API on one origin with password sign-in; `/health` reports
+`"database": "connected"` and `"data": "visible"`. Railway is stopped, the final data
+copy verified, and the scheduler has been on since 15:00 UTC. The deployed build (14:00
+UTC) includes the state fact sheet. Sections A and B stay below as the record of how it
+was done. Still open: B5 (hub deploy), B6 (Foundry target, which first needs an
+`AGENT_API_KEY`), B7 (Netlify redirect, branch `chore/retire-railway-netlify`), B8 (Zach:
+AEOData notebook). Step A4 no longer applies; Supabase Auth is gone.
 
 ### A. Parallel run (no production impact)
 
@@ -89,7 +98,8 @@ Supabase redirect (step 4), and section B.
    Until this runs the app has no Claude key, no Bright Data key, no WordPress
    passwords and no Discord/Slack webhooks — fine while the scheduler is off.
 3. `./scripts/azure/package-app.sh --deploy`; watch `az webapp log tail -g Axxiom-devs-foundry -n app-axxiom-aeo`.
-4. Supabase → Authentication → URL Configuration: add `https://app-axxiom-aeo.azurewebsites.net` to Redirect URLs.
+4. ~~Supabase → Authentication → URL Configuration: add the Azure URL to Redirect URLs.~~
+   Obsolete: password sign-in replaced Supabase Auth on 2026-09-29.
 5. Verify: `/health` → `"database": "connected"`; log in; Published Content, Citations,
    Reports show the same numbers as the Netlify site (both read the same snapshot — any
    difference is a hosting bug). Configuration blade: every vault ref shows a green check.
@@ -116,7 +126,9 @@ loaded, Azure login checked against Netlify.
 6. **Foundry agent:** Foundry portal → project Axxiom-Dev → Connected resources →
    `aeo-platform-api` → change the target from `https://axxiomaeo-production.up.railway.app`
    to `https://app-axxiom-aeo.azurewebsites.net`. Its custom key must equal the app's
-   `AGENT_API_KEY` (vault `aeo-agent-api-key`, loaded from Railway in step A2).
+   `AGENT_API_KEY` (vault `aeo-agent-api-key`). Railway never had that variable, so there
+   is nothing to carry over: create the secret and the setting first (commands in the
+   Azure Setup tab → Identity & secrets). Until then `/api/agent/*` answers 503.
 7. **Netlify:** add to `netlify.toml` on main, above the SPA fallback:
    `[[redirects]] from = "/*"  to = "https://app-axxiom-aeo.azurewebsites.net/:splat"  status = 301  force = true`
    Pause builds after it deploys; delete the site after a quiet week.
@@ -125,14 +137,12 @@ loaded, Azure login checked against Netlify.
 
 **Rollback** (any point after B.4): `SCHEDULER_ENABLED=false` on Azure, scale the Railway
 service back to 1 replica (or `railway redeploy`), unset `AZURE_PG_SCHEMAS` on the hub. Rows written on Azure after the flip would need a reverse copy — decide inside the window.
+This only works while the Railway service still exists. After that, roll back by
+redeploying an older commit with `package-app.sh --deploy` (the B2 plan has no slots).
+Migrations so far only add, so an older build runs on the current schema.
 
 ## Known gaps / follow-ups
 
-- Alerts: `DISCORD_WEBHOOK_URL`, `DISCORD_SCHEMA_WEBHOOK_URL`, `SLACK_WEBHOOK_URL` live only in
-  Railway variables, not in `backend/.env` — sourcing `ENV_FILE` from `railway variables`
-  (step 2) covers them; otherwise the Azure app posts no notifications.
-- Cloud Shell runs Azure Linux with sudo blocked, and `$HOME` does not survive between
-  sessions — re-fetch the scripts and re-run `cloudshell-pg-client.sh` each time.
 - **Row-Level Security and migrations — decided by Zach, 2026-09-25.** The `aeo` tables
   carried Supabase's RLS policies across in the dump. On Supabase the app ran as the table
   owner so they never applied; on Azure it connects as `umi-marketing-functions`, a non-owner,
@@ -150,41 +160,17 @@ service back to 1 replica (or `railway redeploy`), unset `AZURE_PG_SCHEMAS` on t
      applies every idempotent `alter_aeo_v*.sql` in version order and checks RLS + grants.
   `/health` now reports `"data": "visible"` only when the app can actually read a brand row, so
   an RLS or grant problem shows up there instead of as empty pages.
-
-- Alerts: `DISCORD_WEBHOOK_URL`, `DISCORD_SCHEMA_WEBHOOK_URL`, `SLACK_WEBHOOK_URL` live only in
-  Railway variables, not in `backend/.env` — sourcing `ENV_FILE` from `railway variables`
-  (step 2) covers them; otherwise the Azure app posts no notifications.
 - Cloud Shell runs Azure Linux with sudo blocked, and `$HOME` does not survive between
   sessions — re-fetch the scripts and re-run `cloudshell-pg-client.sh` each time.
-- **RLS blocks the app from the data (blocking, found 2026-09-21).** Supabase
-  enables Row-Level Security on the tables it exposes through PostgREST, and
-  `pg_dump` carried that across. On Supabase the app connected as the table
-  owner, so RLS never applied; on Azure it connects as `umi-marketing-functions`,
-  a non-owner, so RLS is enforced against it. The symptom is silent: `SELECT`
-  returns zero rows and `INSERT` is refused, while `/health` still reports the
-  database connected. It showed up as the startup seed trying to re-insert the
-  `axxiom` brand that demonstrably exists in the copy. `has_table_privilege`
-  reports `true` throughout, so the cutover script now checks RLS separately.
-
-  **Fix — one grant, from Zach:**
-  ```sql
-  GRANT dataservices TO "umi-marketing-functions";
-  ```
-  Membership in the owning role restores exactly the posture the app had on
-  Supabase (it ran as the owner), leaves every policy in place and enforced for
-  everyone else, and fixes the migration problem below at the same time. Nothing
-  in this codebase uses RLS for access control: no session roles, no `auth.uid()`,
-  and the FastAPI JWT check is the only gatekeeper. The alternative — disabling
-  RLS on the `aeo` tables — weakens a control that costs nothing to keep, so
-  prefer the grant.
-
-- **Migration ownership (blocking before cutover).** `alter_aeo_vN.sql` runs
-  `ALTER TABLE aeo.*`, which requires ownership. The restore created the tables as
-  Luke, so they belong to `dataservices`, and the app's identity is not a member.
-  Each migration file is now attempted independently and a failure is logged rather
-  than taking startup down, but new migrations will not apply until Zach runs
-  `GRANT dataservices TO "umi-marketing-functions"` (or they are applied by hand in
-  Cloud Shell).
+- **Agent API is off.** `AGENT_API_KEY` is not set anywhere (app settings, vault, or the old
+  Railway variables), so `/api/agent/*` answers 503 and the Foundry agents can't call in.
+  Steps: Azure Setup tab → Identity & secrets.
+- `sync-app-settings.sh` still defaults to the parallel-run `SCHEDULER_ENABLED=false`, so
+  every run needs `--live` (or flip the default in the script).
+- Alerts: resolved at cutover. The Discord webhooks are vault references
+  (`aeo-discord-webhook-url`, `aeo-discord-schema-webhook-url`); `SLACK_WEBHOOK_URL` was
+  empty on Railway too.
 - No CI yet — deploys are the manual zip push, same as the hub. A GitHub Actions OIDC
   workflow is the natural next step for both repos.
-- Entra ID login (replacing Supabase Auth) is the last Supabase dependency to remove.
+- Supabase Auth is gone (password sign-in, 2026-09-29). Entra single sign-on remains an
+  option; Zach would need to grant admin consent.

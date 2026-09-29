@@ -51,10 +51,16 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    # When this process also serves the dashboard (Azure), the dashboard's
+    # Documentation page owns /docs, so the API's Swagger UI and ReDoc move
+    # under /api. Otherwise a refresh or a shared /docs link opens Swagger.
+    api_docs_prefix = "/api" if settings.frontend_dist_dir else ""
     app = FastAPI(
         title="Axxiom AEO Automation API",
         version="1.0.0",
         lifespan=lifespan,
+        docs_url=f"{api_docs_prefix}/docs",
+        redoc_url=f"{api_docs_prefix}/redoc",
     )
 
     allow_origin_regex: str | None = None
@@ -149,7 +155,7 @@ def _mount_frontend(app: FastAPI, dist_dir: str) -> None:
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa(full_path: str):
-        if full_path.startswith(("api/", "api", "health", "docs", "openapi.json")):
+        if full_path.startswith(("api/", "api", "health", "openapi.json")):
             return JSONResponse(status_code=404, content={"detail": "Not Found"})
         candidate = (dist / full_path).resolve() if full_path else None
         if candidate and candidate.is_file() and str(candidate).startswith(str(dist.resolve())):
