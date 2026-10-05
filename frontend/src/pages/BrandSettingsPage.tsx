@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { CtaRefreshPanel } from "../components/CtaRefreshPanel";
 import { apiFetch } from "../lib/api";
-import type { Brand, WpTestResult } from "../types";
+import type { Brand, PhoneCheck, WpTestResult } from "../types";
 
 function normalizeGa4PropertyId(value: string): string {
   const trimmed = value.trim();
@@ -44,11 +45,27 @@ export function BrandSettingsPage() {
     setSaveMsg("");
     setSaveError("");
     setWpTest(null);
+    setPhoneToCheck(null);
   }, [brandId]);
 
   useEffect(() => {
     setServiceUrlsRaw(brand ? JSON.stringify(brand.service_page_urls ?? {}, null, 2) : "");
   }, [brandId, brand]);
+
+  // Is the phone (saved, or as typed once the field loses focus) a CallRail
+  // rotating website number? Those never get swapped per visitor.
+  const [phoneToCheck, setPhoneToCheck] = useState<string | null>(null);
+  const { data: phoneCheck } = useQuery({
+    queryKey: ["phone-check", brandId, phoneToCheck],
+    queryFn: () =>
+      apiFetch<PhoneCheck>(
+        `/api/brands/${brandId}/phone-check` +
+          (phoneToCheck !== null ? `?phone=${encodeURIComponent(phoneToCheck)}` : ""),
+      ),
+    enabled: !!brandId,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
 
   const update = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
@@ -75,7 +92,7 @@ export function BrandSettingsPage() {
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-ink">Brand Settings</h2>
         <p className="text-sm text-muted">
-          WordPress application passwords are managed via Railway environment variables.
+          WordPress application passwords live in Azure Key Vault (app settings), not here.
         </p>
         <div className="aeo-panel overflow-hidden">
           <table className="w-full text-sm">
@@ -175,7 +192,7 @@ export function BrandSettingsPage() {
       </Link>
       <h2 className="text-xl font-bold text-ink">Edit: {brand.name}</h2>
       <p className="text-xs text-muted">
-        WordPress passwords are managed via Railway environment variables, not here.
+        WordPress passwords live in Azure Key Vault (app settings), not here.
       </p>
 
       {saveMsg && (
@@ -280,8 +297,27 @@ export function BrandSettingsPage() {
             type="text"
             value={values.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            onBlur={(e) => setPhoneToCheck(e.target.value.trim())}
             className="w-full border border-border rounded px-3 py-2 text-sm"
           />
+          <p className="text-xs text-muted/80 mt-1">
+            Used in every post's call button and schema. Enter the brand's main line, the number in
+            the site's HTML that CallRail's script swaps for each visitor. Don't copy it from the live
+            page: that shows a rotating tracking number.
+          </p>
+          {phoneCheck?.checked && phoneCheck.website_pool && (
+            <p className="text-xs text-warning mt-1">
+              ⚠ This is one of CallRail's rotating website numbers
+              {phoneCheck.trackers?.[0] ? ` (tracker "${phoneCheck.trackers[0].tracker}")` : ""}. Posts
+              that show it credit their calls to the wrong page. Use the main line instead.
+            </p>
+          )}
+          {phoneCheck?.checked && phoneCheck.tracking_number && !phoneCheck.website_pool && (
+            <p className="text-xs text-muted mt-1">
+              CallRail tracking number
+              {phoneCheck.trackers?.[0] ? ` (tracker "${phoneCheck.trackers[0].tracker}")` : ""}.
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-xs font-medium text-muted mb-1">GA4 Property ID</label>
@@ -358,6 +394,11 @@ export function BrandSettingsPage() {
           {update.isPending ? "Saving…" : "Save Changes"}
         </button>
       </div>
+
+      <CtaRefreshPanel
+        brandId={brand.id}
+        unsavedPhone={form.phone !== undefined && (form.phone ?? "") !== (brand.phone ?? "")}
+      />
     </div>
   );
 }

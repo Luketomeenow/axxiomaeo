@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,3 +82,53 @@ async def test_wp_connection(
     # Feed the health page's cache so /api/health/flow reflects this instantly.
     store_wp_auth_result(brand_id, result)
     return {**result, "checked_at": datetime.utcnow().isoformat()}
+
+
+class CtaRefreshRequest(BaseModel):
+    apply: bool = False
+    limit: int = Field(20, ge=1, le=50)
+    # Earlier numbers to replace besides the ones found in the posts' CTA
+    # buttons, e.g. a number that only appears in body text.
+    old_numbers: list[str] = []
+
+
+@router.get("/{brand_id}/phone-check")
+async def check_brand_phone(
+    brand_id: str,
+    phone: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Is the phone (default: the saved one) one of CallRail's rotating
+    website numbers? Those never get swapped per visitor, so calls from posts
+    that show one are credited to the wrong page."""
+    from app.services.cta_refresh_service import phone_check
+
+    brand = await db.get(Brand, brand_id)
+    if not brand:
+        raise HTTPException(status_code=404, detail="Brand not found")
+    return await phone_check(db, phone if phone is not None else brand.phone)
+
+
+@router.post("/{brand_id}/cta-refresh")
+async def refresh_post_ctas(
+    brand_id: str,
+    body: CtaRefreshRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    """Bring the call-to-action and phone number on the brand's published
+    posts up to date with Brand Settings. apply=false (default) only reports
+    what would change; apply=true updates up to ``limit`` posts on WordPress
+    per call (the dashboard asks for confirmation, then repeats until
+    ``remaining`` is 0)."""
+    from app.services.cta_refresh_service import refresh_brand_posts
+
+    brand = await db.get(Brand, brand_id)
+    if not brand:
+        raise HTTPException(status_code=404, detail="Brand not found")
+    if body.apply and not get_settings().wp_publish_configured(brand_id):
+        raise HTTPException(status_code=400, detail="WordPress credentials not configured for this brand")
+    return await refresh_brand_posts(
+        db, brand, apply=body.apply, limit=body.limit, old_numbers=body.old_numbers
+    )
