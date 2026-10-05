@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { OptimizerPanel } from "../components/OptimizerPanel";
 import { apiFetch } from "../lib/api";
 import type { FlowHealth, FlowStage, WorkerErrorItem, WpTestResult } from "../types";
 
@@ -183,6 +184,8 @@ export function SystemHealthPage() {
           );
         })}
       </div>
+
+      <OptimizerPanel />
 
       {!!wpRows.length && (
         <div className="aeo-panel overflow-hidden">

@@ -37,6 +37,7 @@ const PLATFORM_GROUPS: SectionGroup[] = [
     group: "Reliability",
     items: [
       { id: "health", label: "System Health & alerts" },
+      { id: "optimizer", label: "Optimization agent" },
       { id: "agent", label: "Agent API" },
     ],
   },
@@ -63,6 +64,7 @@ const AZURE_GROUPS: SectionGroup[] = [
     items: [
       { id: "azure-signin", label: "Dashboard sign-in" },
       { id: "azure-secrets", label: "Identity & secrets" },
+      { id: "azure-optimizer", label: "Optimization agent" },
     ],
   },
   {
@@ -297,7 +299,8 @@ const STEPS: { title: string; body: ReactNode }[] = [
       <>
         Citation gaps become one-click Recommendations, and the Improvement Advisor reads the whole
         platform — KPIs, share by brand, posting cadence, pipeline health, costs — into a prioritized
-        "what to improve and why" report.
+        "what to improve and why" report. At 7:30 the optimization agent turns it into specific changes
+        on System Health; an approved code change becomes a pull request drafted by Claude Code.
       </>
     ),
   },
@@ -857,6 +860,82 @@ function PlatformDocs() {
         </List>
       </Section>
 
+      {/* Optimization agent */}
+      <Section
+        id="optimizer"
+        eyebrow="Optimization agent"
+        title={
+          <>
+            Proposes changes; Claude Code drafts the approved ones <Chip tone="gate">human-approved</Chip>
+          </>
+        }
+      >
+        <P>
+          The Advisor says what to improve. The optimization agent, on the <Em>System Health</Em> page,
+          turns that into specific changes you approve or reject, and carries out the approved ones. It
+          runs every Monday at 7:30 AM, after the Advisor, and on demand with <Em>Run analysis now</Em>.
+        </P>
+        <H3>What it reads</H3>
+        <P>
+          A snapshot the platform computes itself: pipeline stages, posts per brand, citation share per
+          brand and engine, phone calls that started on articles (CallRail warehouse), GA4{" "}
+          <Code>phone_call_click</Code> and <Code>form_submit</Code> per brand, the topic queue, draft
+          validation failures, and the main feature switches. Claude only explains. Each proposal must
+          quote numbers from the snapshot, every quoted value is checked against it (✓ found, ⚠ not
+          found), and a proposal with nothing found is dropped.
+        </P>
+        <H3>Two kinds of proposal</H3>
+        <Table
+          head={
+            <>
+              <Th>Kind</Th>
+              <Th>When you approve it</Th>
+            </>
+          }
+        >
+          <tr>
+            <Td tone="ink">Code change</Td>
+            <Td>
+              GitHub Actions starts a Claude Code agent on a new branch. It edits files only (no shell,
+              no network). The workflow then runs the backend tests, the type check and the build, gives
+              the agent one try at fixing failures, and opens a pull request. The PR is a draft if checks
+              still fail. You can edit the agent's task before approving.
+            </Td>
+          </tr>
+          <tr>
+            <Td tone="ink">Manual change</Td>
+            <Td>
+              Work outside this repo, such as WordPress admin, CallRail, GA4, Cloudflare or Brand
+              Settings. Accepting it tracks it as yours to do; <Em>Mark done</Em> closes it.
+            </Td>
+          </tr>
+        </Table>
+        <H3>Why approval can't ship anything by itself</H3>
+        <List>
+          <li>
+            The platform's GitHub token can start the workflow and read its results. It cannot push code.
+          </li>
+          <li>
+            The agent never holds a push credential. The workflow pushes the branch after the agent has
+            exited, and rejects any change under <Code>.github/</Code>, <Code>.claude/</Code>,{" "}
+            <Code>scripts/azure/</Code> or an env file.
+          </li>
+          <li>
+            Merging the PR doesn't deploy. Deploys stay manual (<Em>Azure Setup → Deploying</Em>).
+          </li>
+          <li>
+            Rejected proposals aren't proposed again for 60 days, and each approval is recorded with who
+            and when.
+          </li>
+        </List>
+        <P>
+          Status follows each change from <Em>Starting</Em> to <Em>Claude Code is implementing it</Em>,{" "}
+          <Em>Pull request ready</Em> and <Em>Merged</Em>, with links to the run log and the PR. A new
+          proposal batch and each ready PR are also posted to Discord. To connect the agent, see{" "}
+          <Em>Azure Setup → Optimization agent</Em>.
+        </P>
+      </Section>
+
       {/* Agent API */}
       <Section id="agent" eyebrow="Agent API" title="Machine-facing endpoints for external AI agents">
         <P>
@@ -1030,6 +1109,8 @@ function PlatformDocs() {
           {[
             ["Citation audit", "Mondays, 5:00 AM"],
             ["Improvement advisor", "Mondays, 7:00 AM"],
+            ["Optimization agent (proposals)", "Mondays, 7:30 AM"],
+            ["Optimizer GitHub follow-up", "every 15 min, only while a change is in flight"],
             ["Topic discovery", "daily, 8:00 AM"],
             ["Daily content + auto-publish", "daily, 9:00 AM"],
             ["Schema auto-publish (self-heal)", "daily, 10:00 AM"],
@@ -1129,6 +1210,7 @@ const AZURE_SECRETS: [string, string, string?][] = [
   ["SECRET_KEY", "aeo-secret-key"],
   ["DASHBOARD_SESSION_SECRET", "aeo-dashboard-session-secret"],
   ["AGENT_API_KEY", "aeo-agent-api-key", "once the Agent API is turned on"],
+  ["OPTIMIZER_GITHUB_TOKEN", "aeo-optimizer-github-token", "once the optimization agent is connected"],
   ["DASHBOARD_PASSWORD", "dashboard-password", "shared with the hub"],
   ["BRIGHT_DATA_API_KEY", "bright-data-api-key"],
   ["GOOGLE_SERVICE_ACCOUNT_JSON", "google-service-account-json"],
@@ -1345,6 +1427,58 @@ az webapp config appsettings set ${AZ} -o none \\
   --settings "AGENT_API_KEY=@Microsoft.KeyVault(SecretUri=https://kv-axxiom-marketing.vault.azure.net/secrets/aeo-agent-api-key/)"`}</Cmd>
       </Section>
 
+      {/* Optimization agent */}
+      <Section id="azure-optimizer" eyebrow="Optimization agent" title="Connecting the Claude Code agent">
+        <P>
+          Proposals work without any of this. Executing approved code changes needs two credentials and
+          one GitHub setting. None of them is an Azure resource.
+        </P>
+        <H3>1. A GitHub token for the platform</H3>
+        <P>
+          GitHub → Settings → Developer settings → Fine-grained tokens → Generate. Repository access: only{" "}
+          <Code>Luketomeenow/axxiomaeo</Code>. Permissions: <Em>Actions: read and write</Em>,{" "}
+          <Em>Pull requests: read</Em>. That lets the platform start the workflow and follow it, and
+          nothing else. Note the expiry date, because approvals stop working when it lapses.
+        </P>
+        <Cmd>{`read -rs GH_TOKEN   # paste the token, then press Enter
+az keyvault secret set --vault-name kv-axxiom-marketing --name aeo-optimizer-github-token --value "$GH_TOKEN" -o none
+az webapp config appsettings set ${AZ} -o none \\
+  --settings "OPTIMIZER_GITHUB_TOKEN=@Microsoft.KeyVault(SecretUri=https://kv-axxiom-marketing.vault.azure.net/secrets/aeo-optimizer-github-token/)"`}</Cmd>
+        <H3>2. The Foundry key for the agent</H3>
+        <P>
+          Claude Code runs in GitHub Actions and reaches Claude through the <Code>axxiom-ai</Code> Foundry
+          resource. Add the Foundry key (the same key as <Code>aeo-anthropic-api-key</Code>) as a
+          repository secret. <Code>gh</Code> prompts for the value, so it never lands in your shell
+          history:
+        </P>
+        <Cmd>{`gh secret set FOUNDRY_API_KEY --repo Luketomeenow/axxiomaeo
+# optional: a different deployment for the agent (default claude-opus-5)
+gh variable set OPTIMIZER_MODEL --body claude-opus-5 --repo Luketomeenow/axxiomaeo`}</Cmd>
+        <H3>3. Let workflows open pull requests</H3>
+        <P>
+          Repository → Settings → Actions → General → Workflow permissions → tick{" "}
+          <Em>Allow GitHub Actions to create and approve pull requests</Em>.
+        </P>
+        <H3>4. Put the workflow on the default branch</H3>
+        <P>
+          GitHub only starts a dispatched workflow that is on the default branch, so{" "}
+          <Code>.github/workflows/aeo-optimizer.yml</Code> must be merged to <Code>main</Code>. Until{" "}
+          <Code>feat/azure-app-service</Code> is merged to <Code>main</Code>, also set{" "}
+          <Code>OPTIMIZER_BASE_BRANCH=feat/azure-app-service</Code>, so the agent starts from the code
+          that is actually deployed.
+        </P>
+        <P>
+          When everything is in place, System Health → Optimization agent reads{" "}
+          <Em>Claude Code agent connected</Em>.
+        </P>
+        <Callout tone="warn" tag="Foundry quota">
+          The <Code>claude-opus-5</Code> deployment allows about 40K tokens a minute. A Claude Code run
+          makes dozens of model calls of 20–60K tokens each, so one run can take half an hour or more and
+          a second run at the same time will be rate-limited. Approve one code change at a time, or ask
+          Zach for a higher-quota deployment for the agent and set <Code>OPTIMIZER_MODEL</Code> to it.
+        </Callout>
+      </Section>
+
       {/* Deploying */}
       <Section id="azure-deploy" eyebrow="Deploying" title="Manual zip deploys from a laptop">
         <P>
@@ -1451,9 +1585,10 @@ bash apply-migrations.sh             # migrations on main
 bash apply-migrations.sh my-branch   # or the branch you're about to deploy
 AZ_USER=you@axxiomelevator.com bash apply-migrations.sh   # anyone other than Luke`}</Cmd>
         <P>
-          Every migration file is idempotent, so the script re-applies the whole set in order, then runs two
-          checks that should both print 0: tables with RLS switched on, and tables the app can't read or
-          write. If the second one isn't 0, a new table is missing its grant; ask Zach.
+          Every migration file is idempotent, so the script re-applies the whole set in order, gives the
+          app's identity read and write access to any table a migration just created, then runs two checks
+          that should both print 0: tables with RLS switched on, and tables the app can't read or write. If
+          the second one isn't 0, ask Zach.
         </P>
         <H3>Row-Level Security is off, on purpose</H3>
         <P>
@@ -1468,7 +1603,7 @@ AZ_USER=you@axxiomelevator.com bash apply-migrations.sh   # anyone other than Lu
       {/* Scheduler */}
       <Section id="azure-scheduler" eyebrow="Scheduler" title="One instance, one worker — or every job runs twice">
         <P>
-          The ten scheduled jobs (<Em>Platform → Operations</Em>) run inside the web process on APScheduler,
+          The twelve scheduled jobs (<Em>Platform → Operations</Em>) run inside the web process on APScheduler,
           in America/Chicago time. That's why the plan stays at one instance and <Code>startup.sh</Code>{" "}
           starts a single uvicorn worker: a second copy would write, publish, and audit everything twice.
           Always On keeps the process awake so jobs fire on time.

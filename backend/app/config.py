@@ -212,6 +212,26 @@ class Settings(BaseSettings):
     # recommendations. Also available on demand at /api/advisor/latest.
     advisor_enabled: bool = True
 
+    # Optimization agent (System Health): weekly (Mon 7:30am CT, after the
+    # advisor) and on demand, turns the platform's own numbers into change
+    # proposals that a person approves or rejects. Approving a code change
+    # starts the Claude Code workflow (.github/workflows/aeo-optimizer.yml) in
+    # GitHub Actions, which implements it on a new branch and opens a pull
+    # request. Merging and deploying stay with a person.
+    optimizer_enabled: bool = True
+    # Fine-grained GitHub token for this one repo with Actions: read and write
+    # and Pull requests: read. It can start the workflow and read its runs and
+    # pull requests, but cannot push code: the workflow pushes with its own
+    # short-lived GITHUB_TOKEN. Empty = proposals only, no execution.
+    optimizer_github_token: str = ""
+    optimizer_github_repo: str = "Luketomeenow/axxiomaeo"
+    optimizer_workflow: str = "aeo-optimizer.yml"
+    # Branch the agent starts from and opens its pull requests against. The
+    # workflow file must also be on the repo's default branch for GitHub to
+    # accept a dispatch.
+    optimizer_base_branch: str = "main"
+    optimizer_max_proposals: int = 6
+
     # Daily schema auto-publish: a worker publishes one missing or outdated
     # brand-level schema per brand per day straight to WordPress and announces
     # it on Discord (self-healing rollout of Organization + LocalBusiness +

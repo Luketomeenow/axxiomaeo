@@ -5,12 +5,14 @@ from datetime import datetime
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from app.workers.advisor_worker import run_improvement_advisor
 from app.workers.citation_worker import run_citation_audit
 from app.workers.content_refresh_worker import run_content_refresh
 from app.workers.content_worker import run_daily_content
 from app.workers.flow_health_worker import run_flow_health
+from app.workers.optimizer_worker import run_optimizer, run_optimizer_sync
 from app.workers.posting_monitor_worker import run_posting_monitor
 from app.workers.report_worker import run_monthly_report
 from app.workers.schema_publish_worker import run_daily_schema_publish
@@ -20,6 +22,10 @@ from app.workers.topic_worker import run_topic_discovery
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler(timezone="America/Chicago")
+
+# Frequent housekeeping jobs that would flood aeo.job_runs (one row per
+# firing) without telling the health check anything.
+_UNRECORDED_JOBS = {"optimizer_sync"}
 
 
 async def _record_job_run(job_id: str, status: str, detail: str | None, scheduled_for):
@@ -47,6 +53,8 @@ async def _record_job_run(job_id: str, status: str, detail: str | None, schedule
 
 
 def _on_job_event(event):
+    if event.job_id in _UNRECORDED_JOBS and event.code != EVENT_JOB_ERROR:
+        return
     status = "ok"
     detail = None
     if event.code == EVENT_JOB_ERROR:
@@ -138,10 +146,27 @@ def setup_scheduler():
         id="improvement_advisor",
         replace_existing=True,
     )
+    # Optimization agent: weekly proposals after the advisor, for System Health.
+    scheduler.add_job(
+        run_optimizer,
+        # Explicit timezone: a CronTrigger built without one uses the host's
+        # clock (UTC on Azure), not the scheduler's America/Chicago.
+        CronTrigger(day_of_week="mon", hour=7, minute=30, timezone=scheduler.timezone),
+        id="optimizer",
+        replace_existing=True,
+    )
+    # Follows approved code changes through GitHub (run → pull request) and
+    # announces each PR. Returns at once when nothing is in flight.
+    scheduler.add_job(
+        run_optimizer_sync,
+        IntervalTrigger(minutes=15),
+        id="optimizer_sync",
+        replace_existing=True,
+    )
     # Outcome record per firing (ok/error/missed) → aeo.job_runs, so health
     # checks can tell "ran and produced nothing" from "never ran".
     scheduler.add_listener(_on_job_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
-    logger.info("APScheduler configured with 10 cron jobs (America/Chicago)")
+    logger.info("APScheduler configured with 12 jobs (America/Chicago)")
 
 
 def start_scheduler():

@@ -291,3 +291,66 @@ class GA4Service:
         return await asyncio.to_thread(
             self._fetch_organic_timeseries_sync, property_id, days
         )
+
+    async def get_event_counts_by_page(
+        self,
+        property_id: str,
+        event_names: list[str],
+        days: int = 30,
+    ) -> list[dict] | None:
+        """Counts of the named events (e.g. phone_call_click, form_submit) per
+        page path over the last ``days``. None when GA4 can't be read, so the
+        caller can tell "no events happened" from "no data"."""
+        if not self._get_credentials() or not normalize_ga4_property_id(property_id):
+            return None
+        return await asyncio.to_thread(
+            self._fetch_event_counts_by_page_sync, property_id, event_names, days
+        )
+
+    def _fetch_event_counts_by_page_sync(
+        self, property_id: str, event_names: list[str], days: int
+    ) -> list[dict] | None:
+        creds = self._get_credentials()
+        property_id = normalize_ga4_property_id(property_id)
+        try:
+            from google.analytics.data_v1beta import BetaAnalyticsDataClient
+            from google.analytics.data_v1beta.types import (
+                DateRange,
+                Dimension,
+                Filter,
+                FilterExpression,
+                Metric,
+                RunReportRequest,
+            )
+
+            client = BetaAnalyticsDataClient(credentials=creds)
+            request = RunReportRequest(
+                property=f"properties/{property_id}",
+                date_ranges=[
+                    DateRange(
+                        start_date=(date.today() - timedelta(days=days)).isoformat(),
+                        end_date=date.today().isoformat(),
+                    )
+                ],
+                dimensions=[Dimension(name="eventName"), Dimension(name="pagePath")],
+                metrics=[Metric(name="eventCount")],
+                dimension_filter=FilterExpression(
+                    filter=Filter(
+                        field_name="eventName",
+                        in_list_filter=Filter.InListFilter(values=list(event_names)),
+                    )
+                ),
+                limit=10000,
+            )
+            response = client.run_report(request)
+            return [
+                {
+                    "event": row.dimension_values[0].value,
+                    "page": row.dimension_values[1].value,
+                    "count": int(row.metric_values[0].value),
+                }
+                for row in response.rows
+            ]
+        except Exception as e:
+            logger.warning("GA4 event-count query failed: %s", e)
+            return None

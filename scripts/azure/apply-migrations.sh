@@ -33,6 +33,16 @@ for f in "${files[@]}"; do
   psql "$AZ" -X -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null && echo ok
 done
 
+# A table a migration creates is owned by dataservices (this login's default
+# role) and starts with no grants for the app identity, so the app would get
+# "permission denied" on it. Give the app the same rights it already has on
+# every other aeo table (the grants from the cutover, AZURE_DEPLOY.md step 1).
+echo "== app identity grants on aeo =="
+psql "$AZ" -X -q -v ON_ERROR_STOP=1 -c "
+  GRANT USAGE ON SCHEMA aeo TO \"umi-marketing-functions\";
+  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA aeo TO \"umi-marketing-functions\";
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA aeo TO \"umi-marketing-functions\";" && echo "   ok"
+
 echo "== checks =="
 psql "$AZ" -X -tA -F ' | ' -c "
   select 'tables with RLS (expect 0)', count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

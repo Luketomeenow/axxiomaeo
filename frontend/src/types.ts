@@ -482,3 +482,61 @@ export interface AdvisorResponse {
   message?: string;
   report?: AdvisorReportPayload;
 }
+
+export interface OptimizerEvidence {
+  label: string;
+  value: string;
+  source: string;
+  verified?: boolean;
+}
+
+export interface OptimizerProposal {
+  id: number;
+  trigger: string;
+  title: string;
+  category: string;
+  priority: string;
+  brand_id?: string | null;
+  change_type: "code" | "manual" | string;
+  problem?: string | null;
+  proposed_change?: string | null;
+  instructions?: string | null;
+  acceptance?: string | null;
+  expected_impact?: string | null;
+  risk?: string | null;
+  evidence: OptimizerEvidence[];
+  files_hint: string[];
+  status: string;
+  decided_at?: string | null;
+  decided_by?: string | null;
+  decision_note?: string | null;
+  dispatched_at?: string | null;
+  branch?: string | null;
+  run_url?: string | null;
+  pr_number?: number | null;
+  pr_url?: string | null;
+  error?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface OptimizerStatus {
+  enabled: boolean;
+  github_configured: boolean;
+  workflow_registered: boolean | null;
+  github_error?: string | null;
+  repo: string;
+  workflow: string;
+  base_branch: string;
+  last_proposal_at?: string | null;
+  counts: Record<string, number>;
+}
+
+export interface OptimizerRunResult {
+  status: "ok" | "error";
+  message?: string;
+  summary?: string;
+  created?: OptimizerProposal[];
+  skipped_duplicates?: number;
+  dropped_ungrounded?: number;
+}
