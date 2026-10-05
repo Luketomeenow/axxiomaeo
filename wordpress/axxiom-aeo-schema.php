@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Axxiom AEO Schema
- * Description: AEO plumbing for Axxiom brand sites: JSON-LD output from post meta, robots.txt with sitemap + LLM policy, generated /llms.txt, the IndexNow key file, and GA4 phone-click conversion tracking (Axxiom AEO Automation Platform).
- * Version: 1.3.1
+ * Description: AEO plumbing for Axxiom brand sites: JSON-LD output from post meta, robots.txt with sitemap + LLM policy, generated /llms.txt, the IndexNow key file, GA4 phone-click conversion tracking, and noindex for schema carrier pages (Axxiom AEO Automation Platform).
+ * Version: 1.4.0
  * Author: Axxiom Elevator
  *
  * Install: copy to wp-content/mu-plugins/axxiom-aeo-schema.php on each brand site.
@@ -57,6 +57,67 @@ add_action('wp_head', function () {
     $schema = str_replace('</', '<\/', $schema);
     echo '<script type="application/ld+json">' . $schema . '</script>' . "\n";
 }, 5);
+
+/**
+ * Schema carrier pages (slug "schema-...", created by the AEO platform to hold
+ * brand-level JSON-LD) are near-empty, so keep them out of search: noindex,
+ * and out of the sitemaps and llms.txt. The platform also asks Yoast for
+ * noindex through the REST API, but Yoast's meta keys are not writable there,
+ * so that request never took effect.
+ */
+function axxiom_aeo_is_schema_carrier($post = null) {
+    $post = get_post($post);
+    return $post
+        && $post->post_type === 'page'
+        && strpos($post->post_name, 'schema-') === 0
+        && get_post_meta($post->ID, 'aeo_schema_json', true);
+}
+
+function axxiom_aeo_schema_carrier_ids() {
+    $ids = [];
+    $pages = get_posts([
+        'post_type' => 'page',
+        'post_status' => 'publish',
+        'numberposts' => 200,
+        'fields' => 'ids',
+        'meta_key' => 'aeo_schema_json',
+    ]);
+    foreach ($pages as $id) {
+        if (strpos(get_post_field('post_name', $id), 'schema-') === 0) {
+            $ids[] = $id;
+        }
+    }
+    return $ids;
+}
+
+add_filter('wp_robots', function ($robots) {
+    if (is_singular('page') && axxiom_aeo_is_schema_carrier(get_queried_object_id())) {
+        unset($robots['index']);
+        $robots['noindex'] = true;
+        $robots['follow'] = true;
+    }
+    return $robots;
+}, 20);
+
+// Yoast prints its own robots meta tag.
+add_filter('wpseo_robots', function ($robots) {
+    if (is_singular('page') && axxiom_aeo_is_schema_carrier(get_queried_object_id())) {
+        return 'noindex, follow';
+    }
+    return $robots;
+});
+
+add_filter('wpseo_exclude_from_sitemap_by_post_ids', function ($ids) {
+    return array_merge((array) $ids, axxiom_aeo_schema_carrier_ids());
+});
+
+// WordPress core sitemaps, for a site without Yoast.
+add_filter('wp_sitemaps_posts_query_args', function ($args, $post_type) {
+    if ($post_type === 'page') {
+        $args['post__not_in'] = array_merge($args['post__not_in'] ?? [], axxiom_aeo_schema_carrier_ids());
+    }
+    return $args;
+}, 10, 2);
 
 /**
  * The sitemap URL for this site: Yoast's index when Yoast is active, else
@@ -174,7 +235,7 @@ add_action('parse_request', function ($wp) {
     echo "Sitemap: " . axxiom_aeo_sitemap_url() . "\n\n";
 
     echo "## Key pages\n\n";
-    $pages = get_pages(['sort_column' => 'menu_order', 'number' => 15]);
+    $pages = get_pages(['sort_column' => 'menu_order', 'number' => 15, 'exclude' => axxiom_aeo_schema_carrier_ids()]);
     foreach ($pages as $p) {
         echo '- [' . wp_strip_all_tags(get_the_title($p)) . '](' . get_permalink($p) . ")\n";
     }

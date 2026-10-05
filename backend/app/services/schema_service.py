@@ -20,19 +20,44 @@ def _brand_phone(brand: Brand) -> str | None:
     return phone
 
 
+# Brand facts the platform can't attest (headcount, founding year, hours,
+# price level, certifications) stay out of structured data: the same invented
+# "50-500 employees, founded 2023, open 24/7" used to go out for every brand,
+# the machine-readable form of an unattested claim.
+
+_MARKET_RE = re.compile(r"^(?P<city>.+?)[,\s]+(?P<state>[A-Z]{2})$")
+
+
+def split_market(market: str) -> tuple[str, str]:
+    """'Signal Hill CA' -> ('Signal Hill', 'CA'). A market without a trailing
+    state code comes back whole, with no region."""
+    market = (market or "").strip()
+    m = _MARKET_RE.match(market)
+    if m:
+        return m.group("city").strip(), m.group("state")
+    return market, ""
+
+
+def _areas_served(brand: Brand) -> list[dict]:
+    areas = []
+    for market in brand.markets or []:
+        city, state = split_market(market)
+        if city:
+            areas.append({"@type": "City", "name": f"{city}, {state}" if state else city})
+    return areas
+
+
 def build_organization_schema(brand: Brand) -> str:
     schema = {
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": brand.name,
-        "alternateName": brand.name,
         "url": brand.wp_url,
         "logo": brand.logo_url or f"{brand.wp_url}/wp-content/uploads/logo.png",
-        "description": f"{brand.name} provides certified elevator maintenance, repair, modernization, and installation services.",
-        "areaServed": brand.markets or [],
-        "numberOfEmployees": {"@type": "QuantitativeValue", "minValue": 50, "maxValue": 500},
-        "foundingDate": "2023",
+        "description": f"{brand.name} provides elevator maintenance, repair, modernization, and installation services.",
     }
+    if areas := _areas_served(brand):
+        schema["areaServed"] = areas
     phone = _brand_phone(brand)
     if phone:
         schema["contactPoint"] = {
@@ -40,7 +65,6 @@ def build_organization_schema(brand: Brand) -> str:
             "telephone": phone,
             "contactType": "customer service",
             "availableLanguage": "English",
-            "hoursAvailable": "24/7",
         }
     if not brand.is_corporate:
         schema["parentOrganization"] = {
@@ -52,25 +76,25 @@ def build_organization_schema(brand: Brand) -> str:
 
 
 def build_local_business_schema(brand: Brand, city: str = "") -> str:
-    primary_city = city or (brand.markets[0] if brand.markets else "National")
+    # The old version took the first word of the market as the city
+    # ("Signal Hill CA" -> "Signal", "Pompano Beach FL" -> "Pompano"), wrote
+    # "National" when a brand had no markets, and listed GeoCircles with no
+    # coordinates.
+    locality, region = split_market(city or ((brand.markets or [""])[0]))
+    address = {"@type": "PostalAddress", "addressCountry": "US"}
+    if locality:
+        address["addressLocality"] = locality
+    if region:
+        address["addressRegion"] = region
     schema = {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
         "name": brand.name,
         "url": brand.wp_url,
-        "priceRange": "$$",
-        "openingHours": "Mo-Su 00:00-23:59",
-        "address": {
-            "@type": "PostalAddress",
-            "addressLocality": primary_city.split()[0] if primary_city else "",
-            "addressRegion": primary_city.split()[-1] if " " in primary_city else "",
-            "addressCountry": "US",
-        },
-        "serviceArea": [
-            {"@type": "GeoCircle", "geoMidpoint": {"@type": "GeoCoordinates"}, "geoRadius": "50000"}
-            for _ in (brand.markets or ["National"])
-        ],
+        "address": address,
     }
+    if areas := _areas_served(brand):
+        schema["areaServed"] = areas
     phone = _brand_phone(brand)
     if phone:
         schema["telephone"] = phone
@@ -248,7 +272,7 @@ def build_service_schema(brand: Brand, service_type: str) -> str:
         "name": service_type,
         "serviceType": service_type,
         "provider": {"@type": "Organization", "name": brand.name, "url": brand.wp_url},
-        "areaServed": brand.markets or [],
+        "areaServed": _areas_served(brand),
         "availableChannel": available_channel,
         "hasOfferCatalog": {
             "@type": "OfferCatalog",

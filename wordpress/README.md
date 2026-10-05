@@ -29,14 +29,21 @@ Optional per brand: `WP_AUTHOR_ID_{brand_id}` — the WordPress user ID to credi
 
 ## 2. The mu-plugin (must-have)
 
-Copy [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) (**v1.2.0** — JSON-LD output +
-robots.txt + `/llms.txt` + IndexNow key file) to:
+Copy [`axxiom-aeo-schema.php`](axxiom-aeo-schema.php) (**v1.4.0** — JSON-LD output +
+robots.txt + `/llms.txt` + IndexNow key file + GA4 phone-click tracking + noindex for
+the `schema-*` carrier pages) to:
 
 ```
 wp-content/mu-plugins/axxiom-aeo-schema.php
 ```
 
 Create `mu-plugins` folder if it does not exist. Must-use plugins load automatically.
+
+**v1.4.0 upgrade note:** the platform's brand-schema carrier pages (`/schema-organization-<brand>/`
+and friends) were indexable and listed in Yoast's page sitemap, because Yoast's noindex
+meta can't be set through the REST API. v1.4.0 marks them `noindex, follow` and drops them
+from the sitemaps and `/llms.txt`. Check: a carrier page's source shows `noindex`, and
+`page-sitemap.xml` no longer lists `schema-` URLs.
 
 **v1.2.0 upgrade note:** also **delete any physical `robots.txt` or `llms.txt` files**
 at the web root (WP Engine serves physical files before WordPress runs, which hides
