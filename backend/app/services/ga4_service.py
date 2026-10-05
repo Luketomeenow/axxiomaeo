@@ -18,6 +18,8 @@ AI_REFERRERS = [
     "claude.ai",
     "gemini.google.com",
     "copilot.microsoft.com",
+    "copilot.com",  # Copilot's consumer host since 2025 (not a substring of the one above)
+    "duck.ai",
     "chat.deepseek.com",
     "grok.com",
     "meta.ai",
