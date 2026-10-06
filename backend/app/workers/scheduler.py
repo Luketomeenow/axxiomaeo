@@ -63,16 +63,21 @@ def _on_job_event(event):
 
 
 def setup_scheduler():
+    # Every CronTrigger names its timezone. APScheduler 3.x gives a trigger
+    # built without one the host's clock (UTC on Railway and Azure), not the
+    # scheduler's America/Chicago, so until 2026-10 the "9 AM" content run
+    # fired at 4 AM Central and the 10:30 flow check ran before 6 AM, when its
+    # discovery and publish stages still read "not run yet".
     # One hour before content generation so new topics flow into the same run.
     scheduler.add_job(
         run_topic_discovery,
-        CronTrigger(hour=8, minute=0),
+        CronTrigger(hour=8, minute=0, timezone=scheduler.timezone),
         id="topic_discovery",
         replace_existing=True,
     )
     scheduler.add_job(
         run_daily_content,
-        CronTrigger(hour=9, minute=0),
+        CronTrigger(hour=9, minute=0, timezone=scheduler.timezone),
         id="daily_content",
         replace_existing=True,
     )
@@ -82,13 +87,13 @@ def setup_scheduler():
     # ready before the 7am improvement advisor and the day's content run.
     scheduler.add_job(
         run_citation_audit,
-        CronTrigger(day_of_week="mon", hour=5, minute=0),
+        CronTrigger(day_of_week="mon", hour=5, minute=0, timezone=scheduler.timezone),
         id="citation_audit",
         replace_existing=True,
     )
     scheduler.add_job(
         run_schema_validation,
-        CronTrigger(day="1", hour=7, minute=0),
+        CronTrigger(day="1", hour=7, minute=0, timezone=scheduler.timezone),
         id="schema_validation",
         replace_existing=True,
     )
@@ -96,19 +101,19 @@ def setup_scheduler():
     # SCHEMA_AUTO_PUBLISH_ENABLED=true. Runs after daily content (9am).
     scheduler.add_job(
         run_daily_schema_publish,
-        CronTrigger(hour=10, minute=0),
+        CronTrigger(hour=10, minute=0, timezone=scheduler.timezone),
         id="daily_schema_publish",
         replace_existing=True,
     )
     scheduler.add_job(
         run_monthly_report,
-        CronTrigger(day="last", hour=23, minute=0),
+        CronTrigger(day="last", hour=23, minute=0, timezone=scheduler.timezone),
         id="monthly_report",
         replace_existing=True,
     )
     scheduler.add_job(
         run_content_refresh,
-        CronTrigger(day_of_week="sun", hour=6, minute=0),
+        CronTrigger(day_of_week="sun", hour=6, minute=0, timezone=scheduler.timezone),
         id="content_refresh",
         replace_existing=True,
     )
@@ -117,7 +122,7 @@ def setup_scheduler():
     # Discord when one went silent.
     scheduler.add_job(
         run_posting_monitor,
-        CronTrigger(hour=15, minute=0),
+        CronTrigger(hour=15, minute=0, timezone=scheduler.timezone),
         id="posting_monitor",
         replace_existing=True,
     )
@@ -127,14 +132,14 @@ def setup_scheduler():
     # 2026 silent outage was missing.
     scheduler.add_job(
         run_flow_health,
-        CronTrigger(hour=10, minute=30),
+        CronTrigger(hour=10, minute=30, timezone=scheduler.timezone),
         id="flow_health",
         replace_existing=True,
     )
     # Weekly AI improvement advisor — what to improve and why, from live data.
     scheduler.add_job(
         run_improvement_advisor,
-        CronTrigger(day_of_week="mon", hour=7, minute=0),
+        CronTrigger(day_of_week="mon", hour=7, minute=0, timezone=scheduler.timezone),
         id="improvement_advisor",
         replace_existing=True,
     )
