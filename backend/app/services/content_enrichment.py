@@ -103,13 +103,19 @@ def ensure_cta_block(html: str, brand: Brand, contact_url: str | None = None) ->
     return str(soup)
 
 
+# Where a visitor asks for service, best match first. Not every brand calls it
+# "Contact": Arizona's page is "Customer Support", so its CTAs had no quote link.
+_CONTACT_PAGE_HINTS = ("contact", "quote", "estimate", "request-service", "schedule-service", "support")
+
+
 def find_contact_url(pages: list[dict]) -> str | None:
     """The brand's real contact page from its live WP pages, if one exists."""
-    for page in pages or []:
-        slug = (page.get("slug") or "").lower()
-        title = (page.get("title") or "").lower()
-        if "contact" in slug or "contact" in title:
-            return page.get("url")
+    for hint in _CONTACT_PAGE_HINTS:
+        for page in pages or []:
+            slug = (page.get("slug") or "").lower()
+            title = re.sub(r"\s+", "-", (page.get("title") or "").lower().strip())
+            if hint in slug or hint in title:
+                return page.get("url")
     return None
 
 

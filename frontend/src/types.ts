@@ -453,6 +453,29 @@ export interface WpTestResult {
   checked_at?: string;
 }
 
+export interface PhoneCheck {
+  checked: boolean;
+  reason?: string;
+  tracking_number?: boolean;
+  website_pool?: boolean;
+  trackers?: { tracker: string; company: string; calls: number }[];
+}
+
+export interface CtaRefreshResult {
+  brand_id: string;
+  phone?: string | null;
+  contact_url?: string | null;
+  published_posts: number;
+  posts_to_update: number;
+  posts_without_stored_html: number;
+  old_numbers: Record<string, number>;
+  samples: { title?: string | null; url?: string | null; replaced: string[] }[];
+  applied: boolean;
+  updated: number;
+  remaining: number;
+  errors: { title?: string | null; error: string }[];
+}
+
 export interface AdvisorImprovement {
   title: string;
   why: string;
