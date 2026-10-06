@@ -83,7 +83,7 @@ class AdvisorService:
         return [self._row_to_dict(r) for r in rows]
 
     async def generate(self, trigger: str) -> dict:
-        data = await self._aggregate()
+        data = await self.aggregate()
         if not data.get("kpis") and not data.get("citation_by_brand"):
             return {
                 "status": "no_data",
@@ -108,7 +108,9 @@ class AdvisorService:
             **(row.payload or {}),
         }
 
-    async def _aggregate(self) -> dict:
+    async def aggregate(self) -> dict:
+        """The live platform snapshot the advisor analyzes (also the base of the
+        optimization agent's evidence pack). Every feed is best-effort."""
         async def safe(coro, default):
             try:
                 return await coro

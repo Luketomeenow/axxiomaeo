@@ -1,0 +1,226 @@
+# AEO optimizer: implements one approved change and opens a pull request.
+#
+# Started by the AEO platform (POST .../dispatches) when a person approves a
+# code proposal on System Health. Claude Code implements the approved task
+# with file tools only (no shell, no network). This workflow, not the agent,
+# runs the checks, pushes the branch and opens the pull request. Nothing here
+# merges or deploys: a person reviews and merges the PR, and deploys.
+#
+# Setup (once): repository secret FOUNDRY_API_KEY (the Azure Foundry key);
+# Settings → Actions → General → "Allow GitHub Actions to create and approve
+# pull requests". Optional repository variables: FOUNDRY_RESOURCE (default
+# axxiom-ai), OPTIMIZER_MODEL (default claude-opus-5), OPTIMIZER_SMALL_MODEL
+# (default claude-sonnet-4-6), OPTIMIZER_MAX_TURNS (default 40),
+# CLAUDE_CODE_VERSION (default latest).
+
+name: AEO optimizer
+run-name: "AEO optimizer · proposal #${{ inputs.proposal_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      proposal_id:
+        description: Proposal number on System Health
+        required: true
+        type: string
+      branch:
+        description: Branch to create (optimizer/p<id>-<slug>-<stamp>)
+        required: true
+        type: string
+      title:
+        description: Proposal title, used for the pull request
+        required: true
+        type: string
+      task:
+        description: The approved task (markdown)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: aeo-optimizer-${{ inputs.proposal_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      # Inputs reach the scripts as environment variables, never as ${{ }}
+      # text inside run blocks, so a proposal can't inject shell commands.
+      PROPOSAL_ID: ${{ inputs.proposal_id }}
+      BRANCH: ${{ inputs.branch }}
+      TITLE: ${{ inputs.title }}
+      TASK: ${{ inputs.task }}
+      BASE: ${{ github.ref_name }}
+    steps:
+      - name: Check inputs
+        run: |
+          [[ "$PROPOSAL_ID" =~ ^[0-9]+$ ]] || { echo "::error::Invalid proposal id"; exit 1; }
+          [[ "$BRANCH" =~ ^optimizer/p${PROPOSAL_ID}-[a-z0-9-]+$ ]] || { echo "::error::Invalid branch name"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          # The agent never holds a push credential; the last step pushes
+          # with the job's own token.
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install project dependencies
+        run: |
+          python -m pip install -q -r backend/requirements.txt pytest
+          npm ci --prefix frontend --no-audit --no-fund
+
+      - name: Install Claude Code
+        env:
+          CLAUDE_CODE_VERSION: ${{ vars.CLAUDE_CODE_VERSION || 'latest' }}
+        run: npm install -g --no-audit --no-fund "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
+
+      - name: Write the agent's task and settings (outside the checkout)
+        run: |
+          printf '%s\n' "$TASK" > "$RUNNER_TEMP/task.md"
+          {
+            echo "Implement the approved change below in this repository."
+            echo
+            cat "$RUNNER_TEMP/task.md"
+          } > "$RUNNER_TEMP/prompt.md"
+          cat > "$RUNNER_TEMP/claude-settings.json" <<'JSON'
+          {
+            "permissions": {
+              "allow": ["Read", "Edit", "Write", "Glob", "Grep"],
+              "deny": ["Bash", "WebFetch", "WebSearch", "Read(./**/.env)", "Read(./**/.env.*)"]
+            }
+          }
+          JSON
+
+      - name: Claude Code implements the change
+        env:
+          CLAUDE_CODE_USE_FOUNDRY: "1"
+          ANTHROPIC_FOUNDRY_RESOURCE: ${{ vars.FOUNDRY_RESOURCE || 'axxiom-ai' }}
+          ANTHROPIC_FOUNDRY_API_KEY: ${{ secrets.FOUNDRY_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.OPTIMIZER_MODEL || 'claude-opus-5' }}
+          ANTHROPIC_DEFAULT_OPUS_MODEL: ${{ vars.OPTIMIZER_MODEL || 'claude-opus-5' }}
+          ANTHROPIC_DEFAULT_SONNET_MODEL: ${{ vars.OPTIMIZER_SMALL_MODEL || 'claude-sonnet-4-6' }}
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: ${{ vars.OPTIMIZER_SMALL_MODEL || 'claude-sonnet-4-6' }}
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+          DISABLE_AUTOUPDATER: "1"
+          MAX_TURNS: ${{ vars.OPTIMIZER_MAX_TURNS || '40' }}
+        run: |
+          [[ -n "$ANTHROPIC_FOUNDRY_API_KEY" ]] || { echo "::error::Repository secret FOUNDRY_API_KEY is not set"; exit 1; }
+          bash .github/optimizer/agent.sh "$RUNNER_TEMP/prompt.md" "$RUNNER_TEMP/claude-1.json"
+
+      - name: Guard the change
+        run: bash .github/optimizer/checks.sh guard
+
+      - name: Run the checks
+        id: checks1
+        continue-on-error: true
+        run: bash .github/optimizer/checks.sh test
+
+      - name: Claude Code fixes the failing checks
+        if: steps.checks1.outcome == 'failure'
+        env:
+          CLAUDE_CODE_USE_FOUNDRY: "1"
+          ANTHROPIC_FOUNDRY_RESOURCE: ${{ vars.FOUNDRY_RESOURCE || 'axxiom-ai' }}
+          ANTHROPIC_FOUNDRY_API_KEY: ${{ secrets.FOUNDRY_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.OPTIMIZER_MODEL || 'claude-opus-5' }}
+          ANTHROPIC_DEFAULT_OPUS_MODEL: ${{ vars.OPTIMIZER_MODEL || 'claude-opus-5' }}
+          ANTHROPIC_DEFAULT_SONNET_MODEL: ${{ vars.OPTIMIZER_SMALL_MODEL || 'claude-sonnet-4-6' }}
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: ${{ vars.OPTIMIZER_SMALL_MODEL || 'claude-sonnet-4-6' }}
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+          DISABLE_AUTOUPDATER: "1"
+          MAX_TURNS: ${{ vars.OPTIMIZER_MAX_TURNS || '40' }}
+        run: |
+          {
+            echo "The checks failed after your change. Fix the failures while staying inside the approved task."
+            echo "Do not delete, skip or weaken tests to make them pass."
+            echo
+            for f in backend typecheck build; do
+              echo "## $f (last 120 lines)"
+              tail -n 120 "$RUNNER_TEMP/checks/$f.txt"
+              echo
+            done
+            echo "---"
+            cat "$RUNNER_TEMP/task.md"
+          } > "$RUNNER_TEMP/fix.md"
+          bash .github/optimizer/agent.sh "$RUNNER_TEMP/fix.md" "$RUNNER_TEMP/claude-2.json"
+
+      - name: Guard the fixed change
+        if: steps.checks1.outcome == 'failure'
+        run: bash .github/optimizer/checks.sh guard
+
+      - name: Re-run the checks
+        id: checks2
+        if: steps.checks1.outcome == 'failure'
+        continue-on-error: true
+        run: bash .github/optimizer/checks.sh test
+
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CHECKS: ${{ steps.checks1.outcome == 'success' && 'success' || steps.checks2.outcome }}
+          FIXED: ${{ steps.checks1.outcome == 'failure' }}
+        run: |
+          summary() { jq -r '.result // empty' "$1" 2>/dev/null; }
+          last="$RUNNER_TEMP/claude-1.json"
+          [[ -f "$RUNNER_TEMP/claude-2.json" ]] && last="$RUNNER_TEMP/claude-2.json"
+          cost="$(jq -s 'map(.total_cost_usd // 0) | add | . * 100 | round / 100' "$RUNNER_TEMP"/claude-*.json 2>/dev/null || echo "?")"
+          status_line() { grep "^$1=" "$RUNNER_TEMP/checks/status" | cut -d= -f2; }
+          mark() { [[ "$(status_line "$1")" == "0" ]] && echo "passed" || echo "FAILED"; }
+          draft=()
+          title="optimizer: $TITLE (#$PROPOSAL_ID)"
+          if [[ "$CHECKS" != "success" ]]; then
+            draft=(--draft)
+            title="[checks failing] $title"
+          fi
+          {
+            echo "Opened by the AEO platform's optimization agent after a person approved **proposal #$PROPOSAL_ID** on System Health. Claude Code implemented it with file tools only (no shell, no network), and this workflow ran the checks."
+            echo
+            echo "**Checks:** backend tests $(mark backend) · frontend type check $(mark typecheck) · frontend build $(mark build)$([[ "$FIXED" == "true" ]] && echo " (after one fix-up pass)")"
+            echo "**Run:** $RUN_URL · estimated model cost \$$cost"
+            echo
+            echo "### What the agent says it changed"
+            summary "$last" || true
+            echo
+            echo "<details><summary>The approved task</summary>"
+            echo
+            cat "$RUNNER_TEMP/task.md"
+            echo
+            echo "</details>"
+            echo
+            echo "### Before merging"
+            echo "- [ ] Review the diff. The agent can be wrong, and the checks only cover what the tests cover."
+            echo "- [ ] If \`backend/migrations/\` changed: run \`scripts/azure/apply-migrations.sh <branch>\` in Cloud Shell before deploying."
+            echo "- [ ] If \`wordpress/axxiom-aeo-schema.php\` changed: upload the new plugin to each brand site."
+            echo "- [ ] Merging does not deploy. Deploy app-axxiom-aeo with \`scripts/azure/package-app.sh\` in a safe window (11:00–14:30 or after 16:00 CT)."
+            echo
+            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          } > "$RUNNER_TEMP/pr.md"
+          printf 'optimizer: %s\n\nProposal #%s, approved on System Health.\nRun: %s\n' "$TITLE" "$PROPOSAL_ID" "$RUN_URL" > "$RUNNER_TEMP/commit.txt"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -b "$BRANCH"
+          git commit -q -F "$RUNNER_TEMP/commit.txt"
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c http.extraheader="AUTHORIZATION: basic $auth" push -q origin "HEAD:refs/heads/$BRANCH"
+          gh pr create --base "$BASE" --head "$BRANCH" --title "${title:0:200}" --body-file "$RUNNER_TEMP/pr.md" "${draft[@]}"

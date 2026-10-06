@@ -33,12 +33,27 @@ for f in "${files[@]}"; do
   psql "$AZ" -X -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null && echo ok
 done
 
+# A table a migration creates is owned by dataservices (this login's default
+# role) and starts with no grants for the app identity, so the app would get
+# "permission denied" on it. Give the app the same rights it already has on
+# every other aeo table (the grants from the cutover, AZURE_DEPLOY.md step 1).
+echo "== app identity grants on aeo =="
+psql "$AZ" -X -q -v ON_ERROR_STOP=1 -c "
+  GRANT USAGE ON SCHEMA aeo TO \"umi-marketing-functions\";
+  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA aeo TO \"umi-marketing-functions\";
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA aeo TO \"umi-marketing-functions\";" && echo "   ok"
+
+# The privilege check takes the table's OID, never a name. Postgres may run a
+# WHERE condition on every table in the database before the schema filter,
+# and "aeo.<name>" built for one of the hub's public tables doesn't exist: on
+# 2026-10-05 that stopped this check with 'relation
+# "aeo.fact_brightdata_place" does not exist'. An OID is always valid.
 echo "== checks =="
 psql "$AZ" -X -tA -F ' | ' -c "
   select 'tables with RLS (expect 0)', count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'aeo' and c.relkind = 'r' and c.relrowsecurity
   union all
-  select 'tables the app cannot read/write (expect 0)', count(*) from pg_tables
-   where schemaname = 'aeo'
-     and not has_table_privilege('umi-marketing-functions', format('aeo.%I', tablename), 'SELECT,INSERT,UPDATE,DELETE')"
+  select 'tables the app cannot read/write (expect 0)', count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'aeo' and c.relkind in ('r', 'p')
+     and not has_table_privilege('umi-marketing-functions', c.oid, 'SELECT,INSERT,UPDATE,DELETE')"
 echo "done. If a check is not 0: run drop-supabase-rls.sql for RLS; ask Zach about missing grants."

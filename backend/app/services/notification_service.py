@@ -79,11 +79,12 @@ class NotificationService:
         if entity_type == "schema_deployment":
             # Dedicated schema channel; fall back to the general one if unset.
             return self.settings.discord_schema_webhook_url or self.settings.discord_webhook_url or None
-        if type in ("published", "posting_alert", "flow_alert", "advisor_report"):
+        if type in ("published", "posting_alert", "flow_alert", "advisor_report", "optimizer"):
             # posting_alert / flow_alert: the pipeline went quiet or broke;
-            # advisor_report: the weekly improvement digest. Same channel that
-            # announces published posts, so activity, silence, and its
-            # diagnosis all land in one place.
+            # advisor_report: the weekly improvement digest; optimizer: new
+            # proposals to decide and pull requests ready for review. Same
+            # channel that announces published posts, so activity, silence,
+            # and its diagnosis all land in one place.
             return self.settings.discord_webhook_url or None
         return None
 

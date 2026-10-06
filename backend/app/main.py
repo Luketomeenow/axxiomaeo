@@ -20,6 +20,7 @@ from app.routers import (
     content,
     health,
     notifications,
+    optimizer,
     recommendations,
     reports,
     schema,
@@ -129,6 +130,7 @@ def create_app() -> FastAPI:
     app.include_router(notifications.router)
     app.include_router(recommendations.router)
     app.include_router(advisor.router)
+    app.include_router(optimizer.router)
     app.include_router(agent_api.router)
     app.include_router(auth_session.router)
 

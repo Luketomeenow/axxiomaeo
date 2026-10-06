@@ -40,7 +40,7 @@ Railway, Netlify and Supabase are retired. The dashboard's Documentation page ha
 | `sync-app-settings.sh [--apply] [--no-secrets] [--live]` | Vault secrets (from `backend/.env`, only if missing) + app settings + startup command + health check path. `--live` sets `SCHEDULER_ENABLED=true`. Dry-run by default. **Always pass `--live` now**: without it the script writes `SCHEDULER_ENABLED=false` and every job stops. |
 | `package-app.sh [--deploy]` | Builds the dashboard, stages `backend/` + `frontend_dist/`, zips, `az webapp deploy` (Oryx runs `pip install` server-side). |
 | `aeo-data-cutover.sh [--init]` | **Azure Cloud Shell.** `--init` = first copy (schema + data, tables created under your login → owned by `dataservices`, mirrored to Fabric). Default = data-only wipe + reload + exact-count verification + identity-privilege check. |
-| `apply-migrations.sh [ref]` | **Azure Cloud Shell, as dataservices.** Applies every idempotent `alter_aeo_v*.sql` from `ref` (default `main`) in version order, then checks RLS and the app's grants (both expect 0). `AZ_USER=` for anyone but Luke. |
+| `apply-migrations.sh [ref]` | **Azure Cloud Shell, as dataservices.** Applies every idempotent `alter_aeo_v*.sql` from `ref` (default `main`) in version order, grants the app identity read/write on any new table, then checks RLS and the app's grants (both expect 0). `AZ_USER=` for anyone but Luke. |
 | `drop-supabase-rls.sql` | **Azure Cloud Shell.** Drops the Supabase RLS policies and disables RLS on `aeo` tables. Idempotent. |
 | `cloudshell-pg-client.sh [major]` | **Azure Cloud Shell.** Rootless modern `psql`/`pg_dump` into `~/pgclient` (no sudo there). |
 | `aeo-value-check.sql` | **Azure Cloud Shell.** Read-only report: published articles, citations, AEO traffic, calls, cost. |
@@ -172,5 +172,15 @@ Migrations so far only add, so an older build runs on the current schema.
   empty on Railway too.
 - No CI yet — deploys are the manual zip push, same as the hub. A GitHub Actions OIDC
   workflow is the natural next step for both repos.
+- **Optimization agent (System Health).** Proposals work with no setup. Executing approved
+  code changes needs: vault secret `aeo-optimizer-github-token` (fine-grained PAT on this repo:
+  Actions read/write, Pull requests read) referenced by `OPTIMIZER_GITHUB_TOKEN`; repository
+  secret `FOUNDRY_API_KEY` for `.github/workflows/aeo-optimizer.yml`; the repo setting "Allow
+  GitHub Actions to create and approve pull requests"; and the workflow on `main` (GitHub only
+  dispatches workflows on the default branch). Until `feat/azure-app-service` reaches `main`,
+  set `OPTIMIZER_BASE_BRANCH=feat/azure-app-service`. Migration `alter_aeo_v16.sql` adds
+  `aeo.optimization_proposals`. Steps: Azure Setup tab → Optimization agent. The Foundry key in
+  GitHub is a stopgap: the target is OIDC federation to an Entra identity with Cognitive Services
+  User on `axxiom-ai` (Zach), as in the builder-agent design.
 - Supabase Auth is gone (password sign-in, 2026-09-29). Entra single sign-on remains an
   option; Zach would need to grant admin consent.

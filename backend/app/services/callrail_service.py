@@ -52,7 +52,12 @@ async def aeo_call_attribution(db: AsyncSession, days: int = 30) -> dict:
     the Reports page. Returns zeros (with ``available: False``) when the
     warehouse table is missing/unreadable rather than failing the report."""
     try:
-        rows = (await db.execute(_ATTRIBUTION_SQL, {"days": days})).all()
+        # Savepoint: a failed query (warehouse table missing, no grant) aborts
+        # the whole Postgres transaction, which would also sink the caller's
+        # own writes (the monthly report, the optimizer's proposals). Rolling
+        # back to the savepoint keeps the caller's transaction usable.
+        async with db.begin_nested():
+            rows = (await db.execute(_ATTRIBUTION_SQL, {"days": days})).all()
     except Exception:
         logger.exception("CallRail attribution query failed (warehouse unavailable?)")
         return {"available": False, "days": days, "total_calls": 0}
