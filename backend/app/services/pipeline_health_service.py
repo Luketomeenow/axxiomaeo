@@ -53,6 +53,17 @@ def chicago_day_start_utc(now_utc: datetime | None = None) -> datetime:
     return local_start.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
 
 
+def age_days(created: datetime | None, now_utc: datetime | None = None) -> int | None:
+    """Whole days since ``created``. The app writes naive UTC, but on Azure some
+    columns come back timezone-aware (timestamptz), and naive minus aware
+    raises, which took the whole generation stage down on 2026-10-07."""
+    if created is None:
+        return None
+    if created.tzinfo is not None:
+        created = created.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    return max(0, ((now_utc or datetime.utcnow()) - created).days)
+
+
 def overall_status(stages: list[dict]) -> str:
     statuses = {s.get("status") for s in stages}
     if "fail" in statuses:
@@ -253,7 +264,7 @@ class PipelineHealthService:
                 "draft_id": d_id,
                 "brand_id": brand_id,
                 "title": title,
-                "age_days": max(0, (datetime.utcnow() - created).days) if created else None,
+                "age_days": age_days(created),
             }
             for q_id, d_id, brand_id, title, created in stranded_rows
         ]
