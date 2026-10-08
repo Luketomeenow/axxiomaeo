@@ -17,6 +17,7 @@ const navSections = [
       { path: "/content/review", label: "Content Review", icon: "✎" },
       { path: "/content/published", label: "Published", icon: "▣" },
       { path: "/content/queue", label: "Content Queue", icon: "☰" },
+      { path: "/content/questions", label: "Customer Questions", icon: "?" },
     ],
   },
   {
