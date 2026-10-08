@@ -563,3 +563,28 @@ export interface OptimizerRunResult {
   skipped_duplicates?: number;
   dropped_ungrounded?: number;
 }
+
+export interface CustomerQuestion {
+  id: number;
+  brand_id: string;
+  question: string;
+  source?: string | null;
+  asked_at?: string | null;
+  created_at?: string | null;
+  intent?: string | null;
+  call_source?: string | null;
+  topic?: { queue_id: number; status: string } | null;
+}
+
+export interface CallQuestionScanResult {
+  status: "ok" | "unavailable";
+  message?: string;
+  calls_with_summary?: number;
+  not_an_aeo_brand?: number;
+  already_scanned?: number;
+  calls_scanned?: number;
+  questions_found?: number;
+  out_of_market?: number;
+  stored?: number;
+  duplicates?: number;
+}

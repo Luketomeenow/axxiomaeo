@@ -240,6 +240,18 @@ class Settings(BaseSettings):
     # approval-inbox-only path.
     schema_auto_publish_enabled: bool = True
 
+    # Customer questions from phone calls (daily 7:15am CT, before topic
+    # discovery): reads CallRail's call summaries from the marketing
+    # warehouse, strips personal details, and has Claude pull out the
+    # questions callers actually asked. They are stored as observed questions,
+    # the first-priority topic source and part of the weekly citation audit.
+    call_questions_enabled: bool = True
+    call_questions_lookback_days: int = 3
+    call_questions_max_calls: int = 150
+    # CallRail company name -> brand id, as a JSON object, to extend or
+    # override the built-in name matching (e.g. {"Motion Elevator": "axxiom"}).
+    callrail_company_brands: str = ""
+
     # Daily automated topic discovery (GSC demand + citation gaps + coverage).
     # max_per_brand=1 -> alternate trend/AEO-gap picks day-to-day. max_per_brand=2
     # -> one demand pick of each philosophy per brand, same day, feeding the two
