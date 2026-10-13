@@ -8,6 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.workers.advisor_worker import run_improvement_advisor
+from app.workers.call_questions_worker import run_call_questions
 from app.workers.citation_worker import run_citation_audit
 from app.workers.content_refresh_worker import run_content_refresh
 from app.workers.content_worker import run_daily_content
@@ -76,6 +77,14 @@ def setup_scheduler():
     # scheduler's America/Chicago, so until 2026-10 the "9 AM" content run
     # fired at 4 AM Central and the 10:30 flow check ran before 6 AM, when its
     # discovery and publish stages still read "not run yet".
+    # Customer questions from yesterday's calls (CallRail summaries), stored
+    # before topic discovery so the 8am run can pick them first.
+    scheduler.add_job(
+        run_call_questions,
+        CronTrigger(hour=7, minute=15, timezone=scheduler.timezone),
+        id="call_questions",
+        replace_existing=True,
+    )
     # One hour before content generation so new topics flow into the same run.
     scheduler.add_job(
         run_topic_discovery,
@@ -171,7 +180,7 @@ def setup_scheduler():
     # Outcome record per firing (ok/error/missed) → aeo.job_runs, so health
     # checks can tell "ran and produced nothing" from "never ran".
     scheduler.add_listener(_on_job_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
-    logger.info("APScheduler configured with 12 jobs (America/Chicago)")
+    logger.info("APScheduler configured with 13 jobs (America/Chicago)")
 
 
 def start_scheduler():

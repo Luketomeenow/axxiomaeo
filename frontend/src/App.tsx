@@ -8,6 +8,7 @@ import { BrandSettingsPage } from "./pages/BrandSettingsPage";
 import { CitationsPage } from "./pages/CitationsPage";
 import { SystemHealthPage } from "./pages/SystemHealthPage";
 import { ContentQueuePage } from "./pages/ContentQueuePage";
+import { CustomerQuestionsPage } from "./pages/CustomerQuestionsPage";
 import { ContentReviewDetailPage } from "./pages/ContentReviewDetailPage";
 import { ContentReviewPage } from "./pages/ContentReviewPage";
 import { PublishedContentPage } from "./pages/PublishedContentPage";
@@ -61,6 +62,7 @@ function AppRoutes() {
         <Route path="/content/review/:id" element={<ContentReviewDetailPage />} />
         <Route path="/content/published" element={<PublishedContentPage />} />
         <Route path="/content/queue" element={<ContentQueuePage />} />
+        <Route path="/content/questions" element={<CustomerQuestionsPage />} />
         <Route path="/schema/review" element={<SchemaReviewPage />} />
         <Route path="/schema/published" element={<PublishedSchemaPage />} />
         <Route path="/citations" element={<CitationsPage />} />

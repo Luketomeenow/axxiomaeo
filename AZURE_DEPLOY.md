@@ -172,6 +172,11 @@ Migrations so far only add, so an older build runs on the current schema.
   empty on Railway too.
 - No CI yet — deploys are the manual zip push, same as the hub. A GitHub Actions OIDC
   workflow is the natural next step for both repos.
+- **Customer questions from calls (migration v17).** A daily 7:15 CT job reads CallRail call
+  summaries from `public.fact_callrail_call` (read-only), strips personal details, and stores
+  the questions callers asked in `aeo.observed_questions` (source `call`). `aeo.call_question_scans`
+  records each call it has read. Apply `alter_aeo_v17.sql` before deploying. Switch:
+  `CALL_QUESTIONS_ENABLED`; company → brand matching: `CALLRAIL_COMPANY_BRANDS` (JSON).
 - **Optimization agent (System Health).** Proposals work with no setup. Executing approved
   code changes needs: vault secret `aeo-optimizer-github-token` (fine-grained PAT on this repo:
   Actions read/write, Pull requests read) referenced by `OPTIMIZER_GITHUB_TOKEN`; repository

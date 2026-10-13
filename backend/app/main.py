@@ -18,6 +18,7 @@ from app.routers import (
     brands,
     citations,
     content,
+    customer_questions,
     health,
     notifications,
     optimizer,
@@ -124,6 +125,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(brands.router)
     app.include_router(content.router)
+    app.include_router(customer_questions.router)
     app.include_router(schema.router)
     app.include_router(citations.router)
     app.include_router(reports.router)

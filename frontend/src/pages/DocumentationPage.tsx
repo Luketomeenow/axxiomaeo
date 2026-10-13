@@ -237,8 +237,9 @@ const STEPS: { title: string; body: ReactNode }[] = [
     title: "Pick topics (8:00 AM)",
     body: (
       <>
-        Fills each brand's queue from real demand, best signal first: verbatim customer questions
-        (pushed from GHL), rising Google searches (Search Console), AI-visibility gaps (queries where
+        Fills each brand's queue from real demand, best signal first: customer questions (from
+        CallRail call summaries, scanned at 7:15, and any pushed from GHL), rising Google searches
+        (Search Console), AI-visibility gaps (queries where
         a competitor is cited instead), coverage fill — and, only when everything else is exhausted,
         an AI-proposed evergreen topic so the pipeline can never run dry.
       </>
@@ -481,8 +482,10 @@ function PlatformDocs() {
           <tr>
             <Td tone="ink">customer questions</Td>
             <Td>
-              Verbatim questions from GHL calls/chats/forms, pushed by the ghl-agent via the Agent
-              API — literal human demand
+              Questions callers actually asked, read every morning at 7:15 from CallRail's call
+              summaries (names, numbers and addresses removed; each question must quote the
+              summary it came from), plus any pushed from GHL via the Agent API. Listed under{" "}
+              <Em>Content → Customer Questions</Em>
             </Td>
             <Td>highest</Td>
           </tr>
@@ -1111,6 +1114,7 @@ function PlatformDocs() {
             ["Improvement advisor", "Mondays, 7:00 AM"],
             ["Optimization agent (proposals)", "Mondays, 7:30 AM"],
             ["Optimizer GitHub follow-up", "every 15 min, only while a change is in flight"],
+            ["Customer questions from calls", "daily, 7:15 AM"],
             ["Topic discovery", "daily, 8:00 AM"],
             ["Daily content + auto-publish", "daily, 9:00 AM"],
             ["Schema auto-publish (self-heal)", "daily, 10:00 AM"],
@@ -1603,7 +1607,7 @@ AZ_USER=you@axxiomelevator.com bash apply-migrations.sh   # anyone other than Lu
       {/* Scheduler */}
       <Section id="azure-scheduler" eyebrow="Scheduler" title="One instance, one worker — or every job runs twice">
         <P>
-          The twelve scheduled jobs (<Em>Platform → Operations</Em>) run inside the web process on APScheduler,
+          The thirteen scheduled jobs (<Em>Platform → Operations</Em>) run inside the web process on APScheduler,
           in America/Chicago time. That's why the plan stays at one instance and <Code>startup.sh</Code>{" "}
           starts a single uvicorn worker: a second copy would write, publish, and audit everything twice.
           Always On keeps the process awake so jobs fire on time.

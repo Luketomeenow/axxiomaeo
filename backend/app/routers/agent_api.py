@@ -14,7 +14,7 @@ endpoints) for import as a Foundry OpenAPI tool.
 
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -25,7 +25,6 @@ from app.config import get_settings
 from app.database import get_db
 from app.models.brand import Brand
 from app.models.content import ContentPiece, ContentQueue
-from app.models.observed_question import ObservedQuestion
 from app.routers.content import _generate_task, _parse_local_market
 
 logger = logging.getLogger(__name__)
@@ -218,8 +217,6 @@ async def agent_observed_questions(
     ``duplicates``. Contract for the ghl-agent: POST a JSON array of
     {brand_id, question, source: call|chat|form, asked_at?, external_ref?}
     with the X-API-Key header."""
-    from app.services.topic_discovery_service import queries_similar
-
     if not items:
         raise HTTPException(status_code=422, detail="Provide at least one question")
 
@@ -231,45 +228,21 @@ async def agent_observed_questions(
     if bad_source:
         raise HTTPException(status_code=422, detail=f"source must be one of {sorted(VALID_QUESTION_SOURCES)}")
 
-    cutoff = datetime.utcnow() - timedelta(days=180)
-    existing_rows = (
-        await db.execute(
-            select(ObservedQuestion.brand_id, ObservedQuestion.question, ObservedQuestion.external_ref)
-            .where(ObservedQuestion.created_at >= cutoff)
-        )
-    ).all()
-    questions_by_brand: dict[str, list[str]] = {}
-    refs_by_brand: dict[str, set[str]] = {}
-    for brand_id, question, ref in existing_rows:
-        questions_by_brand.setdefault(brand_id, []).append(question)
-        if ref:
-            refs_by_brand.setdefault(brand_id, set()).add(ref)
+    from app.services.observed_questions import store_observed_questions
 
-    accepted_ids: list[int] = []
-    duplicates = 0
-    for item in items:
-        corpus = questions_by_brand.setdefault(item.brand_id, [])
-        refs = refs_by_brand.setdefault(item.brand_id, set())
-        if (item.external_ref and item.external_ref in refs) or any(
-            queries_similar(item.question, q) for q in corpus
-        ):
-            duplicates += 1
-            continue
-        row = ObservedQuestion(
-            brand_id=item.brand_id,
-            question=item.question.strip(),
-            source=item.source,
-            asked_at=item.asked_at,
-            external_ref=item.external_ref or None,
-        )
-        db.add(row)
-        await db.flush()
-        accepted_ids.append(row.id)
-        corpus.append(item.question)
-        if item.external_ref:
-            refs.add(item.external_ref)
-
-    return {"accepted": len(accepted_ids), "duplicates": duplicates, "ids": accepted_ids}
+    return await store_observed_questions(
+        db,
+        [
+            {
+                "brand_id": i.brand_id,
+                "question": i.question,
+                "source": i.source,
+                "asked_at": i.asked_at,
+                "external_ref": i.external_ref,
+            }
+            for i in items
+        ],
+    )
 
 
 @router.get("/openapi.json", include_in_schema=False)
