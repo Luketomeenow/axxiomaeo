@@ -1,4 +1,5 @@
 import asyncio
+import re
 from datetime import date
 from sqlalchemy import select
 
@@ -8,19 +9,43 @@ from app.models.content import ContentQueue
 from app.utils.seed_data import BRANDS, CONTENT_QUEUE_SEED
 
 
+def _digits(value: str | None) -> str:
+    return re.sub(r"\D", "", value or "")[-10:]
+
+
+def phone_update(current: str | None, seed_phone: str | None, retired: list[str]) -> str | None:
+    """The phone the seed should write, or None to leave the brand's alone.
+
+    Brand Settings owns the phone. The seed fills it only when it is empty,
+    or when it is one of the CallRail pool numbers an earlier seed wrote by
+    mistake. It used to overwrite the phone on every startup, so each deploy
+    or restart reverted every Brand Settings change.
+    """
+    if not seed_phone:
+        return None
+    have = _digits(current)
+    if not have or have in {_digits(p) for p in retired}:
+        return seed_phone if have != _digits(seed_phone) else None
+    return None
+
+
 async def seed_brands_and_queue():
     await init_db()
     async with AsyncSessionLocal() as session:
         for brand_data in BRANDS:
-            existing = await session.get(Brand, brand_data["id"])
+            fields = {k: v for k, v in brand_data.items() if k != "retired_phones"}
+            existing = await session.get(Brand, fields["id"])
             if existing:
-                # Refresh author/phone so seed edits reach brands already in the DB.
-                if brand_data.get("author_name") is not None:
-                    existing.author_name = brand_data["author_name"]
-                if "phone" in brand_data:
-                    existing.phone = brand_data["phone"]
+                # Existing brands: fill gaps only, never overwrite an edit.
+                if fields.get("author_name") and not existing.author_name:
+                    existing.author_name = fields["author_name"]
+                new_phone = phone_update(
+                    existing.phone, fields.get("phone"), brand_data.get("retired_phones", [])
+                )
+                if new_phone:
+                    existing.phone = new_phone
                 continue
-            session.add(Brand(**brand_data))
+            session.add(Brand(**fields))
 
         existing_queue = await session.execute(select(ContentQueue).limit(1))
         if existing_queue.scalar_one_or_none() is None:

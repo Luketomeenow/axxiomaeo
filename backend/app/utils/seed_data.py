@@ -1,3 +1,8 @@
+# phone = the brand's main line: the number each site's CallRail script swaps
+# for a per-visitor tracking number, so calls from articles are credited to
+# the page. retired_phones = CallRail website-pool numbers earlier seeds set
+# by mistake (copied from live pages after the swap); the startup seed
+# replaces those, and never overwrites a phone set in Brand Settings.
 BRANDS = [
     {
         "id": "axxiom",
@@ -8,7 +13,7 @@ BRANDS = [
         # reference in schema_service — this row is the FL operating brand.
         "markets": ["Pompano Beach FL", "Sarasota FL"],
         "is_corporate": False,
-        "phone": None,
+        "phone": "954-970-0020",
         "author_name": "Robin Volesky",
         "logo_url": "https://axxiomelevator.com/wp-content/uploads/2023/10/Axxiom_Color_NoTag.png",
     },
@@ -18,7 +23,8 @@ BRANDS = [
         "wp_url": "https://ameritexelevator.com",
         "markets": ["Houston TX", "Dallas TX", "Austin TX", "San Antonio TX", "Los Angeles CA", "San Diego CA"],
         "is_corporate": False,
-        "phone": "866-679-4313",
+        "phone": "844-646-9660",
+        "retired_phones": ["866-679-4313"],
         "author_name": "Jennifer Gonzales",
     },
     {
@@ -27,7 +33,8 @@ BRANDS = [
         "wp_url": "https://azelevatorsolutions.com",
         "markets": ["Phoenix AZ", "Tucson AZ", "Scottsdale AZ", "Mesa AZ"],
         "is_corporate": False,
-        "phone": "480-319-7157",
+        "phone": "480-557-7600",
+        "retired_phones": ["480-319-7157"],
         "author_name": "Taylor Tack",
     },
     {
@@ -36,7 +43,8 @@ BRANDS = [
         "wp_url": "https://liftechelevator.com",
         "markets": ["Signal Hill CA", "Long Beach CA", "Los Angeles CA", "Orange County CA"],
         "is_corporate": False,
-        "phone": "562-609-3478",
+        "phone": "562-997-3639",
+        "retired_phones": ["562-609-3478"],
         "author_name": "Ian Post",
     },
     {
@@ -45,7 +53,8 @@ BRANDS = [
         "wp_url": "https://qualityelevator.com",
         "markets": ["Baltimore MD", "Washington DC", "Philadelphia PA", "Richmond VA"],
         "is_corporate": False,
-        "phone": "301-307-5363",
+        "phone": "301-779-9116",
+        "retired_phones": ["301-307-5363"],
         "author_name": "Eric Amundson",
     },
     {
