@@ -45,6 +45,10 @@ def ensure_author_byline(html: str, brand: Brand, author_name: str | None = None
     return str(soup)
 
 
+# Anchors only the platform's own CTA box carries.
+_PLATFORM_CTA_MARKERS = ("aeo-cta-call", "aeo-cta-quote")
+
+
 def ensure_cta_block(html: str, brand: Brand, contact_url: str | None = None) -> str:
     """Append a lead-capture CTA block: click-to-call + quote link.
 
@@ -55,8 +59,18 @@ def ensure_cta_block(html: str, brand: Brand, contact_url: str | None = None) ->
     GA4 event hooks; the contact link is only included when the brand
     actually has a contact page (never an invented URL). Idempotent.
     """
-    if not html or "aeo-cta" in html:
+    if not html:
         return html
+    if "aeo-cta" in html:
+        if any(marker in html for marker in _PLATFORM_CTA_MARKERS):
+            return html  # the platform's box is already there
+        # A box the model wrote itself with our class name. Left alone, the
+        # platform would skip adding the tracked call button, and the box's
+        # copy (e.g. "registered with the DBPR") was never checked, so drop it.
+        soup = BeautifulSoup(html, "lxml")
+        for el in soup.select(".aeo-cta"):
+            el.decompose()
+        html = str(soup)
     phone = (brand.phone or "").strip()
     if phone == "[BRAND_PHONE]":
         phone = ""
@@ -105,13 +119,20 @@ def ensure_cta_block(html: str, brand: Brand, contact_url: str | None = None) ->
 
 # Where a visitor asks for service, best match first. Not every brand calls it
 # "Contact": Arizona's page is "Customer Support", so its CTAs had no quote link.
-_CONTACT_PAGE_HINTS = ("contact", "quote", "estimate", "request-service", "schedule-service", "support")
+# A thank-you page is never the destination: Arizona's quote-thank-you page
+# matched "quote", so every "Request a free quote" button skipped the form and
+# each click was counted in GA4 as a form submission.
+_CONTACT_PAGE_HINTS = ("contact", "support", "quote", "estimate", "request-service", "schedule-service")
 
 
 def find_contact_url(pages: list[dict]) -> str | None:
     """The brand's real contact page from its live WP pages, if one exists."""
+    pages = [
+        p for p in (pages or [])
+        if "thank" not in (p.get("slug") or "").lower() and "thank" not in (p.get("title") or "").lower()
+    ]
     for hint in _CONTACT_PAGE_HINTS:
-        for page in pages or []:
+        for page in pages:
             slug = (page.get("slug") or "").lower()
             title = re.sub(r"\s+", "-", (page.get("title") or "").lower().strip())
             if hint in slug or hint in title:

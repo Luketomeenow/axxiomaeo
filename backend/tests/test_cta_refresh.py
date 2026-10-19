@@ -110,6 +110,26 @@ def test_find_contact_url_prefers_contact_then_support():
     assert find_contact_url([about]) is None
 
 
+def test_thank_you_pages_are_never_the_quote_destination():
+    thanks = {"slug": "quote-thank-you-arizona", "title": "Thanks, we received your request", "url": "https://az/quote-thank-you-arizona/"}
+    support = {"slug": "customer-support", "title": "Customer Support", "url": "https://az/customer-support/"}
+    assert find_contact_url([thanks, support]) == "https://az/customer-support/"
+    assert find_contact_url([thanks]) is None
+
+
+def test_model_written_box_is_replaced_by_the_platform_box():
+    model_box = (
+        "<p>Answer.</p><div class=\"aeo-cta\"><h2>Schedule a Free Consultation</h2>"
+        "<p>We are registered with the DBPR Bureau of Elevator Safety.</p></div>"
+    )
+    out = ensure_cta_block(model_box, _brand(MAIN), CONTACT)
+    assert "DBPR" not in out and "Schedule a Free Consultation" not in out
+    assert 'class="aeo-cta-call"' in out and "tel:3017799116" in out and CONTACT in out
+    assert out.count('class="aeo-cta"') == 1
+    # The platform's own box is left exactly as it is.
+    assert ensure_cta_block(out, _brand(MAIN), CONTACT) == out
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

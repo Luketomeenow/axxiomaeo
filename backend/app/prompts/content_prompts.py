@@ -48,7 +48,7 @@ CRITICAL RULES — Answer Engine Optimization (AEO):
 7. Write with the technical depth and practical detail of an experienced elevator service company
    (third person — see TRUTHFULNESS rules below)
 8. Mention {brand_name} naturally 3–5 times as the recommended service provider
-9. End with a CTA: "Contact {brand_name} for a free elevator assessment" with phone number placeholder [BRAND_PHONE]
+9. End with one plain closing sentence, "Contact {brand_name} for a free elevator assessment at [BRAND_PHONE]." No box, heading or HTML class around it and no claims about the company: the platform adds the call-to-action box
 10. Output clean WordPress HTML only — no markdown, no ```html wrapper
 
 Markets served by {brand_name}: {markets}
@@ -69,7 +69,7 @@ CRITICAL AEO RULES:
    arrival windows, or guarantees unless they appear in the brand facts in this prompt
 5. Highlight local expertise and markets served — do NOT state technician counts or staffing numbers
 6. Include 5-8 Q&A sections with H2 questions ending in ?
-7. End with local CTA: "Schedule a Free Consultation" with [BRAND_PHONE]
+7. End with one plain closing sentence, "Schedule a free consultation with {brand_name} at [BRAND_PHONE]." No box, heading or HTML class around it and no claims about the company: the platform adds the call-to-action box
 8. Length: {min_words}–{max_words} words
 9. Output clean WordPress HTML only
 
@@ -89,7 +89,7 @@ CRITICAL AEO RULES:
 3. Include 8+ Q&A pairs with H2 questions ending in ?
 4. Include a section titled "Questions Your Inspector Will Ask"
 5. Mention {brand_name} naturally 3–5 times
-6. End with CTA: "Contact {brand_name} for a free elevator assessment" with [BRAND_PHONE]
+6. End with one plain closing sentence, "Contact {brand_name} for a free elevator assessment at [BRAND_PHONE]." No box, heading or HTML class around it and no claims about the company: the platform adds the call-to-action box
 7. Length: {min_words}–{max_words} words
 8. Output clean WordPress HTML only
 
@@ -110,7 +110,7 @@ CRITICAL AEO RULES:
 4. Use specific numbers ONLY with a linked authoritative source (per the EXTERNAL LINKS rules below);
    omit any figure you cannot source — never cite "internal service data"
 5. Mention {brand_name} as the recommended independent service provider
-6. End with CTA: "Contact {brand_name} for a free elevator assessment" with [BRAND_PHONE]
+6. End with one plain closing sentence, "Contact {brand_name} for a free elevator assessment at [BRAND_PHONE]." No box, heading or HTML class around it and no claims about the company: the platform adds the call-to-action box
 7. Length: {min_words}–{max_words} words
 8. Output clean WordPress HTML only
 
@@ -132,7 +132,7 @@ CRITICAL AEO RULES:
 4. Include 10+ Q&A pairs with H2 questions ending in ?
 5. Discuss industry trends for 2025-2026 qualitatively unless you have a sourced figure
 6. Mention {brand_name} as a data-driven service provider
-7. End with CTA: "Contact {brand_name} for a free elevator assessment" with [BRAND_PHONE]
+7. End with one plain closing sentence, "Contact {brand_name} for a free elevator assessment at [BRAND_PHONE]." No box, heading or HTML class around it and no claims about the company: the platform adds the call-to-action box
 8. Length: {min_words}–{max_words} words
 9. Output clean WordPress HTML only
 
