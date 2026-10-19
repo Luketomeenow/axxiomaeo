@@ -176,9 +176,40 @@ def brand_search_terms(brand_name: str, wp_url: str) -> list[str]:
     return [t for t in terms if t]
 
 
+def _one_edit_apart(a: str, b: str) -> bool:
+    """True when a and b differ by one insertion, deletion or substitution."""
+    if abs(len(a) - len(b)) > 1 or a == b:
+        return False
+    if len(a) > len(b):
+        a, b = b, a
+    i = j = edits = 0
+    while i < len(a) and j < len(b):
+        if a[i] != b[j]:
+            edits += 1
+            if edits > 1:
+                return False
+            if len(a) == len(b):
+                i += 1
+            j += 1
+        else:
+            i += 1
+            j += 1
+    return edits + (len(b) - j) <= 1
+
+
 def is_branded_query(query: str, brand_terms: list[str]) -> bool:
     q = f" {normalize_query(query)} "
-    return any(f" {t} " in q or t.replace(" ", "") in q.replace(" ", "") for t in brand_terms if t)
+    if any(f" {t} " in q or t.replace(" ", "") in q.replace(" ", "") for t in brand_terms if t):
+        return True
+    # A one-letter misspelling of a single-word brand term is still a search
+    # for the brand: "axiom elevator" (for Axxiom) became a self-promotional
+    # post titled "Axiom Elevator" on 2026-10-19.
+    tokens = q.split()
+    return any(
+        _one_edit_apart(tok, t)
+        for t in brand_terms if t and " " not in t and len(t) >= 5
+        for tok in tokens if len(tok) >= 4
+    )
 
 
 def infer_content_type(query: str, markets: list[str] | None = None) -> str:
